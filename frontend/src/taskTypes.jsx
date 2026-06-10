@@ -162,6 +162,38 @@ function ItemIcon() {
   );
 }
 
+function ProductionIcon() {
+  return (
+    <svg width="90" height="68" viewBox="0 0 90 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* Outer ring */}
+      <circle cx="45" cy="36" r="28" fill="none" stroke="#c0c0c0" strokeWidth="3"/>
+      {/* Gear teeth (8 teeth) */}
+      <rect x="41" y="5" width="8" height="11" rx="2.5" fill="#d8d8d8" stroke="#a0a0a0" strokeWidth="1.5"/>
+      <rect x="41" y="56" width="8" height="11" rx="2.5" fill="#d8d8d8" stroke="#a0a0a0" strokeWidth="1.5"/>
+      <rect x="5" y="32" width="11" height="8" rx="2.5" fill="#d8d8d8" stroke="#a0a0a0" strokeWidth="1.5"/>
+      <rect x="74" y="32" width="11" height="8" rx="2.5" fill="#d8d8d8" stroke="#a0a0a0" strokeWidth="1.5"/>
+      {/* Diagonal teeth */}
+      <rect x="13" y="13" width="8" height="11" rx="2.5" fill="#d8d8d8" stroke="#a0a0a0" strokeWidth="1.5" transform="rotate(45 17 18.5)"/>
+      <rect x="65" y="13" width="8" height="11" rx="2.5" fill="#d8d8d8" stroke="#a0a0a0" strokeWidth="1.5" transform="rotate(-45 69 18.5)"/>
+      <rect x="13" y="51" width="8" height="11" rx="2.5" fill="#d8d8d8" stroke="#a0a0a0" strokeWidth="1.5" transform="rotate(-45 17 56.5)"/>
+      <rect x="65" y="51" width="8" height="11" rx="2.5" fill="#d8d8d8" stroke="#a0a0a0" strokeWidth="1.5" transform="rotate(45 69 56.5)"/>
+      {/* Main body */}
+      <circle cx="45" cy="36" r="22" fill="url(#gearGrad)" stroke="#b0b0b0" strokeWidth="2"/>
+      {/* Center hole */}
+      <circle cx="45" cy="36" r="9" fill="#1a1a1a" stroke="#888" strokeWidth="2"/>
+      {/* Shine */}
+      <ellipse cx="36" cy="27" rx="6" ry="4" fill="rgba(255,255,255,0.18)" transform="rotate(-30 36 27)"/>
+      <defs>
+        <radialGradient id="gearGrad" cx="38%" cy="35%" r="65%">
+          <stop offset="0%" stopColor="#f0f0f0"/>
+          <stop offset="60%" stopColor="#c8c8c8"/>
+          <stop offset="100%" stopColor="#909090"/>
+        </radialGradient>
+      </defs>
+    </svg>
+  );
+}
+
 function BossIcon() {
   return (
     <svg width="90" height="68" viewBox="0 0 90 72" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -249,6 +281,12 @@ export const TASK_TYPES = [
     bg: 'rgba(220,60,150,0.15)', border: 'rgba(255,100,190,0.5)',
     badgeBg: 'rgba(130,20,80,0.88)', badgeText: '#ffb0e0', textColor: '#ffb0e0',
     imgBg: 'linear-gradient(135deg, #1a0015 0%, #2a0528 60%, #1a0018 100%)',
+  },
+  {
+    id: 'production', label: 'Production', emoji: '⚙️', Icon: ProductionIcon,
+    bg: 'rgba(200,200,200,0.10)', border: 'rgba(200,200,200,0.45)',
+    badgeBg: 'rgba(80,80,80,0.88)', badgeText: '#e0e0e0', textColor: '#d0d0d0',
+    imgBg: 'linear-gradient(135deg, #111111 0%, #1a1a1a 60%, #0e0e0e 100%)',
   },
 ];
 

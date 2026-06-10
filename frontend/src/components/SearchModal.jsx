@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { TASK_TYPES, getTaskType } from '../taskTypes.jsx';
+import NotesSection from './NotesSection.jsx';
 
 const CARD_EMOJIS = [
   '🎮','🕹️','🏆','🥇','⭐','💎','🔥','❄️','⚡','🎯',
@@ -35,7 +36,7 @@ function formatDateLabel(dateStr) {
 //   initialGame  — when set, opens in edit mode (pre-fills fields)
 //   onSave       — called with updated game object in edit mode
 
-export default function SearchModal({ api, token, boardGames, onAdd, onRemove, onClose, customOnly, initialGame, onSave }) {
+export default function SearchModal({ api, token, boardGames, onAdd, onRemove, onClose, customOnly, initialGame, onSave, isTaskBoard, appUsers = [] }) {
   const isEditMode = !!initialGame;
 
   const [tab, setTab] = useState(customOnly || isEditMode ? 'custom' : 'steam');
@@ -60,6 +61,13 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
   const [dueDate,    setDueDate]    = useState(initialGame?.dueDate    || '');
   const [startDate,  setStartDate]  = useState(initialGame?.startDate  || '');
   const [endDate,    setEndDate]    = useState(initialGame?.endDate    || '');
+
+  // Extra fields
+  const [urgent,    setUrgent]    = useState(!!initialGame?.urgent);
+  const [assignees, setAssignees] = useState(initialGame?.assignees || []);
+  const [notes,     setNotes]     = useState(initialGame?.notes     || []);
+  const [showAssigneeMenu, setShowAssigneeMenu] = useState(false);
+  const assigneeMenuRef = useRef(null);
 
   const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
 
@@ -104,6 +112,9 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
       dueDate:   dateMode === 'single' ? (dueDate || null) : null,
       startDate: dateMode === 'period' ? (startDate || null) : null,
       endDate:   dateMode === 'period' ? (endDate || null) : null,
+      urgent,
+      assignees,
+      notes,
     };
     if (isEditMode && onSave) {
       onSave({ ...initialGame, ...gameData });
@@ -412,6 +423,123 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
                 </div>
               )}
             </div>
+
+            {/* ── URGENT toggle ── */}
+            <div>
+              <button
+                type="button"
+                onClick={() => setUrgent(v => !v)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  padding: '10px 16px', borderRadius: 9, cursor: 'pointer',
+                  background: urgent ? 'rgba(220,40,40,0.14)' : 'var(--surface2)',
+                  border: urgent ? '2px solid rgba(220,60,60,0.7)' : '2px solid var(--border)',
+                  color: urgent ? '#ff6060' : 'var(--text-muted)',
+                  fontWeight: urgent ? 700 : 500, fontSize: 14,
+                  transition: 'all .15s',
+                  boxShadow: urgent ? '0 0 10px rgba(220,40,40,0.25)' : 'none',
+                  width: '100%',
+                }}
+              >
+                <span style={{ fontSize: 18, lineHeight: 1 }}>⚠</span>
+                <span>URGENT</span>
+                {urgent && <span style={{ marginLeft: 'auto', fontSize: 11, opacity: 0.7 }}>Activé</span>}
+              </button>
+            </div>
+
+            {/* ── Assignees (Steam boards only) ── */}
+            {isTaskBoard && appUsers.length > 0 && (
+              <div style={{ position: 'relative' }}>
+                <label style={{ display: 'block', fontSize: 14, color: 'var(--text-muted)', marginBottom: 10 }}>
+                  👥 Assignés <span style={{ opacity: 0.55 }}>(facultatif)</span>
+                </label>
+
+                {/* Selected assignees chips */}
+                {assignees.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+                    {assignees.map(uid => {
+                      const u = appUsers.find(x => x.id === uid);
+                      if (!u) return null;
+                      return (
+                        <div key={uid} style={{
+                          display: 'flex', alignItems: 'center', gap: 5,
+                          background: 'var(--surface2)', border: '1px solid var(--border)',
+                          borderRadius: 20, padding: '4px 10px 4px 5px',
+                          fontSize: 13,
+                        }}>
+                          {u.steamAvatar ? (
+                            <img src={u.steamAvatar} alt="" style={{ width: 20, height: 20, borderRadius: '50%', flexShrink: 0 }} />
+                          ) : (
+                            <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
+                              {u.username?.[0]?.toUpperCase()}
+                            </div>
+                          )}
+                          <span style={{ color: 'var(--text)' }}>{u.steamPersonaName || u.username}</span>
+                          <button
+                            onClick={() => setAssignees(a => a.filter(id => id !== uid))}
+                            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', padding: '0 0 0 2px', lineHeight: 1 }}
+                          >✕</button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <button
+                  onClick={() => setShowAssigneeMenu(v => !v)}
+                  style={{
+                    width: '100%', padding: '10px 12px', textAlign: 'left',
+                    background: 'var(--surface2)', border: '1px solid var(--border)',
+                    borderRadius: 8, color: 'var(--text-muted)', fontSize: 14, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: 6,
+                  }}
+                >
+                  <span>+ Ajouter un assigné</span>
+                  <span style={{ marginLeft: 'auto', opacity: 0.4 }}>{showAssigneeMenu ? '▲' : '▼'}</span>
+                </button>
+
+                {showAssigneeMenu && (
+                  <div ref={assigneeMenuRef} style={{
+                    position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50,
+                    background: 'var(--surface2)', border: '1px solid var(--border)',
+                    borderRadius: 8, marginTop: 4, maxHeight: 180, overflowY: 'auto',
+                    boxShadow: '0 6px 20px rgba(0,0,0,0.4)',
+                  }}>
+                    {appUsers
+                      .filter(u => !assignees.includes(u.id))
+                      .map(u => (
+                        <div key={u.id}
+                          onClick={() => { setAssignees(a => [...a, u.id]); setShowAssigneeMenu(false); }}
+                          style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.05)' }}
+                          onMouseEnter={e => e.currentTarget.style.background = 'var(--surface3)'}
+                          onMouseLeave={e => e.currentTarget.style.background = ''}
+                        >
+                          {u.steamAvatar ? (
+                            <img src={u.steamAvatar} alt="" style={{ width: 26, height: 26, borderRadius: '50%', flexShrink: 0, border: '1px solid var(--border)' }} />
+                          ) : (
+                            <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
+                              {u.username?.[0]?.toUpperCase()}
+                            </div>
+                          )}
+                          <div>
+                            <div style={{ fontSize: 13, color: 'var(--text)', fontWeight: 600 }}>{u.username}</div>
+                            {u.steamPersonaName && u.steamPersonaName !== u.username && (
+                              <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{u.steamPersonaName}</div>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    }
+                    {appUsers.filter(u => !assignees.includes(u.id)).length === 0 && (
+                      <div style={{ padding: '12px', fontSize: 13, color: 'var(--text-muted)', textAlign: 'center' }}>Tous les utilisateurs sont assignés</div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── Notes ── */}
+            <NotesSection notes={notes} onSave={setNotes} compact />
 
             {/* ── Submit ── */}
             <button

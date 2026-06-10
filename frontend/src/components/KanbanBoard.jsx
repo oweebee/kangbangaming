@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import GameCard from './GameCard.jsx';
+import AssigneeAvatars from './AssigneeAvatars.jsx';
 
 const EMOJIS = [
   '🎮','🕹️','🏆','🥇','⭐','💎','🔥','❄️','⚡','🎯',
@@ -101,7 +102,7 @@ function ColumnHeader({ col, onRename, onDelete, onSetEmoji, onColDragStart, onC
   );
 }
 
-export default function KanbanBoard({ columns, byColumn, dragging, setDragging, moveGame, onCardClick, onArchiveGame, onUnarchiveGame, onDeleteGame, onEditGame, onRenameColumn, onDeleteColumn, onSetEmoji, onReorderColumns, onAddToColumn, onReorderGames, isTaskBoard }) {
+export default function KanbanBoard({ columns, byColumn, dragging, setDragging, moveGame, onCardClick, onArchiveGame, onUnarchiveGame, onDeleteGame, onEditGame, onRenameColumn, onDeleteColumn, onSetEmoji, onReorderColumns, onAddToColumn, onReorderGames, isTaskBoard, appUsers = [] }) {
   const [draggingColId, setDraggingColId] = useState(null);
   const [dragOverColId, setDragOverColId] = useState(null);
   const [dragInsert, setDragInsert] = useState(null); // { colId, beforeAppid: string|null }
@@ -190,37 +191,48 @@ export default function KanbanBoard({ columns, byColumn, dragging, setDragging, 
                   {isTaskBoard ? 'Glisse une tâche ici' : 'Glisse des jeux ici'}
                 </div>
               )}
-              {games.map((game, idx) => (
-                <div
-                  key={game.appid}
-                  onDragOver={e => {
-                    if (draggingColId || !dragging || dragging.appid === game.appid) return;
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    const isTopHalf = e.clientY < rect.top + rect.height / 2;
-                    const beforeAppid = isTopHalf ? game.appid : (games[idx + 1]?.appid ?? null);
-                    if (dragInsert?.colId !== col.id || dragInsert?.beforeAppid !== beforeAppid) {
-                      setDragInsert({ colId: col.id, beforeAppid });
-                    }
-                  }}
-                >
-                  {dragInsert?.colId === col.id && dragInsert?.beforeAppid === game.appid && (
-                    <div style={{ height: 3, background: 'var(--accent)', borderRadius: 3, margin: '0 2px 4px', opacity: 0.85 }} />
-                  )}
-                  <GameCard game={game}
-                    onDragStart={() => setDragging(game)}
-                    onDragEnd={() => { setDragging(null); setDragInsert(null); }}
-                    onClick={() => onCardClick(game)}
-                    onArchive={() => onArchiveGame(game.appid)}
-                    onUnarchive={() => onUnarchiveGame(game.appid)}
-                    onDelete={() => onDeleteGame(game.appid)}
-                    onEdit={onEditGame}
-                    isDragging={dragging?.appid === game.appid}
-                    isTaskBoard={isTaskBoard}
-                  />
-                </div>
-              ))}
+              {games.map((game, idx) => {
+                const hasAssignees = isTaskBoard && appUsers.length > 0 && game.assignees?.length > 0;
+                return (
+                  <div
+                    key={game.appid}
+                    style={{ position: 'relative', paddingTop: hasAssignees ? 40 : 0 }}
+                    onDragOver={e => {
+                      if (draggingColId || !dragging || dragging.appid === game.appid) return;
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      const isTopHalf = e.clientY < rect.top + rect.height / 2;
+                      const beforeAppid = isTopHalf ? game.appid : (games[idx + 1]?.appid ?? null);
+                      if (dragInsert?.colId !== col.id || dragInsert?.beforeAppid !== beforeAppid) {
+                        setDragInsert({ colId: col.id, beforeAppid });
+                      }
+                    }}
+                  >
+                    {dragInsert?.colId === col.id && dragInsert?.beforeAppid === game.appid && (
+                      <div style={{ height: 3, background: 'var(--accent)', borderRadius: 3, margin: '0 2px 4px', opacity: 0.85 }} />
+                    )}
+                    {hasAssignees && (
+                      <AssigneeAvatars
+                        assignees={game.assignees}
+                        appUsers={appUsers}
+                        size={44}
+                      />
+                    )}
+                    <GameCard game={game}
+                      onDragStart={() => setDragging(game)}
+                      onDragEnd={() => { setDragging(null); setDragInsert(null); }}
+                      onClick={() => onCardClick(game)}
+                      onArchive={() => onArchiveGame(game.appid)}
+                      onUnarchive={() => onUnarchiveGame(game.appid)}
+                      onDelete={() => onDeleteGame(game.appid)}
+                      onEdit={onEditGame}
+                      isDragging={dragging?.appid === game.appid}
+                      isTaskBoard={isTaskBoard}
+                    />
+                  </div>
+                );
+              })}
               {dragInsert?.colId === col.id && dragInsert?.beforeAppid === null && (
                 <div style={{ height: 3, background: 'var(--accent)', borderRadius: 3, margin: '4px 2px 0', opacity: 0.85 }} />
               )}

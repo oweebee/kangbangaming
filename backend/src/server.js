@@ -150,6 +150,22 @@ app.get('/api/auth/me', requireAuth, (req, res) => {
   res.json({ id: user.id, username: user.username, role: user.role, steamAvatar: user.steamAvatar || null, steamPersonaName: user.steamPersonaName || null });
 });
 
+// ── Users list (for assignees feature) ───────────────────────────────────────
+
+app.get('/api/users/list', requireAuth, (req, res) => {
+  const users = readUsers();
+  const list = users
+    .filter(u => (u.status || 'active') === 'active')
+    .map(u => ({
+      id: u.id,
+      username: u.username,
+      steamAvatar: u.steamAvatar || null,
+      steamPersonaName: u.steamPersonaName || null,
+      steamId: u.steamId || null,
+    }));
+  res.json(list);
+});
+
 // ── User profile + settings ───────────────────────────────────────────────────
 
 app.get('/api/user/profile', requireAuth, (req, res) => {
@@ -510,6 +526,8 @@ app.patch('/api/public/boards/:boardId/games/:appid', requireAuth, (req, res) =>
   if (req.body.startDate !== undefined) game.startDate = req.body.startDate;
   if (req.body.endDate !== undefined) game.endDate = req.body.endDate;
   if (req.body.archived !== undefined) game.archived = req.body.archived;
+  if (req.body.urgent !== undefined) game.urgent = req.body.urgent;
+  if (req.body.assignees !== undefined) game.assignees = req.body.assignees;
   f.userBoards[req.params.boardId] = f.board;
   f.all[f.userId] = f.userBoards;
   writeBoards(f.all);
@@ -691,6 +709,8 @@ app.patch('/api/boards/:boardId/games/:appid', requireAuth, (req, res) => {
   if (req.body.startDate !== undefined) game.startDate = req.body.startDate;
   if (req.body.endDate !== undefined) game.endDate = req.body.endDate;
   if (req.body.archived !== undefined) game.archived = req.body.archived;
+  if (req.body.urgent !== undefined) game.urgent = req.body.urgent;
+  if (req.body.assignees !== undefined) game.assignees = req.body.assignees;
   setUserBoards(req.user.id, userBoards);
   res.json(game);
 });

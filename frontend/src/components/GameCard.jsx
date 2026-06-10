@@ -12,9 +12,10 @@ function formatPlaytime(minutes) {
 
 export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArchive, onUnarchive, onDelete, onEdit, isDragging, readOnly, isTaskBoard }) {
   const [imgError, setImgError] = useState(false);
-  const isCustom  = game.type === 'custom';
+  const isCustom   = game.type === 'custom';
   const isArchived = !!game.archived;
-  const tt        = game.taskType ? getTaskType(game.taskType) : null;
+  const isUrgent   = !!game.urgent;
+  const tt         = game.taskType ? getTaskType(game.taskType) : null;
   const TtIcon    = tt?.Icon;
   const dateInfo  = getDateInfo(game);
 
@@ -26,7 +27,7 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
       onClick={readOnly || isArchived ? undefined : onClick}
       style={{
         background: isArchived ? 'var(--surface2)' : tt ? tt.bg : 'var(--surface2)',
-        border: isArchived ? '1px solid rgba(120,120,120,0.3)' : tt ? `1.5px solid ${tt.border}` : '1px solid var(--border)',
+        border: isArchived ? '1px solid rgba(120,120,120,0.3)' : isUrgent ? '1.5px solid rgba(220,60,60,0.6)' : tt ? `1.5px solid ${tt.border}` : '1px solid var(--border)',
         borderRadius: 8,
         overflow: 'hidden',
         cursor: readOnly || isArchived ? 'default' : 'grab',
@@ -60,6 +61,15 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
             fontSize: 8, fontWeight: 700, padding: '2px 6px',
             borderRadius: 4, letterSpacing: '0.04em',
           }}>{tt.label.toUpperCase()}</div>
+          {isUrgent && !isArchived && (
+            <div style={{
+              position: 'absolute', top: 5, right: 5,
+              background: 'rgba(200,30,30,0.9)', color: '#fff',
+              fontSize: 11, fontWeight: 900, padding: '2px 7px',
+              borderRadius: 4, letterSpacing: '0.02em',
+              boxShadow: '0 0 8px rgba(220,40,40,0.5)',
+            }}>!</div>
+          )}
           {isArchived && (
             <div style={{
               position: 'absolute', top: 5, right: 5,
@@ -76,6 +86,15 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
           display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 42,
         }}>
           {game.emoji || '🎮'}
+          {isUrgent && !isArchived && (
+            <div style={{
+              position: 'absolute', top: 5, right: 5,
+              background: 'rgba(200,30,30,0.9)', color: '#fff',
+              fontSize: 11, fontWeight: 900, padding: '2px 7px',
+              borderRadius: 4, letterSpacing: '0.02em',
+              boxShadow: '0 0 8px rgba(220,40,40,0.5)',
+            }}>!</div>
+          )}
           {isArchived && (
             <div style={{
               position: 'absolute', top: 5, right: 5,
@@ -93,6 +112,15 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
             style={{ width: '100%', height: 88, objectFit: 'cover', display: 'block' }}
             draggable={false}
           />
+          {isUrgent && !isArchived && (
+            <div style={{
+              position: 'absolute', top: 5, right: 5,
+              background: 'rgba(200,30,30,0.9)', color: '#fff',
+              fontSize: 11, fontWeight: 900, padding: '2px 7px',
+              borderRadius: 4, letterSpacing: '0.02em',
+              boxShadow: '0 0 8px rgba(220,40,40,0.5)',
+            }}>!</div>
+          )}
           {isArchived && (
             <div style={{
               position: 'absolute', top: 5, right: 5,
@@ -108,6 +136,15 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
           display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24,
         }}>
           🎮
+          {isUrgent && !isArchived && (
+            <div style={{
+              position: 'absolute', top: 5, right: 5,
+              background: 'rgba(200,30,30,0.9)', color: '#fff',
+              fontSize: 11, fontWeight: 900, padding: '2px 7px',
+              borderRadius: 4, letterSpacing: '0.02em',
+              boxShadow: '0 0 8px rgba(220,40,40,0.5)',
+            }}>!</div>
+          )}
           {isArchived && (
             <div style={{
               position: 'absolute', top: 5, right: 5,
@@ -187,6 +224,19 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
               : formatPlaytime(game.playtime_minutes)
             }
           </div>
+
+          {/* Urgent badge in footer */}
+          {isUrgent && !isArchived && (
+            <div style={{
+              background: 'rgba(200,30,30,0.15)',
+              color: '#ff6060',
+              border: '1px solid rgba(220,60,60,0.5)',
+              borderRadius: 4, padding: '1px 6px',
+              fontSize: 9, fontWeight: 900,
+              whiteSpace: 'nowrap', flexShrink: 0,
+              letterSpacing: '0.04em',
+            }}>⚠ URGENT</div>
+          )}
 
           {/* Date badge */}
           {dateInfo && (

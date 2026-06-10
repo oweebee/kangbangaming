@@ -152,6 +152,7 @@ export default function App() {
   const [editingGame,  setEditingGame]  = useState(null);
   const [showArchived, setShowArchived] = useState(false);
   const [searchTargetCol, setSearchTargetCol] = useState(null);
+  const [appUsers, setAppUsers] = useState([]);
   const [showSearch, setShowSearch] = useState(false);
   const [dragging, setDragging] = useState(null);
   const [newBoardName, setNewBoardName] = useState('');
@@ -256,6 +257,12 @@ export default function App() {
     setLoading(true);
     try { const res = await fetch(`${API}/boards/${boardId}/games`, { headers: { Authorization: `Bearer ${token}` } }); setGames(await res.json()); }
     catch { setGames([]); } finally { setLoading(false); }
+  }, [token]);
+
+  useEffect(() => {
+    if (!token) return;
+    fetch(`${API}/users/list`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : []).then(setAppUsers).catch(() => {});
   }, [token]);
 
   useEffect(() => {
@@ -419,12 +426,22 @@ export default function App() {
 
   const updateGame = async (updatedGame) => {
     const boardApi = publicBoardMode ? `${API}/public/boards/${publicBoardMode.id}` : `${API}/boards/${activeBoardId}`;
-    const { appid, name, emoji, taskType, dueDate, startDate, endDate } = updatedGame;
+    const { appid, name, emoji, taskType, dueDate, startDate, endDate, urgent, assignees, notes } = updatedGame;
     await fetch(`${boardApi}/games/${appid}`, {
       method: 'PATCH', headers: authHeaders(token),
-      body: JSON.stringify({ name, emoji, taskType: taskType ?? null, dueDate: dueDate ?? null, startDate: startDate ?? null, endDate: endDate ?? null }),
+      body: JSON.stringify({ name, emoji, taskType: taskType ?? null, dueDate: dueDate ?? null, startDate: startDate ?? null, endDate: endDate ?? null, urgent: urgent ?? false, assignees: assignees ?? [], notes: notes ?? [] }),
     });
     setGames(prev => prev.map(g => g.appid === appid ? { ...g, ...updatedGame } : g));
+  };
+
+  // Generic field patch — used by TaskModal for immediate note/urgent/assignee saves
+  const patchGame = async (appid, fields) => {
+    const boardApi = publicBoardMode ? `${API}/public/boards/${publicBoardMode.id}` : `${API}/boards/${activeBoardId}`;
+    await fetch(`${boardApi}/games/${appid}`, {
+      method: 'PATCH', headers: authHeaders(token),
+      body: JSON.stringify(fields),
+    });
+    setGames(prev => prev.map(g => g.appid === appid ? { ...g, ...fields } : g));
   };
   const moveGame = useCallback(async (appid, column) => {
     setGames(prev => prev.map(g => g.appid === appid ? { ...g, column } : g));
@@ -466,6 +483,11 @@ export default function App() {
   const orphans = filteredForBoard.filter(g => !knownColIds.has(g.column));
   if (orphans.length > 0 && columns[0]) byColumn[columns[0].id] = [...(byColumn[columns[0].id] || []), ...orphans];
   const archiveCount = games.filter(g => g.archived).length;
+
+  // Reactive displayed game — stays in sync when patchGame mutates the games array
+  const displayedGame = selectedGame
+    ? (games.find(g => g.appid === selectedGame.appid) || selectedGame)
+    : null;
 
   // Sorted boards (respects drag order)
   const sortedBoards = boardOrder.length > 0
@@ -859,11 +881,11 @@ export default function App() {
           </div>
         )}
         <footer style={{ position: 'fixed', bottom: 0, right: 0, padding: '4px 10px', display: 'flex', alignItems: 'center', gap: 8, fontSize: 9, color: 'var(--text-muted)' }}><span>by Oweebee</span><a href="https://discord.gg/9mXpM9wv" target="_blank" rel="noreferrer" style={{ color: '#7289da', textDecoration: 'none', fontSize: 9 }}>Discord</a><a href="https://github.com/oweebee/kangbangaming" target="_blank" rel="noreferrer" style={{ color: 'var(--text-muted)', textDecoration: 'none', fontSize: 9 }}>GitHub</a></footer>
-        {showSearch && <SearchModal api={API} token={token} boardGames={games} onAdd={addGame} onRemove={removeGame} onClose={() => setShowSearch(false)} customOnly={isTaskBoard} />}
-        {editingGame && <SearchModal api={API} token={token} boardGames={games} onAdd={addGame} onRemove={removeGame} onClose={() => setEditingGame(null)} customOnly={isTaskBoard} initialGame={editingGame} onSave={async g => { await updateGame(g); setEditingGame(null); }} />}
-        {selectedGame && selectedGame.type === 'custom'
-          ? <TaskModal game={selectedGame} onClose={() => setSelectedGame(null)} onEdit={() => { setEditingGame(selectedGame); setSelectedGame(null); }} />
-          : selectedGame && <GameModal game={selectedGame} onClose={() => setSelectedGame(null)} api={API} token={token} />
+        {showSearch && <SearchModal api={API} token={token} boardGames={games} onAdd={g => addGame(g, searchTargetCol)} onRemove={removeGame} onClose={() => { setShowSearch(false); setSearchTargetCol(null); }} customOnly={isTaskBoard} isTaskBoard={isTaskBoard} appUsers={appUsers} />}
+        {editingGame && <SearchModal api={API} token={token} boardGames={games} onAdd={addGame} onRemove={removeGame} onClose={() => setEditingGame(null)} customOnly={isTaskBoard} isTaskBoard={isTaskBoard} appUsers={appUsers} initialGame={editingGame} onSave={async g => { await updateGame(g); setEditingGame(null); }} />}
+        {displayedGame && displayedGame.type === 'custom'
+          ? <TaskModal game={displayedGame} appUsers={appUsers} onPatchGame={patchGame} onClose={() => setSelectedGame(null)} onEdit={() => { setEditingGame(displayedGame); setSelectedGame(null); }} isTaskBoard={isTaskBoard} />
+          : displayedGame && <GameModal game={displayedGame} onClose={() => setSelectedGame(null)} api={API} token={token} />
         }
         {showAdmin && <AdminPanel token={token} currentUser={currentUser} onClose={() => setShowAdmin(false)} />}
         {showSteamSettings && <SteamSettings token={token} onSave={handleSteamSave} onClose={() => setShowSteamSettings(false)} />}
@@ -885,8 +907,12 @@ export default function App() {
           {publicBoardMode ? (
             <>
               {/* Board icon */}
-              {publicBoardMode.gameIcon ? (
-                <img src={publicBoardMode.gameIcon} alt="" style={{ width: 22, height: 22, borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border)', flexShrink: 0 }} />
+              {(publicBoardMode.headerImg || publicBoardMode.gameIcon) ? (
+                <img src={publicBoardMode.headerImg || publicBoardMode.gameIcon} alt=""
+                  style={publicBoardMode.headerImg
+                    ? { height: 53, width: 'auto', objectFit: 'contain', borderRadius: 6, flexShrink: 0, border: '1px solid var(--border)' }
+                    : { width: 22, height: 22, borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border)', flexShrink: 0 }}
+                />
               ) : (
                 <span style={{ fontSize: 18, flexShrink: 0 }}>{publicBoardMode.emoji || '🎮'}</span>
               )}
@@ -924,8 +950,13 @@ export default function App() {
           ) : (
             <>
               {/* Board icon */}
-              {activeBoard?.gameIcon ? (
-                <img src={activeBoard.gameIcon} alt="" style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border)', flexShrink: 0 }} />
+              {(activeBoard?.headerImg || activeBoard?.gameIcon) ? (
+                <img
+                  src={activeBoard.headerImg || activeBoard.gameIcon} alt=""
+                  style={activeBoard.headerImg
+                    ? { height: 53, width: 'auto', objectFit: 'contain', borderRadius: 6, flexShrink: 0, border: '1px solid var(--border)' }
+                    : { width: 53, height: 53, borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border)', flexShrink: 0 }}
+                />
               ) : activeBoard ? (
                 <span style={{ fontSize: 36, flexShrink: 0 }}>{activeBoard.emoji || '🎮'}</span>
               ) : null}
@@ -978,14 +1009,14 @@ export default function App() {
           loading ? (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Chargement...</div>
           ) : (
-            <KanbanBoard columns={columns} byColumn={byColumn} dragging={dragging} setDragging={setDragging} moveGame={moveGame} onCardClick={setSelectedGame} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} onRenameColumn={renameColumn} onDeleteColumn={deleteColumn} onSetEmoji={setColumnEmoji} onReorderColumns={reorderColumns} onAddToColumn={colId => { setSearchTargetCol(colId); setShowSearch(true); }} onReorderGames={reorderGamesInColumn} isTaskBoard={isTaskBoard} />
+            <KanbanBoard columns={columns} byColumn={byColumn} dragging={dragging} setDragging={setDragging} moveGame={moveGame} onCardClick={setSelectedGame} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} onRenameColumn={renameColumn} onDeleteColumn={deleteColumn} onSetEmoji={setColumnEmoji} onReorderColumns={reorderColumns} onAddToColumn={colId => { setSearchTargetCol(colId); setShowSearch(true); }} onReorderGames={reorderGamesInColumn} isTaskBoard={isTaskBoard} appUsers={appUsers} />
           )
         ) : !activeBoardId ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Crée un board pour commencer</div>
         ) : loading ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Chargement...</div>
         ) : (
-          <KanbanBoard columns={columns} byColumn={byColumn} dragging={dragging} setDragging={setDragging} moveGame={moveGame} onCardClick={setSelectedGame} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onRenameColumn={renameColumn} onDeleteColumn={deleteColumn} onSetEmoji={setColumnEmoji} onReorderColumns={reorderColumns} onAddToColumn={colId => { setSearchTargetCol(colId); setShowSearch(true); }} onReorderGames={reorderGamesInColumn} isTaskBoard={isTaskBoard} />
+          <KanbanBoard columns={columns} byColumn={byColumn} dragging={dragging} setDragging={setDragging} moveGame={moveGame} onCardClick={setSelectedGame} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} onRenameColumn={renameColumn} onDeleteColumn={deleteColumn} onSetEmoji={setColumnEmoji} onReorderColumns={reorderColumns} onAddToColumn={colId => { setSearchTargetCol(colId); setShowSearch(true); }} onReorderGames={reorderGamesInColumn} isTaskBoard={isTaskBoard} appUsers={appUsers} />
         )}
       </div>
       <footer style={{ position: 'fixed', bottom: 0, right: 0, padding: '5px 12px', display: 'flex', alignItems: 'center', gap: 8, fontSize: 10, color: 'var(--text-muted)' }}>
@@ -993,11 +1024,11 @@ export default function App() {
         <a href="https://discord.gg/9mXpM9wv" target="_blank" rel="noreferrer" style={{ color: '#7289da', textDecoration: 'none' }}>Discord</a>
         <a href="https://github.com/oweebee/kangbangaming" target="_blank" rel="noreferrer" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>GitHub</a>
       </footer>
-      {showSearch && <SearchModal api={API} token={token} boardGames={games} onAdd={g => addGame(g, searchTargetCol)} onRemove={removeGame} onClose={() => { setShowSearch(false); setSearchTargetCol(null); }} customOnly={isTaskBoard} />}
-      {editingGame && <SearchModal api={API} token={token} boardGames={games} onAdd={addGame} onRemove={removeGame} onClose={() => setEditingGame(null)} customOnly={isTaskBoard} initialGame={editingGame} onSave={async g => { await updateGame(g); setEditingGame(null); }} />}
-      {selectedGame && selectedGame.type === 'custom'
-        ? <TaskModal game={selectedGame} onClose={() => setSelectedGame(null)} onEdit={() => { setEditingGame(selectedGame); setSelectedGame(null); }} />
-        : selectedGame && <GameModal game={selectedGame} onClose={() => setSelectedGame(null)} api={API} token={token} />
+      {showSearch && <SearchModal api={API} token={token} boardGames={games} onAdd={g => addGame(g, searchTargetCol)} onRemove={removeGame} onClose={() => { setShowSearch(false); setSearchTargetCol(null); }} customOnly={isTaskBoard} isTaskBoard={isTaskBoard} appUsers={appUsers} />}
+      {editingGame && <SearchModal api={API} token={token} boardGames={games} onAdd={addGame} onRemove={removeGame} onClose={() => setEditingGame(null)} customOnly={isTaskBoard} isTaskBoard={isTaskBoard} appUsers={appUsers} initialGame={editingGame} onSave={async g => { await updateGame(g); setEditingGame(null); }} />}
+      {displayedGame && displayedGame.type === 'custom'
+        ? <TaskModal game={displayedGame} appUsers={appUsers} onPatchGame={patchGame} onClose={() => setSelectedGame(null)} onEdit={() => { setEditingGame(displayedGame); setSelectedGame(null); }} isTaskBoard={isTaskBoard} />
+        : displayedGame && <GameModal game={displayedGame} onClose={() => setSelectedGame(null)} api={API} token={token} />
       }
       {showAdmin && <AdminPanel token={token} currentUser={currentUser} onClose={() => setShowAdmin(false)} />}
       {showSteamSettings && <SteamSettings token={token} onSave={handleSteamSave} onClose={() => setShowSteamSettings(false)} />}

@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { getTaskType } from '../taskTypes.jsx';
+import NotesSection from './NotesSection.jsx';
 
 // ── Date helpers ──────────────────────────────────────────────────────────────
 
@@ -45,12 +47,84 @@ function getDateInfo(game) {
 
 const STATUS_LABEL = { future: 'À venir', active: 'En cours', past: 'Passée' };
 
+// ── Assignee row ──────────────────────────────────────────────────────────────
+
+function AssigneeRow({ assignees = [], appUsers = [] }) {
+  const [hoveredId, setHoveredId] = useState(null);
+
+  const users = assignees
+    .map(id => appUsers.find(u => u.id === id))
+    .filter(Boolean);
+
+  if (users.length === 0) return null;
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0 }}>👥 Assignés</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: -4, flexWrap: 'wrap', gap: 6 }}>
+        {users.map(user => {
+          const initials = user.username?.[0]?.toUpperCase() || '?';
+          const isHovered = hoveredId === user.id;
+          return (
+            <div
+              key={user.id}
+              style={{ position: 'relative' }}
+              onMouseEnter={() => setHoveredId(user.id)}
+              onMouseLeave={() => setHoveredId(null)}
+              onClick={() => user.steamId && window.open(`https://steamcommunity.com/profiles/${user.steamId}`, '_blank')}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 20, padding: '4px 10px 4px 5px', cursor: user.steamId ? 'pointer' : 'default' }}>
+                {user.steamAvatar ? (
+                  <img src={user.steamAvatar} alt="" style={{ width: 22, height: 22, borderRadius: '50%', flexShrink: 0, border: '1px solid var(--border)' }} />
+                ) : (
+                  <div style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: '#fff', flexShrink: 0 }}>{initials}</div>
+                )}
+                <span style={{ fontSize: 12, color: 'var(--text)', fontWeight: 500 }}>{user.steamPersonaName || user.username}</span>
+                {user.steamId && (
+                  <svg viewBox="0 0 496 512" xmlns="http://www.w3.org/2000/svg" style={{ width: 9, height: 9, fill: 'var(--text-muted)', opacity: 0.5, flexShrink: 0 }}>
+                    <path d="M496 256c0 137-111.2 248-248.4 248-113.8 0-209.7-76.3-239-180.4l95.2 39.3c6.4 32.1 34.9 56.4 68.9 56.4 38.2 0 69.1-31.1 68.9-69.3l84.5-60.2c52.1 1.3 95.8-40.9 95.8-93.5 0-51.6-42-93.5-93.7-93.5s-93.7 42-93.7 93.5v1.2L176.6 279c-15.5-.9-30.7 3.4-43.5 12.1L0 236.1C10.2 108.4 117.1 8 247.6 8 384.8 8 496 119 496 256z"/>
+                  </svg>
+                )}
+              </div>
+              {/* Hover popup */}
+              {isHovered && user.steamAvatar && (
+                <div style={{
+                  position: 'absolute', bottom: '110%', left: '50%', transform: 'translateX(-50%)',
+                  background: 'var(--surface2)', border: '1px solid var(--border)',
+                  borderRadius: 9, padding: '10px 12px', width: 160,
+                  zIndex: 50, boxShadow: '0 6px 20px rgba(0,0,0,0.5)',
+                  pointerEvents: 'none',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <img src={user.steamAvatar} alt="" style={{ width: 36, height: 36, borderRadius: '50%', border: '1px solid var(--border)' }} />
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>{user.username}</div>
+                      {user.steamPersonaName && user.steamPersonaName !== user.username && (
+                        <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>{user.steamPersonaName}</div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ── TaskModal ─────────────────────────────────────────────────────────────────
 
-export default function TaskModal({ game, onClose, onEdit }) {
+export default function TaskModal({ game, onClose, onEdit, appUsers = [], onPatchGame, isTaskBoard }) {
   const tt        = game.taskType ? getTaskType(game.taskType) : null;
   const TtIcon    = tt?.Icon;
   const dateInfo  = getDateInfo(game);
+  const isUrgent  = !!game.urgent;
+
+  const handleSaveNotes = (notes) => {
+    if (onPatchGame) onPatchGame(game.appid, { notes });
+  };
 
   return (
     <div
@@ -62,9 +136,11 @@ export default function TaskModal({ game, onClose, onEdit }) {
       }}
     >
       <div style={{
-        background: 'var(--surface)', border: tt ? `1.5px solid ${tt.border}` : '1px solid var(--border)',
-        borderRadius: 14, width: '100%', maxWidth: 480,
-        maxHeight: '85vh', display: 'flex', flexDirection: 'column', overflow: 'hidden',
+        background: 'var(--surface)',
+        border: isUrgent ? '1.5px solid rgba(220,60,60,0.6)' : tt ? `1.5px solid ${tt.border}` : '1px solid var(--border)',
+        borderRadius: 14, width: '100%', maxWidth: 500,
+        maxHeight: '88vh', display: 'flex', flexDirection: 'column', overflow: 'hidden',
+        boxShadow: isUrgent ? '0 0 30px rgba(220,40,40,0.15)' : undefined,
       }}>
 
         {/* ── Header illustration / emoji ── */}
@@ -130,6 +206,22 @@ export default function TaskModal({ game, onClose, onEdit }) {
         {/* ── Body ── */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '14px 16px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
 
+          {/* URGENT banner */}
+          {isUrgent && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              background: 'rgba(200,30,30,0.12)',
+              border: '1.5px solid rgba(220,60,60,0.5)',
+              borderRadius: 9, padding: '10px 14px',
+            }}>
+              <span style={{ fontSize: 20, lineHeight: 1 }}>⚠</span>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 900, color: '#ff6060', letterSpacing: '0.06em', textTransform: 'uppercase' }}>URGENT</div>
+                <div style={{ fontSize: 11, color: 'rgba(255,100,100,0.7)', marginTop: 1 }}>Cette tâche est marquée comme urgente</div>
+              </div>
+            </div>
+          )}
+
           {/* Date block */}
           {dateInfo && (
             <div style={{
@@ -154,14 +246,20 @@ export default function TaskModal({ game, onClose, onEdit }) {
             </div>
           )}
 
-          {/* Notes placeholder */}
-          <div style={{
-            background: 'var(--surface2)', border: '1px dashed var(--border)',
-            borderRadius: 9, padding: '14px 14px',
-            color: 'var(--text-muted)', fontSize: 12, lineHeight: 1.7,
-            fontStyle: 'italic', minHeight: 80,
-          }}>
-            Aucune note — clique sur ✏ pour ajouter des détails.
+          {/* Assignees (Steam boards only) */}
+          {isTaskBoard && appUsers.length > 0 && (game.assignees?.length > 0) && (
+            <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 9, padding: '10px 14px' }}>
+              <AssigneeRow assignees={game.assignees} appUsers={appUsers} />
+            </div>
+          )}
+
+          {/* Notes */}
+          <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 9, padding: '12px 14px' }}>
+            <NotesSection
+              notes={game.notes || []}
+              onSave={handleSaveNotes}
+              compact={false}
+            />
           </div>
 
           {/* Meta row — emoji only for untyped cards */}
