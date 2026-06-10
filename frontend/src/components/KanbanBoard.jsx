@@ -84,11 +84,11 @@ function ColumnHeader({ col, onRename, onDelete, onSetEmoji, onColDragStart, onC
         <input autoFocus value={label}
           onChange={e => setLabel(e.target.value)} onBlur={commit}
           onKeyDown={e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') { setLabel(col.label); setEditing(false); } }}
-          style={{ flex: 1, background: 'var(--surface3)', border: '1px solid var(--accent)', borderRadius: 5, padding: '3px 7px', color: 'var(--text)', fontSize: 12, fontWeight: 600, outline: 'none' }}
+          style={{ flex: 1, background: 'var(--surface3)', border: '1px solid var(--accent)', borderRadius: 5, padding: '3px 7px', color: 'var(--text)', fontSize: 13, fontWeight: 700, outline: 'none', letterSpacing: '0.06em', textTransform: 'uppercase' }}
         />
       ) : (
         <span onDoubleClick={() => setEditing(true)} title="Double-clic pour renommer"
-          style={{ flex: 1, fontWeight: 600, fontSize: 12, cursor: 'text', userSelect: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: col.color || 'var(--text)' }}
+          style={{ flex: 1, fontWeight: 700, fontSize: 13, letterSpacing: '0.07em', textTransform: 'uppercase', cursor: 'text', userSelect: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: col.color || 'var(--text)' }}
         >{col.label}</span>
       )}
 

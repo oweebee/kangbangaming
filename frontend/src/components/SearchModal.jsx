@@ -13,8 +13,8 @@ function LibraryBadge() {
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 4,
       background: '#1b2838', color: '#c7d5e0',
-      fontSize: 10, fontWeight: 600,
-      padding: '2px 7px', borderRadius: 4, flexShrink: 0,
+      fontSize: 11, fontWeight: 600,
+      padding: '2px 8px', borderRadius: 4, flexShrink: 0,
     }}>
       <svg width="9" height="9" viewBox="0 0 256 256" fill="#c7d5e0"><circle cx="128" cy="128" r="128"/></svg>
       Bibliothèque
@@ -114,17 +114,17 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
   };
 
   const tabStyle = (active) => ({
-    flex: 1, padding: '9px 0', background: 'none',
+    flex: 1, padding: '11px 0', background: 'none',
     border: 'none', borderBottom: active ? '2px solid var(--accent)' : '2px solid transparent',
     color: active ? 'var(--text)' : 'var(--text-muted)',
-    fontWeight: active ? 700 : 400, fontSize: 13, cursor: 'pointer',
+    fontWeight: active ? 700 : 400, fontSize: 15, cursor: 'pointer',
     transition: 'all .15s',
   });
 
   const inputStyle = {
-    width: '100%', boxSizing: 'border-box', padding: '9px 11px',
+    width: '100%', boxSizing: 'border-box', padding: '11px 14px',
     background: 'var(--surface2)', border: '1px solid var(--border)',
-    borderRadius: 7, color: 'var(--text)', fontSize: 13, outline: 'none',
+    borderRadius: 8, color: 'var(--text)', fontSize: 15, outline: 'none',
   };
 
   // Live preview derived values
@@ -142,22 +142,22 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
     >
       <div style={{
         background: 'var(--surface)', border: '1px solid var(--border)',
-        borderRadius: 14, width: '100%', maxWidth: 540,
-        maxHeight: '88vh', display: 'flex', flexDirection: 'column', overflow: 'hidden',
+        borderRadius: 14, width: '100%', maxWidth: 600,
+        maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden',
       }}>
         {/* Header */}
-        <div style={{ padding: '14px 16px 0', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
-            <span style={{ fontWeight: 700, fontSize: 14 }}>
+        <div style={{ padding: '16px 20px 0', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', marginBottom: 10 }}>
+            <span style={{ fontWeight: 700, fontSize: 17 }}>
               {isEditMode ? '✏ Modifier la tâche' : 'Ajouter une carte'}
             </span>
-            <button onClick={onClose} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 18, cursor: 'pointer', lineHeight: 1 }}>✕</button>
+            <button onClick={onClose} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 22, cursor: 'pointer', lineHeight: 1 }}>✕</button>
           </div>
           {/* Tabs — hidden in edit mode or customOnly */}
           {!customOnly && !isEditMode && (
             <div style={{ display: 'flex' }}>
               <button style={tabStyle(tab === 'steam')} onClick={() => setTab('steam')}>
-                <svg viewBox="0 0 496 512" xmlns="http://www.w3.org/2000/svg" style={{ width: 12, height: 12, fill: 'currentColor', marginRight: 5, verticalAlign: 'middle' }}>
+                <svg viewBox="0 0 496 512" xmlns="http://www.w3.org/2000/svg" style={{ width: 13, height: 13, fill: 'currentColor', marginRight: 5, verticalAlign: 'middle' }}>
                   <path d="M496 256c0 137-111.2 248-248.4 248-113.8 0-209.7-76.3-239-180.4l95.2 39.3c6.4 32.1 34.9 56.4 68.9 56.4 38.2 0 69.1-31.1 68.9-69.3l84.5-60.2c52.1 1.3 95.8-40.9 95.8-93.5 0-51.6-42-93.5-93.7-93.5s-93.7 42-93.7 93.5v1.2L176.6 279c-15.5-.9-30.7 3.4-43.5 12.1L0 236.1C10.2 108.4 117.1 8 247.6 8 384.8 8 496 119 496 256z"/>
                 </svg>
                 Jeu Steam
@@ -172,26 +172,26 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
         {/* ── Steam tab ── */}
         {tab === 'steam' && (
           <>
-            <div style={{ padding: '12px 16px 8px', flexShrink: 0 }}>
+            <div style={{ padding: '14px 20px 10px', flexShrink: 0 }}>
               <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                <svg viewBox="0 0 496 512" xmlns="http://www.w3.org/2000/svg" style={{ position: 'absolute', left: 12, width: 14, height: 14, fill: 'var(--accent)', pointerEvents: 'none', flexShrink: 0 }}>
+                <svg viewBox="0 0 496 512" xmlns="http://www.w3.org/2000/svg" style={{ position: 'absolute', left: 13, width: 15, height: 15, fill: 'var(--accent)', pointerEvents: 'none', flexShrink: 0 }}>
                   <path d="M496 256c0 137-111.2 248-248.4 248-113.8 0-209.7-76.3-239-180.4l95.2 39.3c6.4 32.1 34.9 56.4 68.9 56.4 38.2 0 69.1-31.1 68.9-69.3l84.5-60.2c52.1 1.3 95.8-40.9 95.8-93.5 0-51.6-42-93.5-93.7-93.5s-93.7 42-93.7 93.5v1.2L176.6 279c-15.5-.9-30.7 3.4-43.5 12.1L0 236.1C10.2 108.4 117.1 8 247.6 8 384.8 8 496 119 496 256z"/>
                 </svg>
                 <input
                   autoFocus type="search"
                   placeholder="Rechercher un jeu Steam..."
                   value={query} onChange={handleInput}
-                  style={{ ...inputStyle, paddingLeft: 34 }}
+                  style={{ ...inputStyle, paddingLeft: 38 }}
                 />
               </div>
             </div>
-            <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px 16px' }}>
-              {loading && <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 32 }}>Recherche...</div>}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px 20px' }}>
+              {loading && <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 36, fontSize: 14 }}>Recherche...</div>}
               {!loading && query && results.length === 0 && (
-                <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 32 }}>Aucun résultat</div>
+                <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 36, fontSize: 14 }}>Aucun résultat</div>
               )}
               {!loading && !query && (
-                <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 32, fontSize: 12, lineHeight: 1.8 }}>
+                <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 36, fontSize: 14, lineHeight: 1.8 }}>
                   Tape le nom d'un jeu.<br/>
                   Les jeux dans ta bibliothèque Steam sont identifiés.
                 </div>
@@ -199,27 +199,27 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
               {results.map(game => {
                 const isAdded = added.has(game.appid);
                 return (
-                  <div key={game.appid} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderBottom: '1px solid var(--border)' }}>
+                  <div key={game.appid} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
                     <img src={game.header_img} alt={game.name}
-                      style={{ width: 92, height: 43, objectFit: 'cover', borderRadius: 5, flexShrink: 0 }}
+                      style={{ width: 104, height: 49, objectFit: 'cover', borderRadius: 5, flexShrink: 0 }}
                       onError={e => { e.target.style.display = 'none'; }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3, flexWrap: 'wrap' }}>
-                        <span style={{ fontWeight: 600, fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{game.name}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4, flexWrap: 'wrap' }}>
+                        <span style={{ fontWeight: 600, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{game.name}</span>
                         {game.in_library && <LibraryBadge />}
                       </div>
-                      <div style={{ color: 'var(--text-muted)', fontSize: 11 }}>
+                      <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>
                         {game.in_library && game.playtime_hours > 0 ? `⏱ ${game.playtime_hours}h jouées` : game.in_library ? 'Jamais joué' : ''}
                       </div>
                     </div>
                     {isAdded ? (
                       <button onClick={() => handleRemove(game)}
-                        style={{ background: 'var(--surface3)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 10px', color: 'var(--text-muted)', fontSize: 11, cursor: 'pointer', flexShrink: 0 }}>
+                        style={{ background: 'var(--surface3)', border: '1px solid var(--border)', borderRadius: 7, padding: '6px 12px', color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer', flexShrink: 0 }}>
                         ✓ Retirer
                       </button>
                     ) : (
                       <button onClick={() => handleAdd(game)}
-                        style={{ background: 'var(--accent)', border: 'none', borderRadius: 6, padding: '5px 10px', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>
+                        style={{ background: 'var(--accent)', border: 'none', borderRadius: 7, padding: '6px 12px', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>
                         + Ajouter
                       </button>
                     )}
@@ -232,9 +232,9 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
 
         {/* ── Custom / edit tab ── */}
         {tab === 'custom' && (
-          <div style={{ flex: 1, overflowY: 'auto', padding: '18px 20px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div style={{ flex: 1, overflowY: 'auto', padding: '20px 22px 28px', display: 'flex', flexDirection: 'column', gap: 18 }}>
             {!isEditMode && (
-              <p style={{ margin: 0, fontSize: 12, color: 'var(--text-muted)' }}>
+              <p style={{ margin: 0, fontSize: 14, color: 'var(--text-muted)' }}>
                 Crée une carte libre : projet perso, objectif, note de jeu…
               </p>
             )}
@@ -244,26 +244,26 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
               <div style={{
                 background: 'var(--surface2)',
                 border: previewTt ? `1.5px solid ${previewTt.border}` : '1px solid var(--border)',
-                borderRadius: 8, width: 160, overflow: 'hidden',
+                borderRadius: 9, width: 185, overflow: 'hidden',
               }}>
                 <div style={{
-                  width: '100%', height: 88,
+                  width: '100%', height: 100,
                   background: previewTt ? previewTt.imgBg : 'linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: previewTt ? 0 : 44, position: 'relative',
+                  fontSize: previewTt ? 0 : 50, position: 'relative',
                 }}>
                   {previewTt ? <PreviewIcon /> : customEmoji}
                   {previewTt && (
                     <div style={{
-                      position: 'absolute', bottom: 4, left: 6,
+                      position: 'absolute', bottom: 5, left: 7,
                       background: previewTt.badgeBg, color: previewTt.badgeText,
-                      fontSize: 8, fontWeight: 700, padding: '2px 6px',
+                      fontSize: 9, fontWeight: 700, padding: '2px 7px',
                       borderRadius: 4, letterSpacing: '0.04em',
                     }}>{previewTt.label.toUpperCase()}</div>
                   )}
                 </div>
-                <div style={{ padding: '7px 9px' }}>
-                  <div style={{ fontWeight: 600, fontSize: 11, color: customName ? 'var(--text)' : 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <div style={{ padding: '8px 10px' }}>
+                  <div style={{ fontWeight: 600, fontSize: 13, color: customName ? 'var(--text)' : 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {customName || (customOnly ? 'Nom de la tâche…' : 'Nom de la carte…')}
                   </div>
                 </div>
@@ -273,29 +273,29 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
             {/* ── Emoji picker — hidden when type is set ── */}
             {!customTaskType && (
               <div>
-                <label style={{ display: 'block', fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>Icône</label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <label style={{ display: 'block', fontSize: 14, color: 'var(--text-muted)', marginBottom: 9 }}>Icône</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <button
                     onClick={() => setShowEmojiPicker(p => !p)}
                     style={{
-                      width: 42, height: 42, fontSize: 22, background: 'var(--surface2)',
-                      border: '2px solid var(--accent)', borderRadius: 8, cursor: 'pointer',
+                      width: 50, height: 50, fontSize: 26, background: 'var(--surface2)',
+                      border: '2px solid var(--accent)', borderRadius: 9, cursor: 'pointer',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}
                   >{customEmoji}</button>
-                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Clique pour changer</span>
+                  <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Clique pour changer</span>
                 </div>
                 {showEmojiPicker && (
                   <div style={{
-                    marginTop: 8, display: 'grid', gridTemplateColumns: 'repeat(10, 1fr)', gap: 4,
-                    background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, padding: 8,
+                    marginTop: 10, display: 'grid', gridTemplateColumns: 'repeat(10, 1fr)', gap: 5,
+                    background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 9, padding: 10,
                   }}>
                     {CARD_EMOJIS.map(e => (
                       <button key={e} onClick={() => { setCustomEmoji(e); setShowEmojiPicker(false); }}
                         style={{
-                          width: 32, height: 32, fontSize: 18, background: customEmoji === e ? 'var(--accent-dim)' : 'none',
+                          width: 38, height: 38, fontSize: 22, background: customEmoji === e ? 'var(--accent-dim)' : 'none',
                           border: customEmoji === e ? '1px solid var(--accent)' : '1px solid transparent',
-                          borderRadius: 5, cursor: 'pointer',
+                          borderRadius: 6, cursor: 'pointer',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                         }}>{e}</button>
                     ))}
@@ -306,7 +306,7 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
 
             {/* ── Name ── */}
             <div>
-              <label style={{ display: 'block', fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>
+              <label style={{ display: 'block', fontSize: 14, color: 'var(--text-muted)', marginBottom: 7 }}>
                 {customOnly ? 'Nom de la tâche' : 'Nom de la carte'}
               </label>
               <input
@@ -322,27 +322,28 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
             {/* ── Task type selector (Steam boards only) ── */}
             {customOnly && (
               <div>
-                <label style={{ display: 'block', fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>
+                <label style={{ display: 'block', fontSize: 14, color: 'var(--text-muted)', marginBottom: 10 }}>
                   Type de tâche <span style={{ opacity: 0.55 }}>(facultatif)</span>
                 </label>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                   {TASK_TYPES.map(t => {
                     const active = customTaskType === t.id;
                     return (
                       <button key={t.id}
                         onClick={() => setCustomTaskType(active ? null : t.id)}
                         style={{
-                          display: 'flex', alignItems: 'center', gap: 5,
-                          padding: '5px 10px',
+                          display: 'flex', alignItems: 'center', gap: 7,
+                          padding: '8px 14px',
                           background: active ? t.bg : 'var(--surface2)',
-                          border: active ? `1.5px solid ${t.border}` : '1.5px solid var(--border)',
-                          borderRadius: 20,
+                          border: active ? `2px solid ${t.border}` : '2px solid var(--border)',
+                          borderRadius: 22,
                           color: active ? t.textColor : 'var(--text-muted)',
-                          fontSize: 11, fontWeight: active ? 700 : 400,
+                          fontSize: 13, fontWeight: active ? 700 : 500,
                           cursor: 'pointer', transition: 'all .15s', whiteSpace: 'nowrap',
+                          boxShadow: active ? `0 0 8px ${t.border}` : 'none',
                         }}
                       >
-                        <span style={{ fontSize: 13 }}>{t.emoji}</span>
+                        <span style={{ fontSize: 16 }}>{t.emoji}</span>
                         <span>{t.label}</span>
                       </button>
                     );
@@ -353,24 +354,25 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
 
             {/* ── Date ── */}
             <div>
-              <label style={{ display: 'block', fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>
+              <label style={{ display: 'block', fontSize: 14, color: 'var(--text-muted)', marginBottom: 10 }}>
                 📅 Date <span style={{ opacity: 0.55 }}>(facultatif)</span>
               </label>
               {/* Mode buttons */}
-              <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
                 {[
-                  ['none',   'Aucune'],
-                  ['single', 'Une date'],
-                  ['period', 'Période'],
+                  ['none',   '✕  Aucune'],
+                  ['single', '📌 Une date'],
+                  ['period', '↔ Période'],
                 ].map(([mode, lbl]) => (
                   <button key={mode}
                     onClick={() => setDateMode(mode)}
                     style={{
-                      padding: '4px 11px', borderRadius: 14, cursor: 'pointer', fontSize: 11,
+                      padding: '7px 15px', borderRadius: 18, cursor: 'pointer', fontSize: 13,
                       background: dateMode === mode ? 'var(--accent)' : 'var(--surface2)',
-                      border: dateMode === mode ? 'none' : '1px solid var(--border)',
+                      border: dateMode === mode ? '2px solid var(--accent)' : '2px solid var(--border)',
                       color: dateMode === mode ? '#fff' : 'var(--text-muted)',
-                      fontWeight: dateMode === mode ? 700 : 400,
+                      fontWeight: dateMode === mode ? 700 : 500,
+                      transition: 'all .15s',
                     }}
                   >{lbl}</button>
                 ))}
@@ -380,23 +382,33 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
                   style={{ ...inputStyle, colorScheme: 'dark' }} />
               )}
               {dateMode === 'period' && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
                     style={{ ...inputStyle, flex: 1, colorScheme: 'dark' }} />
-                  <span style={{ color: 'var(--text-muted)', fontSize: 16, flexShrink: 0 }}>→</span>
+                  <span style={{ color: 'var(--text-muted)', fontSize: 20, flexShrink: 0 }}>→</span>
                   <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
                     style={{ ...inputStyle, flex: 1, colorScheme: 'dark' }} />
                 </div>
               )}
               {/* Date preview when set */}
               {dateMode === 'single' && dueDate && (
-                <div style={{ marginTop: 6, fontSize: 11, color: 'var(--text-muted)' }}>
-                  Échéance : <strong style={{ color: 'var(--text)' }}>{formatDateLabel(dueDate)}</strong>
+                <div style={{
+                  marginTop: 9, padding: '8px 13px', borderRadius: 8,
+                  background: 'rgba(180,140,10,0.12)', border: '1px solid rgba(180,140,10,0.35)',
+                  fontSize: 13, color: 'var(--text-muted)',
+                }}>
+                  📅 Échéance : <strong style={{ color: '#d4b020' }}>{formatDateLabel(dueDate)}</strong>
                 </div>
               )}
               {dateMode === 'period' && (startDate || endDate) && (
-                <div style={{ marginTop: 6, fontSize: 11, color: 'var(--text-muted)' }}>
-                  {startDate && formatDateLabel(startDate)} {startDate && endDate && '→'} {endDate && formatDateLabel(endDate)}
+                <div style={{
+                  marginTop: 9, padding: '8px 13px', borderRadius: 8,
+                  background: 'rgba(40,100,200,0.12)', border: '1px solid rgba(60,130,220,0.35)',
+                  fontSize: 13, color: 'var(--text-muted)',
+                }}>
+                  📅 {startDate ? <strong style={{ color: '#80b8f0' }}>{formatDateLabel(startDate)}</strong> : '…'}
+                  {' → '}
+                  {endDate ? <strong style={{ color: '#80b8f0' }}>{formatDateLabel(endDate)}</strong> : '…'}
                 </div>
               )}
             </div>
@@ -406,13 +418,13 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
               onClick={handleSubmitCustom}
               disabled={!customName.trim()}
               style={{
-                padding: '11px', background: 'var(--accent)', border: 'none', borderRadius: 8,
-                color: '#fff', fontWeight: 700, fontSize: 14,
+                padding: '14px', background: 'var(--accent)', border: 'none', borderRadius: 9,
+                color: '#fff', fontWeight: 700, fontSize: 17,
                 cursor: customName.trim() ? 'pointer' : 'not-allowed',
                 opacity: customName.trim() ? 1 : 0.5,
               }}
             >
-              {isEditMode ? '✓ Enregistrer' : (customOnly ? '+ Créer la tâche' : '+ Créer la carte')}
+              {isEditMode ? '✓ Enregistrer les modifications' : (customOnly ? '+ Créer la tâche' : '+ Créer la carte')}
             </button>
           </div>
         )}
