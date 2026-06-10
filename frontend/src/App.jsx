@@ -552,9 +552,9 @@ export default function App() {
           <button onClick={() => setShowDrawer(true)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 20, cursor: 'pointer', lineHeight: 1, flexShrink: 0 }}>☰</button>
           {publicBoardMode ? (
             <>
-              <span style={ fontWeight: 700, fontSize: 13, color: '#3db86a', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }>
+              <span style={{ fontWeight: 700, fontSize: 13, color: '#3db86a', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 Board Public
-                <span style={ fontSize: 10, fontWeight: 400, color: 'var(--text-muted)', marginLeft: 6 }>{publicBoardMode.name}</span>
+                <span style={{ fontSize: 10, fontWeight: 400, color: 'var(--text-muted)', marginLeft: 6 }}>{publicBoardMode.name}</span>
               </span>
               <button onClick={refreshPublicBoard} title="Rafraîchir" style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', color: 'var(--text-muted)', fontSize: 14, cursor: 'pointer', flexShrink: 0, lineHeight: 1 }}>↻</button>
               <button onClick={closePublicBoard} style={{ background: 'rgba(255,255,255,.08)', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 10px', color: 'var(--text-muted)', fontSize: 11, cursor: 'pointer', flexShrink: 0 }}>✕ Quitter</button>
