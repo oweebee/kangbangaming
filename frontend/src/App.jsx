@@ -354,11 +354,11 @@ export default function App() {
   const filtered = games.filter(g => g.name?.toLowerCase().includes(search.toLowerCase()));
   const byColumn = columns.reduce((acc, col) => { acc[col.id] = filtered.filter(g => g.column === col.id); return acc; }, {});
   const knownColIds = new Set(columns.map(c => c.id));
+  const activeBoard = boards.find(b => b.id === activeBoardId);
   // true when the active board was created from a Steam game (task board)
   const isTaskBoard = !!(publicBoardMode ? publicBoardMode.gameIcon : activeBoard?.gameIcon);
   const orphans = filtered.filter(g => !knownColIds.has(g.column));
   if (orphans.length > 0 && columns[0]) byColumn[columns[0].id] = [...(byColumn[columns[0].id] || []), ...orphans];
-  const activeBoard = boards.find(b => b.id === activeBoardId);
 
   // ── Sidebar ───────────────────────────────────────────────────────────────
 

@@ -5,7 +5,7 @@ echo ============================
 cd /d "%~dp0"
 del .git\index.lock 2>nul
 git add -A
-git commit -m "fix: favoris sidebar ouvrent le board directement au lieu de la page publics"
+git commit -m "fix: activeBoard declare avant isTaskBoard (ReferenceError page noire)"
 git push
 echo.
 echo Termine ! Redeploi dans Coolify.
