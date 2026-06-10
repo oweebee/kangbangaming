@@ -21,8 +21,8 @@ function LibraryBadge() {
   );
 }
 
-export default function SearchModal({ api, token, boardGames, onAdd, onRemove, onClose }) {
-  const [tab, setTab] = useState('steam'); // 'steam' | 'custom'
+export default function SearchModal({ api, token, boardGames, onAdd, onRemove, onClose, customOnly }) {
+  const [tab, setTab] = useState(customOnly ? 'custom' : 'steam'); // 'steam' | 'custom'
 
   // Steam search state
   const [query, setQuery] = useState('');
@@ -103,12 +103,14 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
           </div>
           {/* Tabs */}
           <div style={{ display: 'flex' }}>
-            <button style={tabStyle(tab === 'steam')} onClick={() => setTab('steam')}>
-              <svg viewBox="0 0 496 512" xmlns="http://www.w3.org/2000/svg" style={{ width: 12, height: 12, fill: 'currentColor', marginRight: 5, verticalAlign: 'middle' }}>
-                <path d="M496 256c0 137-111.2 248-248.4 248-113.8 0-209.7-76.3-239-180.4l95.2 39.3c6.4 32.1 34.9 56.4 68.9 56.4 38.2 0 69.1-31.1 68.9-69.3l84.5-60.2c52.1 1.3 95.8-40.9 95.8-93.5 0-51.6-42-93.5-93.7-93.5s-93.7 42-93.7 93.5v1.2L176.6 279c-15.5-.9-30.7 3.4-43.5 12.1L0 236.1C10.2 108.4 117.1 8 247.6 8 384.8 8 496 119 496 256z"/>
-              </svg>
-              Jeu Steam
-            </button>
+            {!customOnly && (
+              <button style={tabStyle(tab === 'steam')} onClick={() => setTab('steam')}>
+                <svg viewBox="0 0 496 512" xmlns="http://www.w3.org/2000/svg" style={{ width: 12, height: 12, fill: 'currentColor', marginRight: 5, verticalAlign: 'middle' }}>
+                  <path d="M496 256c0 137-111.2 248-248.4 248-113.8 0-209.7-76.3-239-180.4l95.2 39.3c6.4 32.1 34.9 56.4 68.9 56.4 38.2 0 69.1-31.1 68.9-69.3l84.5-60.2c52.1 1.3 95.8-40.9 95.8-93.5 0-51.6-42-93.5-93.7-93.5s-93.7 42-93.7 93.5v1.2L176.6 279c-15.5-.9-30.7 3.4-43.5 12.1L0 236.1C10.2 108.4 117.1 8 247.6 8 384.8 8 496 119 496 256z"/>
+                </svg>
+                Jeu Steam
+              </button>
+            )}
             <button style={tabStyle(tab === 'custom')} onClick={() => setTab('custom')}>
               ✦ Carte personnalisée
             </button>

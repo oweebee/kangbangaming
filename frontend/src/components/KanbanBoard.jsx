@@ -101,7 +101,7 @@ function ColumnHeader({ col, onRename, onDelete, onSetEmoji, onColDragStart, onC
   );
 }
 
-export default function KanbanBoard({ columns, byColumn, dragging, setDragging, moveGame, onCardClick, onRemoveGame, onRenameColumn, onDeleteColumn, onSetEmoji, onReorderColumns }) {
+export default function KanbanBoard({ columns, byColumn, dragging, setDragging, moveGame, onCardClick, onRemoveGame, onRenameColumn, onDeleteColumn, onSetEmoji, onReorderColumns, isTaskBoard }) {
   const [draggingColId, setDraggingColId] = useState(null);
   const [dragOverColId, setDragOverColId] = useState(null);
 
@@ -165,7 +165,7 @@ export default function KanbanBoard({ columns, byColumn, dragging, setDragging, 
             <div style={{ flex: 1, overflowY: 'auto', padding: '8px', display: 'flex', flexDirection: 'column', gap: '7px' }}>
               {games.length === 0 && (
                 <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 11, padding: '20px 8px', border: '1px dashed var(--border)', borderRadius: 7 }}>
-                  Glisse des jeux ici
+                  {isTaskBoard ? 'Glisse une tâche ici' : 'Glisse des jeux ici'}
                 </div>
               )}
               {games.map(game => (

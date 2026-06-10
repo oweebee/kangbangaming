@@ -354,6 +354,8 @@ export default function App() {
   const filtered = games.filter(g => g.name?.toLowerCase().includes(search.toLowerCase()));
   const byColumn = columns.reduce((acc, col) => { acc[col.id] = filtered.filter(g => g.column === col.id); return acc; }, {});
   const knownColIds = new Set(columns.map(c => c.id));
+  // true when the active board was created from a Steam game (task board)
+  const isTaskBoard = !!(publicBoardMode ? publicBoardMode.gameIcon : activeBoard?.gameIcon);
   const orphans = filtered.filter(g => !knownColIds.has(g.column));
   if (orphans.length > 0 && columns[0]) byColumn[columns[0].id] = [...(byColumn[columns[0].id] || []), ...orphans];
   const activeBoard = boards.find(b => b.id === activeBoardId);
@@ -406,12 +408,12 @@ export default function App() {
             }}
           >
             {b.gameIcon ? (
-              <img src={b.gameIcon} alt="" style={{ width: 34, height: 34, objectFit: 'cover', borderRadius: '50%', flexShrink: 0, border: '2px solid white' }} />
+              <img src={b.gameIcon} alt="" style={{ width: 34, height: 34, objectFit: 'cover', borderRadius: '50%', flexShrink: 0, border: '1.5px solid white' }} />
             ) : (
               <div style={{ position: 'relative' }}>
                 <button
                   onClick={e => { e.stopPropagation(); setEmojiPickerFor(emojiPickerFor === b.id ? null : b.id); }}
-                  style={{ background: b.emoji ? 'transparent' : 'var(--surface3)', border: '2px solid white', borderRadius: 4, width: 34, height: 34, fontSize: b.emoji ? 18 : 11, cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                  style={{ background: b.emoji ? 'transparent' : 'var(--surface3)', border: '1.5px solid white', borderRadius: 4, width: 34, height: 34, fontSize: b.emoji ? 18 : 11, cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
                 >{b.emoji || '+'}</button>
                 {emojiPickerFor === b.id && (
                   <BoardEmojiPicker current={b.emoji || ''} onSelect={emoji => { setBoardEmoji(b.id, emoji); setEmojiPickerFor(null); }} onClose={() => setEmojiPickerFor(null)} />
@@ -443,7 +445,7 @@ export default function App() {
           </div>
           {favBoards.map(b => (
             <div key={b.id}
-              onClick={() => { setActiveBoardId(null); setShowPublicBoards(true); if (isMobile) setShowDrawer(false); }}
+              onClick={() => { openPublicBoard(b); if (isMobile) setShowDrawer(false); }}
               style={{
                 padding: '6px 8px', borderRadius: 7, cursor: 'pointer', marginBottom: 2,
                 background: 'transparent', borderLeft: '3px solid transparent',
@@ -454,7 +456,7 @@ export default function App() {
               onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
             >
               {b.gameIcon ? (
-                <img src={b.gameIcon} alt="" style={{ width: 34, height: 34, objectFit: 'cover', borderRadius: '50%', flexShrink: 0, border: '2px solid white', opacity: 0.85 }} />
+                <img src={b.gameIcon} alt="" style={{ width: 34, height: 34, objectFit: 'cover', borderRadius: '50%', flexShrink: 0, border: '1.5px solid white', opacity: 0.85 }} />
               ) : (
                 <span style={{ fontSize: 20, flexShrink: 0 }}>{b.emoji || '🎮'}</span>
               )}
@@ -611,7 +613,7 @@ export default function App() {
           </div>
         )}
         <footer style={{ position: 'fixed', bottom: 0, right: 0, padding: '4px 10px', display: 'flex', alignItems: 'center', gap: 8, fontSize: 9, color: 'var(--text-muted)' }}><span>by Oweebee</span><a href="https://discord.gg/9mXpM9wv" target="_blank" rel="noreferrer" style={{ color: '#7289da', textDecoration: 'none', fontSize: 9 }}>Discord</a><a href="https://github.com/oweebee/kangbangaming" target="_blank" rel="noreferrer" style={{ color: 'var(--text-muted)', textDecoration: 'none', fontSize: 9 }}>GitHub</a></footer>
-        {showSearch && <SearchModal api={API} token={token} boardGames={games} onAdd={addGame} onRemove={removeGame} onClose={() => setShowSearch(false)} />}
+        {showSearch && <SearchModal api={API} token={token} boardGames={games} onAdd={addGame} onRemove={removeGame} onClose={() => setShowSearch(false)} customOnly={isTaskBoard} />}
         {selectedGame && <GameModal game={selectedGame} onClose={() => setSelectedGame(null)} api={API} token={token} />}
         {showAdmin && <AdminPanel token={token} currentUser={currentUser} onClose={() => setShowAdmin(false)} />}
         {showSteamSettings && <SteamSettings token={token} onSave={handleSteamSave} onClose={() => setShowSteamSettings(false)} />}
@@ -689,14 +691,14 @@ export default function App() {
           loading ? (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Chargement...</div>
           ) : (
-            <KanbanBoard columns={columns} byColumn={byColumn} dragging={dragging} setDragging={setDragging} moveGame={moveGame} onCardClick={setSelectedGame} onRemoveGame={removeGame} onRenameColumn={renameColumn} onDeleteColumn={deleteColumn} onSetEmoji={setColumnEmoji} onReorderColumns={reorderColumns} />
+            <KanbanBoard columns={columns} byColumn={byColumn} dragging={dragging} setDragging={setDragging} moveGame={moveGame} onCardClick={setSelectedGame} onRemoveGame={removeGame} onRenameColumn={renameColumn} onDeleteColumn={deleteColumn} onSetEmoji={setColumnEmoji} onReorderColumns={reorderColumns} isTaskBoard={isTaskBoard} />
           )
         ) : !activeBoardId ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Crée un board pour commencer</div>
         ) : loading ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Chargement...</div>
         ) : (
-          <KanbanBoard columns={columns} byColumn={byColumn} dragging={dragging} setDragging={setDragging} moveGame={moveGame} onCardClick={setSelectedGame} onRemoveGame={removeGame} onRenameColumn={renameColumn} onDeleteColumn={deleteColumn} onSetEmoji={setColumnEmoji} onReorderColumns={reorderColumns} />
+          <KanbanBoard columns={columns} byColumn={byColumn} dragging={dragging} setDragging={setDragging} moveGame={moveGame} onCardClick={setSelectedGame} onRemoveGame={removeGame} onRenameColumn={renameColumn} onDeleteColumn={deleteColumn} onSetEmoji={setColumnEmoji} onReorderColumns={reorderColumns} isTaskBoard={isTaskBoard} />
         )}
       </div>
       <footer style={{ position: 'fixed', bottom: 0, right: 0, padding: '5px 12px', display: 'flex', alignItems: 'center', gap: 8, fontSize: 10, color: 'var(--text-muted)' }}>
@@ -704,7 +706,7 @@ export default function App() {
         <a href="https://discord.gg/9mXpM9wv" target="_blank" rel="noreferrer" style={{ color: '#7289da', textDecoration: 'none' }}>Discord</a>
         <a href="https://github.com/oweebee/kangbangaming" target="_blank" rel="noreferrer" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>GitHub</a>
       </footer>
-      {showSearch && <SearchModal api={API} token={token} boardGames={games} onAdd={addGame} onRemove={removeGame} onClose={() => setShowSearch(false)} />}
+      {showSearch && <SearchModal api={API} token={token} boardGames={games} onAdd={addGame} onRemove={removeGame} onClose={() => setShowSearch(false)} customOnly={isTaskBoard} />}
       {selectedGame && <GameModal game={selectedGame} onClose={() => setSelectedGame(null)} api={API} token={token} />}
       {showAdmin && <AdminPanel token={token} currentUser={currentUser} onClose={() => setShowAdmin(false)} />}
       {showSteamSettings && <SteamSettings token={token} onSave={handleSteamSave} onClose={() => setShowSteamSettings(false)} />}
