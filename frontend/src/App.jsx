@@ -164,6 +164,9 @@ export default function App() {
   const [editingBoardName, setEditingBoardName] = useState(false);
   const [boardNameInput, setBoardNameInput] = useState('');
 
+  // Steam game info for active board
+  const [gameInfo, setGameInfo] = useState(null);
+
   // Board game search
   const [boardSearchQuery, setBoardSearchQuery] = useState('');
   const [boardSearchResults, setBoardSearchResults] = useState([]);
@@ -299,6 +302,13 @@ export default function App() {
     if (board) setColumns(board.columns || []);
     fetchGames(activeBoardId);
   }, [activeBoardId]);
+
+  // Fetch Steam game info when board changes
+  useEffect(() => {
+    if (!activeSteamAppId || !token) { setGameInfo(null); return; }
+    fetch(`${API}/steam/gameinfo/${activeSteamAppId}`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : null).then(setGameInfo).catch(() => setGameInfo(null));
+  }, [activeSteamAppId, token]);
 
   // Board game search
   const searchBoardGames = useCallback(async (q) => {
@@ -496,6 +506,8 @@ export default function App() {
   const activeBoard = boards.find(b => b.id === activeBoardId);
   // Banner image: prefer board's stored headerImg, fallback to first Steam game header_img
   const activeBoardHeaderImg = activeBoard?.headerImg || games.find(g => g.header_img)?.header_img || null;
+  // Extract Steam appid from banner URL
+  const activeSteamAppId = activeBoardHeaderImg?.match(/apps\/(\d+)\//)?.[1] || null;
   // true when the active board was created from a Steam game (task board)
   const isTaskBoard = !!(publicBoardMode ? publicBoardMode.gameIcon : activeBoard?.gameIcon);
   const orphans = filteredForBoard.filter(g => !knownColIds.has(g.column));
@@ -1013,7 +1025,76 @@ export default function App() {
               {activeBoardId && (
                 <button onClick={addColumn} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>+ Colonne</button>
               )}
-              <div style={{ flex: 1 }} />
+              {/* ── Steam game info — encart centre du header ── */}
+              <div style={{ flex: 1, display: 'flex', justifyContent: 'center', minWidth: 0 }}>
+                {gameInfo && (() => {
+                  const reviewColor = gameInfo.reviewScore >= 8 ? '#4cd882' : gameInfo.reviewScore >= 5 ? '#f5c518' : '#f87575';
+                  const reviewBg    = gameInfo.reviewScore >= 8 ? 'rgba(60,200,100,.1)' : gameInfo.reviewScore >= 5 ? 'rgba(245,197,24,.1)' : 'rgba(248,117,117,.1)';
+                  return (
+                    <div style={{
+                      display: 'flex', alignItems: 'stretch', gap: 0,
+                      background: 'rgba(255,255,255,0.04)',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      borderRadius: 10, overflow: 'hidden',
+                      boxShadow: '0 2px 12px rgba(0,0,0,0.3)',
+                      fontSize: 12, flexShrink: 0, maxWidth: 520,
+                    }}>
+                      {/* Joueurs actifs */}
+                      {gameInfo.playerCount !== null && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '6px 14px', borderRight: '1px solid rgba(255,255,255,0.08)' }}>
+                          <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#3db86a', boxShadow: '0 0 8px #3db86a88', display: 'inline-block', flexShrink: 0 }} />
+                          <div>
+                            <div style={{ fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>{gameInfo.playerCount.toLocaleString('fr-FR')}</div>
+                            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', lineHeight: 1 }}>en jeu</div>
+                          </div>
+                        </div>
+                      )}
+                      {/* Avis Steam */}
+                      {gameInfo.reviewScoreDesc && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '6px 14px', background: reviewBg, borderRight: gameInfo.metacritic || gameInfo.price ? '1px solid rgba(255,255,255,0.08)' : undefined }}>
+                          <span style={{ fontSize: 15, lineHeight: 1 }}>{gameInfo.reviewScore >= 8 ? '👍' : gameInfo.reviewScore >= 5 ? '😐' : '👎'}</span>
+                          <div>
+                            <div style={{ fontWeight: 700, color: reviewColor, lineHeight: 1.2 }}>{gameInfo.reviewScoreDesc}</div>
+                            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', lineHeight: 1 }}>
+                              {gameInfo.positivePercent !== null ? `${gameInfo.positivePercent}% positif` : ''}
+                              {gameInfo.totalReviews ? ` · ${gameInfo.totalReviews.toLocaleString('fr-FR')} avis` : ''}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      {/* Métacritique */}
+                      {gameInfo.metacritic !== null && (
+                        <div
+                          style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '6px 14px', borderRight: gameInfo.price ? '1px solid rgba(255,255,255,0.08)' : undefined, cursor: gameInfo.metacriticUrl ? 'pointer' : 'default' }}
+                          onClick={() => gameInfo.metacriticUrl && window.open(gameInfo.metacriticUrl, '_blank')}
+                          title={gameInfo.metacriticUrl ? 'Voir sur Metacritic' : undefined}
+                        >
+                          <div style={{
+                            width: 28, height: 28, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            background: gameInfo.metacritic >= 75 ? '#6c3' : gameInfo.metacritic >= 50 ? '#fc3' : '#f00',
+                            fontWeight: 900, fontSize: 13, color: '#000', flexShrink: 0, lineHeight: 1,
+                          }}>{gameInfo.metacritic}</div>
+                          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', lineHeight: 1.3 }}>Meta<br/>critic</div>
+                        </div>
+                      )}
+                      {/* Prix */}
+                      {gameInfo.price && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px' }}>
+                          {gameInfo.discount > 0 && (
+                            <span style={{ background: '#4c6b22', color: '#a4d007', fontWeight: 900, fontSize: 11, padding: '2px 5px', borderRadius: 4, flexShrink: 0 }}>-{gameInfo.discount}%</span>
+                          )}
+                          <div>
+                            {gameInfo.discount > 0 && gameInfo.priceInitial && (
+                              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', textDecoration: 'line-through', lineHeight: 1 }}>{gameInfo.priceInitial}</div>
+                            )}
+                            <div style={{ fontWeight: 700, color: gameInfo.discount > 0 ? '#a4d007' : '#fff', lineHeight: 1.2 }}>{gameInfo.price}</div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
               {(activeBoardId || publicBoardMode) && archiveCount > 0 && (
                 <button
                   onClick={() => setShowArchived(v => !v)}

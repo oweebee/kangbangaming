@@ -320,6 +320,65 @@ app.delete('/api/admin/boards/:userId/:boardId', requireAdmin, (req, res) => {
   res.json({ ok: true });
 });
 
+// ── Steam game info (players + reviews) ──────────────────────────────────────
+
+const gameInfoCache = new Map(); // appid -> { data, fetchedAt }
+const GAME_INFO_TTL = 5 * 60 * 1000; // 5 min
+
+app.get('/api/steam/gameinfo/:appid', requireAuth, async (req, res) => {
+  const { appid } = req.params;
+  if (!appid || !/^\d+$/.test(appid)) return res.status(400).json({ error: 'Invalid appid' });
+
+  const cached = gameInfoCache.get(appid);
+  if (cached && Date.now() - cached.fetchedAt < GAME_INFO_TTL) return res.json(cached.data);
+
+  try {
+    const [playersRes, reviewsRes, detailsRes] = await Promise.allSettled([
+      GLOBAL_STEAM_API_KEY
+        ? fetch(`https://api.steampowered.com/ISteamUserStats/GetNumberOfCurrentPlayers/v1/?appid=${appid}&key=${GLOBAL_STEAM_API_KEY}`).then(r => r.json())
+        : Promise.reject('no key'),
+      fetch(`https://store.steampowered.com/appreviews/${appid}?json=1&language=all&num_per_page=0`).then(r => r.json()),
+      fetch(`https://store.steampowered.com/api/appdetails?appids=${appid}&filters=price_overview,metacritic&cc=FR&l=french`).then(r => r.json()),
+    ]);
+
+    const playerCount = playersRes.status === 'fulfilled'
+      ? (playersRes.value?.response?.player_count ?? null)
+      : null;
+
+    const reviewSummary = reviewsRes.status === 'fulfilled'
+      ? reviewsRes.value?.query_summary ?? null
+      : null;
+
+    const appDetails = detailsRes.status === 'fulfilled'
+      ? detailsRes.value?.[appid]?.data ?? null
+      : null;
+
+    const positivePercent = (reviewSummary?.total_reviews > 0)
+      ? Math.round((reviewSummary.total_positive / reviewSummary.total_reviews) * 100)
+      : null;
+
+    const data = {
+      appid,
+      playerCount,
+      reviewScore: reviewSummary?.review_score ?? null,
+      reviewScoreDesc: reviewSummary?.review_score_desc ?? null,
+      totalReviews: reviewSummary?.total_reviews ?? null,
+      totalPositive: reviewSummary?.total_positive ?? null,
+      positivePercent,
+      price: appDetails?.price_overview?.final_formatted ?? null,
+      priceInitial: appDetails?.price_overview?.initial_formatted ?? null,
+      discount: appDetails?.price_overview?.discount_percent ?? 0,
+      metacritic: appDetails?.metacritic?.score ?? null,
+      metacriticUrl: appDetails?.metacritic?.url ?? null,
+    };
+
+    gameInfoCache.set(appid, { data, fetchedAt: Date.now() });
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── Steam library cache (per user) ───────────────────────────────────────────
 
 const libraryCaches = new Map();
