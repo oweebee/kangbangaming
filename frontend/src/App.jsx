@@ -121,6 +121,7 @@ export default function App() {
   const [showAdmin, setShowAdmin] = useState(false);
   const [showSteamSettings, setShowSteamSettings] = useState(false);
   const [showPublicBoards, setShowPublicBoards] = useState(false);
+  const [publicBoardsKey, setPublicBoardsKey] = useState(0);
   const [showProfile, setShowProfile] = useState(false);
 
   // Favorites (public boards pinned to sidebar)
@@ -772,7 +773,7 @@ export default function App() {
           )}
         </header>
         {showPublicBoards ? (
-          <PublicBoards token={token} currentUser={currentUser} favBoardIds={new Set(favBoards.map(b => b.id))} onToggleFavorite={toggleFavorite} onOpenBoard={openPublicBoard} onClose={() => setShowPublicBoards(false)} />
+          <PublicBoards key={publicBoardsKey} token={token} currentUser={currentUser} favBoardIds={new Set(favBoards.map(b => b.id))} onToggleFavorite={toggleFavorite} onOpenBoard={openPublicBoard} onClose={() => setShowPublicBoards(false)} />
         ) : showHome && !publicBoardMode ? (
           homeView
         ) : publicBoardMode ? (
@@ -838,6 +839,7 @@ export default function App() {
               </svg>
               <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--accent)' }}>Boards Publics</span>
               <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Boards partagés par la communauté</span>
+              <button onClick={() => setPublicBoardsKey(k => k + 1)} style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 11px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ fontSize: 15, lineHeight: 1 }}>↻</span> Refresh</button>
               <div style={{ flex: 1 }} />
               <button onClick={() => setShowPublicBoards(false)} style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>✕ Fermer</button>
             </>
@@ -891,7 +893,7 @@ export default function App() {
           )}
         </header>
         {showPublicBoards ? (
-          <PublicBoards token={token} currentUser={currentUser} favBoardIds={new Set(favBoards.map(b => b.id))} onToggleFavorite={toggleFavorite} onOpenBoard={openPublicBoard} onClose={() => setShowPublicBoards(false)} />
+          <PublicBoards key={publicBoardsKey} token={token} currentUser={currentUser} favBoardIds={new Set(favBoards.map(b => b.id))} onToggleFavorite={toggleFavorite} onOpenBoard={openPublicBoard} onClose={() => setShowPublicBoards(false)} />
         ) : showHome && !publicBoardMode ? (
           homeView
         ) : publicBoardMode ? (
