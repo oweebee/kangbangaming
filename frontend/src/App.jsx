@@ -169,7 +169,7 @@ export default function App() {
           display: 'flex', alignItems: 'center', gap: 8,
         }}>
           <span style={{ fontSize: 16 }}>🎮</span>
-          <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)' }}>Steam Kanban</span>
+          <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)' }}>Kanban Gaming</span>
         </div>
 
         <div style={{ flex: 1, overflowY: 'auto', padding: '8px 6px' }}>
@@ -292,6 +292,13 @@ export default function App() {
           />
         )}
       </div>
+
+      <footer style={{
+        position: 'fixed', bottom: 0, right: 0,
+        padding: '5px 12px',
+        fontSize: 10, color: 'var(--text-muted)',
+        pointerEvents: 'none',
+      }}>Développé par Oweebee</footer>
 
       {showSearch && (
         <SearchModal api={API} boardGames={games} onAdd={addGame} onClose={() => setShowSearch(false)} />
