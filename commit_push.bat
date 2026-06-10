@@ -5,7 +5,7 @@ echo ============================
 cd /d "%~dp0"
 del .git\index.lock 2>nul
 git add -A
-git commit -m "fix: activeBoard declare avant isTaskBoard (ReferenceError page noire)"
+git commit -m "feat: page accueil au login - boards publics / prives en grille, logo cliquable"
 git push
 echo.
 echo Termine ! Redeploi dans Coolify.

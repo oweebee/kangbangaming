@@ -65,6 +65,39 @@ function BoardEmojiPicker({ current, onSelect, onClose }) {
 
 const API = import.meta.env.VITE_API_URL || '/api';
 
+function HomeBoardCard({ board, onClick }) {
+  const [hover, setHover] = React.useState(false);
+  return (
+    <div
+      onClick={onClick}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        background: hover ? 'var(--surface2)' : 'var(--surface)',
+        border: '1px solid var(--border)',
+        borderRadius: 12, cursor: 'pointer', overflow: 'hidden',
+        transition: 'background .12s', display: 'flex', flexDirection: 'column',
+      }}
+    >
+      {/* Banner */}
+      <div style={{ width: '100%', height: 90, background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
+        {board.gameIcon ? (
+          <img src={board.gameIcon} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        ) : (
+          <span style={{ fontSize: 38 }}>{board.emoji || '🎮'}</span>
+        )}
+      </div>
+      {/* Info */}
+      <div style={{ padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 6 }}>
+        <span style={{ flex: 1, fontWeight: 700, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text)' }}>{board.name}</span>
+        <span style={{ fontSize: 10, fontWeight: 700, color: board.public ? '#3db86a' : '#f5a500', border: `1px solid ${board.public ? '#3db86a' : '#f5a500'}`, borderRadius: 4, padding: '1px 5px', flexShrink: 0 }}>
+          {board.public ? 'Public' : 'Privé'}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function getSavedAuth() {
   try {
     const token = localStorage.getItem('token');
@@ -94,6 +127,9 @@ export default function App() {
   const [favBoards, setFavBoards] = useState([]);
   // Collaborative public board currently open (null = own boards mode)
   const [publicBoardMode, setPublicBoardMode] = useState(null); // { id, name, ownerUsername }
+
+  // Home view
+  const [showHome, setShowHome] = useState(true);
 
   // Board state
   const [boards, setBoards] = useState([]);
@@ -132,7 +168,7 @@ export default function App() {
   };
   const handleLogout = () => {
     localStorage.removeItem('token'); localStorage.removeItem('user');
-    setCurrentUser(null); setToken(null); setBoards([]); setActiveBoardId(null); setColumns([]); setGames([]);
+    setCurrentUser(null); setToken(null); setBoards([]); setActiveBoardId(null); setColumns([]); setGames([]); setShowHome(true);
   };
 
   const fetchFavorites = useCallback(async () => {
@@ -159,6 +195,7 @@ export default function App() {
   const openPublicBoard = async (board) => {
     setPublicBoardMode(board);
     setShowPublicBoards(false);
+    setShowHome(false);
     setActiveBoardId(null);
     setLoading(true);
     try {
@@ -174,8 +211,9 @@ export default function App() {
 
   const closePublicBoard = () => {
     setPublicBoardMode(null);
+    setActiveBoardId(null);
     setColumns([]); setGames([]);
-    if (boards.length > 0) { setActiveBoardId(boards[0].id); setColumns(boards[0].columns || []); fetchGames(boards[0].id); }
+    setShowHome(true);
   };
 
   const refreshPublicBoard = async () => {
@@ -198,7 +236,6 @@ export default function App() {
     if (res.status === 401) { handleLogout(); return; }
     const data = await res.json();
     setBoards(data);
-    if (data.length > 0 && !activeBoardId) { setActiveBoardId(data[0].id); setColumns(data[0].columns || []); }
   }, [token, activeBoardId]);
 
   const fetchGames = useCallback(async (boardId) => {
@@ -360,6 +397,75 @@ export default function App() {
   const orphans = filtered.filter(g => !knownColIds.has(g.column));
   if (orphans.length > 0 && columns[0]) byColumn[columns[0].id] = [...(byColumn[columns[0].id] || []), ...orphans];
 
+  const openBoard = (b) => {
+    setActiveBoardId(b.id);
+    setColumns(b.columns || []);
+    setShowHome(false);
+    setPublicBoardMode(null);
+    fetchGames(b.id);
+  };
+
+  const publicBoards  = boards.filter(b => b.public);
+  const privateBoards = boards.filter(b => !b.public);
+
+  const boardCardStyle = (hover) => ({
+    background: hover ? 'var(--surface2)' : 'var(--surface)',
+    border: '1px solid var(--border)',
+    borderRadius: 12,
+    cursor: 'pointer',
+    overflow: 'hidden',
+    transition: 'background .12s, transform .12s',
+    display: 'flex',
+    flexDirection: 'column',
+  });
+
+  const homeView = (
+    <div style={{ flex: 1, overflowY: 'auto', padding: '28px 32px' }}>
+      <div style={{ maxWidth: 900, margin: '0 auto' }}>
+        {/* Public */}
+        <div style={{ marginBottom: 36 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#3db86a" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="10" cy="7" r="4"/><path d="M4 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M15 3.13a4 4 0 0 1 0 7.75"/><path d="M20 21v-2a4 4 0 0 0-3-3.85"/>
+            </svg>
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#3db86a', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Boards Publics</span>
+            <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--surface2)', borderRadius: 99, padding: '1px 7px' }}>{publicBoards.length}</span>
+          </div>
+          {publicBoards.length === 0 ? (
+            <div style={{ color: 'var(--text-muted)', fontSize: 12, padding: '16px 0' }}>Aucun board public — active la visibilité publique sur un board pour le partager.</div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 }}>
+              {publicBoards.map(b => (
+                <HomeBoardCard key={b.id} board={b} onClick={() => openBoard(b)} />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Séparateur */}
+        <div style={{ borderTop: '1px solid var(--border)', marginBottom: 32 }} />
+
+        {/* Privé */}
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+            <span style={{ fontSize: 14 }}>🔒</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#f5a500', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Boards Privés</span>
+            <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--surface2)', borderRadius: 99, padding: '1px 7px' }}>{privateBoards.length}</span>
+          </div>
+          {privateBoards.length === 0 ? (
+            <div style={{ color: 'var(--text-muted)', fontSize: 12, padding: '16px 0' }}>Aucun board privé.</div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 }}>
+              {privateBoards.map(b => (
+                <HomeBoardCard key={b.id} board={b} onClick={() => openBoard(b)} />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
   // ── Sidebar ───────────────────────────────────────────────────────────────
 
   const sidebarContent = (
@@ -372,7 +478,7 @@ export default function App() {
           </svg>
           <DiscordServerIcon size={35} borderColor="#111" />
         </div>
-        <span style={{ fontWeight: 800, fontSize: 16, letterSpacing: '0.04em', color: 'var(--text)', flex: 1 }}>KangBanGaming</span>
+        <span onClick={() => { setShowHome(true); setActiveBoardId(null); setPublicBoardMode(null); setShowPublicBoards(false); }} style={{ fontWeight: 800, fontSize: 16, letterSpacing: '0.04em', color: 'var(--text)', flex: 1, cursor: 'pointer' }}>KangBanGaming</span>
         {isMobile && <button onClick={() => setShowDrawer(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 18, cursor: 'pointer', lineHeight: 1 }}>✕</button>}
       </div>
 
@@ -397,7 +503,7 @@ export default function App() {
       <div style={{ flex: 1, overflowY: 'auto', padding: '6px 6px' }}>
         {boards.map(b => (
           <div key={b.id}
-            onClick={() => { setActiveBoardId(b.id); setColumns(b.columns || []); setEmojiPickerFor(null); if (isMobile) setShowDrawer(false); }}
+            onClick={() => { setActiveBoardId(b.id); setColumns(b.columns || []); setEmojiPickerFor(null); setShowHome(false); setPublicBoardMode(null); if (isMobile) setShowDrawer(false); }}
             style={{
               padding: '6px 8px', borderRadius: 7, cursor: 'pointer', marginBottom: 2,
               background: activeBoardId === b.id ? 'var(--accent-dim)' : 'transparent',
@@ -594,6 +700,8 @@ export default function App() {
         </header>
         {showPublicBoards ? (
           <PublicBoards token={token} currentUser={currentUser} favBoardIds={new Set(favBoards.map(b => b.id))} onToggleFavorite={toggleFavorite} onOpenBoard={openPublicBoard} onClose={() => setShowPublicBoards(false)} />
+        ) : showHome && !publicBoardMode ? (
+          homeView
         ) : publicBoardMode ? (
           loading ? (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Chargement...</div>
@@ -650,6 +758,12 @@ export default function App() {
               <button onClick={() => setShowSearch(true)} style={{ background: 'var(--accent)', border: 'none', borderRadius: 7, padding: '7px 16px', color: '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>+ Ajouter une carte</button>
               <button onClick={closePublicBoard} style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>✕ Quitter</button>
             </>
+          ) : showHome ? (
+            <>
+              <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>Mes Boards</span>
+              <div style={{ flex: 1 }} />
+              <button onClick={() => { setShowPublicBoards(true); }} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: 'var(--accent)', fontSize: 12, cursor: 'pointer', fontWeight: 600, flexShrink: 0 }}>🌐 Boards Publics</button>
+            </>
           ) : (
             <>
               {/* Board icon */}
@@ -658,6 +772,7 @@ export default function App() {
               ) : activeBoard ? (
                 <span style={{ fontSize: 18, flexShrink: 0 }}>{activeBoard.emoji || '🎮'}</span>
               ) : null}
+              <button onClick={() => { setActiveBoardId(null); setShowHome(true); }} title="Accueil" style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', padding: '2px 4px', opacity: 0.6 }}>←</button>
               <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 220 }}>{activeBoard?.name || '—'}</span>
               {activeBoard && (
                 <span
@@ -687,6 +802,8 @@ export default function App() {
         </header>
         {showPublicBoards ? (
           <PublicBoards token={token} currentUser={currentUser} favBoardIds={new Set(favBoards.map(b => b.id))} onToggleFavorite={toggleFavorite} onOpenBoard={openPublicBoard} onClose={() => setShowPublicBoards(false)} />
+        ) : showHome && !publicBoardMode ? (
+          homeView
         ) : publicBoardMode ? (
           loading ? (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Chargement...</div>
