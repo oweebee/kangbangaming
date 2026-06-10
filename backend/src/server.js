@@ -445,4 +445,20 @@ app.patch('/api/boards/:boardId/games/:appid', requireAuth, (req, res) => {
 });
 
 app.delete('/api/boards/:boardId/games/:appid', requireAuth, (req, res) => {
-  const userBoards = getUserB
+  const userBoards = getUserBoards(req.user.id);
+  const board = userBoards[req.params.boardId];
+  if (!board) return res.status(404).json({ error: 'Board not found' });
+  if (!(board.games || {})[req.params.appid]) return res.status(404).json({ error: 'Game not found' });
+  delete board.games[req.params.appid];
+  setUserBoards(req.user.id, userBoards);
+  res.json({ ok: true });
+});
+
+// ── Start ─────────────────────────────────────────────────────────────────────
+
+ensureAdmin().then(() => {
+  app.listen(PORT, () => console.log(`[server] Backend running on port ${PORT}`));
+}).catch(err => {
+  console.error('[server] Startup error:', err);
+  process.exit(1);
+});
