@@ -384,7 +384,7 @@ export default function App() {
     const boardApi = publicBoardMode ? `${API}/public/boards/${publicBoardMode.id}` : `${API}/boards/${activeBoardId}`;
     await fetch(`${boardApi}/games`, {
       method: 'POST', headers: authHeaders(token),
-      body: JSON.stringify({ appid: game.appid, name: game.name, header_img: game.header_img, icon_img: game.icon_img, column: colId, type: game.type || 'steam', emoji: game.emoji || null, taskType: game.taskType || null }),
+      body: JSON.stringify({ appid: game.appid, name: game.name, header_img: game.header_img, icon_img: game.icon_img, column: colId, type: game.type || 'steam', emoji: game.emoji || null, taskType: game.taskType || null, urgent: game.urgent ?? false, assignees: game.assignees ?? [], notes: game.notes ?? [], progress: game.progress ?? null }),
     });
     if (publicBoardMode) {
       const res = await fetch(`${boardApi}/games`, { headers: authHeaders(token) });
@@ -426,10 +426,10 @@ export default function App() {
 
   const updateGame = async (updatedGame) => {
     const boardApi = publicBoardMode ? `${API}/public/boards/${publicBoardMode.id}` : `${API}/boards/${activeBoardId}`;
-    const { appid, name, emoji, taskType, dueDate, startDate, endDate, urgent, assignees, notes } = updatedGame;
+    const { appid, name, emoji, taskType, dueDate, startDate, endDate, urgent, assignees, notes, progress } = updatedGame;
     await fetch(`${boardApi}/games/${appid}`, {
       method: 'PATCH', headers: authHeaders(token),
-      body: JSON.stringify({ name, emoji, taskType: taskType ?? null, dueDate: dueDate ?? null, startDate: startDate ?? null, endDate: endDate ?? null, urgent: urgent ?? false, assignees: assignees ?? [], notes: notes ?? [] }),
+      body: JSON.stringify({ name, emoji, taskType: taskType ?? null, dueDate: dueDate ?? null, startDate: startDate ?? null, endDate: endDate ?? null, urgent: urgent ?? false, assignees: assignees ?? [], notes: notes ?? [], progress: progress ?? null }),
     });
     setGames(prev => prev.map(g => g.appid === appid ? { ...g, ...updatedGame } : g));
   };
@@ -815,8 +815,8 @@ export default function App() {
           <button onClick={() => setShowDrawer(true)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 20, cursor: 'pointer', lineHeight: 1, flexShrink: 0 }}>☰</button>
           {publicBoardMode ? (
             <>
-              {publicBoardMode.gameIcon ? (
-                <img src={publicBoardMode.gameIcon} alt="" style={{ width: 20, height: 20, borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border)', flexShrink: 0 }} />
+              {(publicBoardMode.headerImg || publicBoardMode.gameIcon) ? (
+                <img src={publicBoardMode.headerImg || publicBoardMode.gameIcon} alt="" style={{ height: 30, width: 'auto', maxWidth: 100, objectFit: 'contain', borderRadius: 4, flexShrink: 0, border: '1px solid var(--border)' }} />
               ) : (
                 <span style={{ fontSize: 16, flexShrink: 0 }}>{publicBoardMode.emoji || '🎮'}</span>
               )}
@@ -830,8 +830,8 @@ export default function App() {
             </>
           ) : (
             <>
-              {activeBoard?.gameIcon ? (
-                <img src={activeBoard.gameIcon} alt="" style={{ width: 20, height: 20, borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border)', flexShrink: 0 }} />
+              {(activeBoard?.headerImg || activeBoard?.gameIcon) ? (
+                <img src={activeBoard.headerImg || activeBoard.gameIcon} alt="" style={{ height: 30, width: 'auto', maxWidth: 100, objectFit: 'contain', borderRadius: 4, flexShrink: 0, border: '1px solid var(--border)' }} />
               ) : activeBoard ? (
                 <span style={{ fontSize: 16, flexShrink: 0 }}>{activeBoard.emoji || '🎮'}</span>
               ) : null}
@@ -909,9 +909,7 @@ export default function App() {
               {/* Board icon */}
               {(publicBoardMode.headerImg || publicBoardMode.gameIcon) ? (
                 <img src={publicBoardMode.headerImg || publicBoardMode.gameIcon} alt=""
-                  style={publicBoardMode.headerImg
-                    ? { height: 53, width: 'auto', objectFit: 'contain', borderRadius: 6, flexShrink: 0, border: '1px solid var(--border)' }
-                    : { width: 22, height: 22, borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border)', flexShrink: 0 }}
+                  style={{ height: 53, width: 'auto', maxWidth: 200, objectFit: 'contain', borderRadius: 6, flexShrink: 0, border: '1px solid var(--border)' }}
                 />
               ) : (
                 <span style={{ fontSize: 18, flexShrink: 0 }}>{publicBoardMode.emoji || '🎮'}</span>
@@ -953,9 +951,7 @@ export default function App() {
               {(activeBoard?.headerImg || activeBoard?.gameIcon) ? (
                 <img
                   src={activeBoard.headerImg || activeBoard.gameIcon} alt=""
-                  style={activeBoard.headerImg
-                    ? { height: 53, width: 'auto', objectFit: 'contain', borderRadius: 6, flexShrink: 0, border: '1px solid var(--border)' }
-                    : { width: 53, height: 53, borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border)', flexShrink: 0 }}
+                  style={{ height: 53, width: 'auto', maxWidth: 200, objectFit: 'contain', borderRadius: 6, flexShrink: 0, border: '1px solid var(--border)' }}
                 />
               ) : activeBoard ? (
                 <span style={{ fontSize: 36, flexShrink: 0 }}>{activeBoard.emoji || '🎮'}</span>

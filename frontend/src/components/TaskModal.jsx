@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { getTaskType } from '../taskTypes.jsx';
 import NotesSection from './NotesSection.jsx';
+import ProgressSlider, { progressColor } from './ProgressSlider.jsx';
 
 // ── Date helpers ──────────────────────────────────────────────────────────────
 
@@ -49,7 +50,7 @@ const STATUS_LABEL = { future: 'À venir', active: 'En cours', past: 'Passée' }
 
 // ── Assignee row ──────────────────────────────────────────────────────────────
 
-function AssigneeRow({ assignees = [], appUsers = [] }) {
+function AssigneeRow({ assignees = [], appUsers = [], borderColor = 'var(--border)' }) {
   const [hoveredId, setHoveredId] = useState(null);
 
   const users = assignees
@@ -75,9 +76,9 @@ function AssigneeRow({ assignees = [], appUsers = [] }) {
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 20, padding: '4px 10px 4px 5px', cursor: user.steamId ? 'pointer' : 'default' }}>
                 {user.steamAvatar ? (
-                  <img src={user.steamAvatar} alt="" style={{ width: 22, height: 22, borderRadius: '50%', flexShrink: 0, border: '1px solid var(--border)' }} />
+                  <img src={user.steamAvatar} alt="" style={{ width: 22, height: 22, borderRadius: '50%', flexShrink: 0, border: `1.5px solid ${borderColor}` }} />
                 ) : (
-                  <div style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: '#fff', flexShrink: 0 }}>{initials}</div>
+                  <div style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: '#fff', flexShrink: 0, border: `1.5px solid ${borderColor}` }}>{initials}</div>
                 )}
                 <span style={{ fontSize: 12, color: 'var(--text)', fontWeight: 500 }}>{user.steamPersonaName || user.username}</span>
                 {user.steamId && (
@@ -121,10 +122,10 @@ export default function TaskModal({ game, onClose, onEdit, appUsers = [], onPatc
   const TtIcon    = tt?.Icon;
   const dateInfo  = getDateInfo(game);
   const isUrgent  = !!game.urgent;
+  const cardBorderColor = isUrgent ? 'rgba(220,60,60,0.6)' : tt ? tt.border : 'var(--border)';
 
-  const handleSaveNotes = (notes) => {
-    if (onPatchGame) onPatchGame(game.appid, { notes });
-  };
+  const handleSaveNotes    = (notes)    => { if (onPatchGame) onPatchGame(game.appid, { notes }); };
+  const handleSaveProgress = (progress) => { if (onPatchGame) onPatchGame(game.appid, { progress }); };
 
   return (
     <div
@@ -178,7 +179,11 @@ export default function TaskModal({ game, onClose, onEdit, appUsers = [], onPatc
                   borderRadius: 7, width: 32, height: 32, color: '#ccc', fontSize: 13, cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}
-              >✏</button>
+              >
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
+                </svg>
+              </button>
             )}
             <button
               onClick={onClose}
@@ -248,10 +253,18 @@ export default function TaskModal({ game, onClose, onEdit, appUsers = [], onPatc
 
           {/* Assignees (Steam boards only) */}
           {isTaskBoard && appUsers.length > 0 && (game.assignees?.length > 0) && (
-            <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 9, padding: '10px 14px' }}>
-              <AssigneeRow assignees={game.assignees} appUsers={appUsers} />
+            <div style={{ background: 'var(--surface2)', border: `1px solid ${cardBorderColor}`, borderRadius: 9, padding: '10px 14px' }}>
+              <AssigneeRow assignees={game.assignees} appUsers={appUsers} borderColor={cardBorderColor} />
             </div>
           )}
+
+          {/* Progress */}
+          <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 9, padding: '12px 14px' }}>
+            <ProgressSlider
+              value={game.progress ?? null}
+              onChange={handleSaveProgress}
+            />
+          </div>
 
           {/* Notes */}
           <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 9, padding: '12px 14px' }}>

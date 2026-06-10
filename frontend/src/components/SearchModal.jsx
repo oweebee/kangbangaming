@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { TASK_TYPES, getTaskType } from '../taskTypes.jsx';
 import NotesSection from './NotesSection.jsx';
+import ProgressSlider from './ProgressSlider.jsx';
 
 const CARD_EMOJIS = [
   '🎮','🕹️','🏆','🥇','⭐','💎','🔥','❄️','⚡','🎯',
@@ -66,6 +67,7 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
   const [urgent,    setUrgent]    = useState(!!initialGame?.urgent);
   const [assignees, setAssignees] = useState(initialGame?.assignees || []);
   const [notes,     setNotes]     = useState(initialGame?.notes     || []);
+  const [progress,  setProgress]  = useState(initialGame?.progress ?? null);
   const [showAssigneeMenu, setShowAssigneeMenu] = useState(false);
   const assigneeMenuRef = useRef(null);
 
@@ -115,6 +117,7 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
       urgent,
       assignees,
       notes,
+      progress,
     };
     if (isEditMode && onSave) {
       onSave({ ...initialGame, ...gameData });
@@ -537,6 +540,9 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
                 )}
               </div>
             )}
+
+            {/* ── Progress ── */}
+            <ProgressSlider value={progress} onChange={setProgress} compact />
 
             {/* ── Notes ── */}
             <NotesSection notes={notes} onSave={setNotes} compact />

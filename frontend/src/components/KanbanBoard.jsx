@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import GameCard from './GameCard.jsx';
 import AssigneeAvatars from './AssigneeAvatars.jsx';
+import { getTaskType } from '../taskTypes.jsx';
 
 const EMOJIS = [
   '🎮','🕹️','🏆','🥇','⭐','💎','🔥','❄️','⚡','🎯',
@@ -193,6 +194,8 @@ export default function KanbanBoard({ columns, byColumn, dragging, setDragging, 
               )}
               {games.map((game, idx) => {
                 const hasAssignees = isTaskBoard && appUsers.length > 0 && game.assignees?.length > 0;
+                const tt = game.taskType ? getTaskType(game.taskType) : null;
+                const cardBorderColor = game.urgent ? 'rgba(220,60,60,0.6)' : tt ? tt.border : 'var(--border)';
                 return (
                   <div
                     key={game.appid}
@@ -217,6 +220,7 @@ export default function KanbanBoard({ columns, byColumn, dragging, setDragging, 
                         assignees={game.assignees}
                         appUsers={appUsers}
                         size={44}
+                        borderColor={cardBorderColor}
                       />
                     )}
                     <GameCard game={game}

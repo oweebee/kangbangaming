@@ -502,10 +502,10 @@ app.get('/api/public/boards/:boardId/games', requireAuth, (req, res) => {
 app.post('/api/public/boards/:boardId/games', requireAuth, (req, res) => {
   const f = findPublicBoard(req.params.boardId);
   if (!f) return res.status(404).json({ error: 'Not found' });
-  const { appid, name, header_img, icon_img, column, type, emoji, taskType } = req.body;
+  const { appid, name, header_img, icon_img, column, type, emoji, taskType, urgent, assignees, notes, progress } = req.body;
   if (!appid || !column) return res.status(400).json({ error: 'Missing fields' });
   if (!f.board.games) f.board.games = {};
-  f.board.games[appid] = { appid, name, header_img: header_img || null, icon_img: icon_img || null, column, type: type || 'steam', emoji: emoji || null, taskType: taskType || null, archived: false, sortOrder: Date.now(), addedAt: new Date().toISOString() };
+  f.board.games[appid] = { appid, name, header_img: header_img || null, icon_img: icon_img || null, column, type: type || 'steam', emoji: emoji || null, taskType: taskType || null, urgent: urgent || false, assignees: assignees || [], notes: notes || [], progress: progress ?? null, archived: false, sortOrder: Date.now(), addedAt: new Date().toISOString() };
   f.userBoards[req.params.boardId] = f.board;
   f.all[f.userId] = f.userBoards;
   writeBoards(f.all);
@@ -528,6 +528,7 @@ app.patch('/api/public/boards/:boardId/games/:appid', requireAuth, (req, res) =>
   if (req.body.archived !== undefined) game.archived = req.body.archived;
   if (req.body.urgent !== undefined) game.urgent = req.body.urgent;
   if (req.body.assignees !== undefined) game.assignees = req.body.assignees;
+  if (req.body.progress !== undefined) game.progress = req.body.progress;
   f.userBoards[req.params.boardId] = f.board;
   f.all[f.userId] = f.userBoards;
   writeBoards(f.all);
@@ -567,7 +568,7 @@ app.delete('/api/public/boards/:boardId/games/:appid', requireAuth, (req, res) =
 app.get('/api/boards', requireAuth, (req, res) => {
   const userBoards = getUserBoards(req.user.id);
   res.json(Object.entries(userBoards).map(([id, b]) => {
-    const firstGame = Object.values(b.games || {})[0];
+    const firstGame = Object.values(b.games || {}).find(g => g.header_img);
     const headerImg = b.headerImg || firstGame?.header_img || null;
     return { id, name: b.name, emoji: b.emoji || '🎮', gameIcon: b.gameIcon || null, headerImg, columns: b.columns || [], public: b.public || false };
   }));
@@ -683,13 +684,13 @@ app.get('/api/boards/:boardId/games', requireAuth, (req, res) => {
 });
 
 app.post('/api/boards/:boardId/games', requireAuth, (req, res) => {
-  const { appid, name, header_img, column, icon_img, type, emoji, taskType } = req.body;
+  const { appid, name, header_img, column, icon_img, type, emoji, taskType, urgent, assignees, notes, progress } = req.body;
   if (!appid || !column) return res.status(400).json({ error: 'Missing fields' });
   const userBoards = getUserBoards(req.user.id);
   const board = userBoards[req.params.boardId];
   if (!board) return res.status(404).json({ error: 'Board not found' });
   if (!board.games) board.games = {};
-  board.games[appid] = { appid, name, header_img: header_img || null, icon_img: icon_img || null, column, type: type || 'steam', emoji: emoji || null, taskType: taskType || null, archived: false, sortOrder: Date.now(), addedAt: new Date().toISOString() };
+  board.games[appid] = { appid, name, header_img: header_img || null, icon_img: icon_img || null, column, type: type || 'steam', emoji: emoji || null, taskType: taskType || null, urgent: urgent || false, assignees: assignees || [], notes: notes || [], progress: progress ?? null, archived: false, sortOrder: Date.now(), addedAt: new Date().toISOString() };
   setUserBoards(req.user.id, userBoards);
   res.status(201).json(board.games[appid]);
 });
@@ -711,6 +712,7 @@ app.patch('/api/boards/:boardId/games/:appid', requireAuth, (req, res) => {
   if (req.body.archived !== undefined) game.archived = req.body.archived;
   if (req.body.urgent !== undefined) game.urgent = req.body.urgent;
   if (req.body.assignees !== undefined) game.assignees = req.body.assignees;
+  if (req.body.progress !== undefined) game.progress = req.body.progress;
   setUserBoards(req.user.id, userBoards);
   res.json(game);
 });

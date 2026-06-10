@@ -4,11 +4,11 @@ function AvatarPopup({ user }) {
   const initials = user?.username?.[0]?.toUpperCase() || '?';
   return (
     <div style={{
-      position: 'absolute', top: '110%', left: '50%',
+      position: 'absolute', bottom: '110%', top: 'auto', left: '50%',
       transform: 'translateX(-50%)',
       background: 'var(--surface2)', border: '1px solid var(--border)',
       borderRadius: 10, padding: '10px 12px', width: 170,
-      zIndex: 200, boxShadow: '0 6px 24px rgba(0,0,0,0.6)',
+      zIndex: 200, boxShadow: '0 -4px 24px rgba(0,0,0,0.6)',
       pointerEvents: 'none',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
@@ -42,7 +42,7 @@ function AvatarPopup({ user }) {
   );
 }
 
-export default function AssigneeAvatars({ assignees = [], appUsers = [], size = 24 }) {
+export default function AssigneeAvatars({ assignees = [], appUsers = [], size = 24, borderColor = 'var(--surface)' }) {
   const [hoveredId, setHoveredId] = useState(null);
 
   const users = assignees
@@ -59,7 +59,7 @@ export default function AssigneeAvatars({ assignees = [], appUsers = [], size = 
         return (
           <div
             key={user.id}
-            style={{ position: 'relative', marginLeft: idx > 0 ? -8 : 0, zIndex: isHovered ? 20 : idx + 1 }}
+            style={{ position: 'relative', marginLeft: idx > 0 ? -(size * 0.25) : 0, zIndex: isHovered ? 20 : idx + 1 }}
             onMouseEnter={() => setHoveredId(user.id)}
             onMouseLeave={() => setHoveredId(null)}
             onClick={e => {
@@ -74,10 +74,10 @@ export default function AssigneeAvatars({ assignees = [], appUsers = [], size = 
                 title={user.username}
                 style={{
                   width: size, height: size, borderRadius: '50%',
-                  border: '2px solid var(--surface)',
+                  border: `2px solid ${borderColor}`,
                   objectFit: 'cover', display: 'block',
                   cursor: user.steamId ? 'pointer' : 'default',
-                  boxShadow: isHovered ? '0 0 0 2px var(--accent)' : 'none',
+                  boxShadow: isHovered ? `0 0 0 2px var(--accent)` : 'none',
                   transition: 'box-shadow .15s',
                 }}
               />
@@ -87,7 +87,7 @@ export default function AssigneeAvatars({ assignees = [], appUsers = [], size = 
                 background: 'var(--accent)', color: '#fff',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: size * 0.4, fontWeight: 700,
-                border: '2px solid var(--surface)',
+                border: `2px solid ${borderColor}`,
                 cursor: 'default',
                 boxShadow: isHovered ? '0 0 0 2px #fff' : 'none',
                 transition: 'box-shadow .15s',

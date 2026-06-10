@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { getTaskType } from '../taskTypes.jsx';
 import { getDateInfo } from './TaskModal.jsx';
+import { progressColor } from './ProgressSlider.jsx';
 
 function formatPlaytime(minutes) {
   if (!minutes || minutes === 0) return null;
@@ -39,12 +40,12 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
       onMouseEnter={readOnly || isArchived ? undefined : e => {
         e.currentTarget.style.transform = 'translateY(-1px)';
         e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.4)';
-        e.currentTarget.style.borderColor = tt ? tt.border : '#444';
+        e.currentTarget.style.borderColor = isUrgent ? 'rgba(220,60,60,0.8)' : tt ? tt.border : '#444';
       }}
       onMouseLeave={readOnly || isArchived ? undefined : e => {
         e.currentTarget.style.transform = '';
         e.currentTarget.style.boxShadow = '';
-        e.currentTarget.style.borderColor = tt ? tt.border : 'var(--border)';
+        e.currentTarget.style.borderColor = isUrgent ? 'rgba(220,60,60,0.6)' : tt ? tt.border : 'var(--border)';
       }}
     >
       {/* ── Image area ── */}
@@ -172,11 +173,15 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
                   onClick={e => { e.stopPropagation(); onEdit(game); }}
                   style={{
                     background: 'none', border: 'none', color: 'var(--text-muted)',
-                    fontSize: 11, cursor: 'pointer', opacity: 0.45, padding: '1px 3px',
-                    lineHeight: 1, flexShrink: 0,
+                    cursor: 'pointer', opacity: 0.6, padding: '1px 3px',
+                    lineHeight: 1, flexShrink: 0, display: 'flex', alignItems: 'center',
                   }}
                   title="Éditer"
-                >✏</button>
+                >
+                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
+                  </svg>
+                </button>
               )}
               {isArchived ? (
                 <>
@@ -253,6 +258,16 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
           )}
         </div>
       </div>
+      {/* ── Progress bar — shown when progress is set ── */}
+      {typeof game.progress === 'number' && !isArchived && (
+        <div style={{ height: 3, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+          <div style={{
+            width: `${game.progress}%`, height: '100%',
+            background: progressColor(game.progress) || '#c03030',
+            transition: 'width .3s, background .3s',
+          }} />
+        </div>
+      )}
     </div>
   );
 }
