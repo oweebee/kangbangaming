@@ -120,28 +120,29 @@ app.get('/api/search/store', async (req, res) => {
 app.get('/api/boards', async (_req, res) => {
   const data = await readData();
   res.json(Object.entries(data.boards).map(([id, b]) => ({
-    id, name: b.name,
+    id, name: b.name, emoji: b.emoji || '',
     columns: b.columns || defaultColumns(),
     gameCount: Object.keys(b.games || {}).length,
   })));
 });
 
 app.post('/api/boards', async (req, res) => {
-  const { name } = req.body;
+  const { name, emoji = '' } = req.body;
   if (!name) return res.status(400).json({ error: 'name requis' });
   const data = await readData();
   const id = `board_${Date.now()}`;
-  data.boards[id] = { name, columns: defaultColumns(), games: {} };
+  data.boards[id] = { name, emoji, columns: defaultColumns(), games: {} };
   await writeData(data);
-  res.json({ id, name, columns: data.boards[id].columns, gameCount: 0 });
+  res.json({ id, name, emoji, columns: data.boards[id].columns, gameCount: 0 });
 });
 
 app.patch('/api/boards/:boardId', async (req, res) => {
   const { boardId } = req.params;
-  const { name } = req.body;
+  const { name, emoji } = req.body;
   const data = await readData();
   if (!data.boards[boardId]) return res.status(404).json({ error: 'Board introuvable' });
-  data.boards[boardId].name = name;
+  if (name !== undefined) data.boards[boardId].name = name;
+  if (emoji !== undefined) data.boards[boardId].emoji = emoji;
   await writeData(data);
   res.json({ ok: true });
 });

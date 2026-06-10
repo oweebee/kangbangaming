@@ -100,10 +100,19 @@ export default function SearchModal({ api, boardGames, onAdd, onClose }) {
           {results.map(game => {
             const isAdded = added.has(game.appid);
             return (
-              <div key={game.appid} style={{
-                display: 'flex', alignItems: 'center', gap: 10,
-                padding: '9px 0', borderBottom: '1px solid var(--border)',
-              }}>
+              <div
+                key={game.appid}
+                onClick={() => { if (!isAdded) { handleAdd(game); onClose(); } }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '9px 0', borderBottom: '1px solid var(--border)',
+                  cursor: isAdded ? 'default' : 'pointer',
+                  opacity: isAdded ? 0.45 : 1,
+                  transition: 'opacity .15s',
+                }}
+                onMouseEnter={e => { if (!isAdded) e.currentTarget.style.background = 'var(--surface2)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = ''; }}
+              >
                 <img
                   src={game.header_img}
                   alt={game.name}
@@ -116,6 +125,7 @@ export default function SearchModal({ api, boardGames, onAdd, onClose }) {
                       {game.name}
                     </span>
                     {game.owned && <LibraryBadge />}
+                    {isAdded && <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>✓ déjà ajouté</span>}
                   </div>
                   <div style={{ color: 'var(--text-muted)', fontSize: 11 }}>
                     {game.owned
@@ -124,17 +134,6 @@ export default function SearchModal({ api, boardGames, onAdd, onClose }) {
                     }
                   </div>
                 </div>
-                <button
-                  onClick={() => !isAdded && handleAdd(game)}
-                  disabled={isAdded}
-                  style={{
-                    background: isAdded ? 'var(--surface2)' : 'var(--accent)',
-                    border: 'none', borderRadius: 6, padding: '6px 14px',
-                    color: isAdded ? 'var(--text-muted)' : '#000',
-                    fontWeight: 700, fontSize: 11,
-                    cursor: isAdded ? 'default' : 'pointer', flexShrink: 0,
-                  }}
-                >{isAdded ? '✓ Ajouté' : '+ Ajouter'}</button>
               </div>
             );
           })}

@@ -1,7 +1,48 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import KanbanBoard from './components/KanbanBoard.jsx';
 import GameModal from './components/GameModal.jsx';
 import SearchModal from './components/SearchModal.jsx';
+
+const EMOJIS = [
+  '🎮','🕹️','🏆','🥇','⭐','💎','🔥','❄️','⚡','🎯',
+  '📦','🚀','💀','👾','🛡️','⚔️','🗡️','🧩','🎲','🃏',
+  '✅','⏳','🔒','🔓','💤','👀','🧠','💪','🎪','🌟',
+  '📋','📌','🔖','🏁','🚩','💬','🎵','🎬','📺','🖥️',
+];
+
+function BoardEmojiPicker({ current, onSelect, onClose }) {
+  const ref = useRef();
+  useEffect(() => {
+    const h = e => { if (ref.current && !ref.current.contains(e.target)) onClose(); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, [onClose]);
+
+  return (
+    <div ref={ref} style={{
+      position: 'absolute', left: '100%', top: 0, zIndex: 100,
+      background: 'var(--surface2)', border: '1px solid var(--border)',
+      borderRadius: 10, padding: 8, marginLeft: 6,
+      display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: 2,
+      boxShadow: '0 8px 24px rgba(0,0,0,.6)',
+    }}>
+      <button onClick={() => onSelect('')} style={{
+        background: current === '' ? 'var(--accent-dim)' : 'none',
+        border: current === '' ? '1px solid var(--accent)' : '1px solid transparent',
+        borderRadius: 5, width: 28, height: 28, fontSize: 11,
+        color: 'var(--text-muted)', cursor: 'pointer',
+      }}>✕</button>
+      {EMOJIS.map(e => (
+        <button key={e} onClick={() => onSelect(e)} style={{
+          background: current === e ? 'var(--accent-dim)' : 'none',
+          border: current === e ? '1px solid var(--accent)' : '1px solid transparent',
+          borderRadius: 5, width: 28, height: 28, fontSize: 15,
+          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>{e}</button>
+      ))}
+    </div>
+  );
+}
 
 const API = import.meta.env.VITE_API_URL || '/api';
 
@@ -17,6 +58,7 @@ export default function App() {
   const [dragging, setDragging] = useState(null);
   const [newBoardName, setNewBoardName] = useState('');
   const [showNewBoard, setShowNewBoard] = useState(false);
+  const [emojiPickerFor, setEmojiPickerFor] = useState(null);
 
   const fetchBoards = useCallback(async () => {
     const res = await fetch(`${API}/boards`);
@@ -63,6 +105,14 @@ export default function App() {
     setGames([]);
     setNewBoardName('');
     setShowNewBoard(false);
+  };
+
+  const setBoardEmoji = async (boardId, emoji) => {
+    await fetch(`${API}/boards/${boardId}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ emoji }),
+    });
+    setBoards(prev => prev.map(b => b.id === boardId ? { ...b, emoji } : b));
   };
 
   const deleteBoard = async (boardId) => {
@@ -122,9 +172,10 @@ export default function App() {
   // ── Jeux ──────────────────────────────────────────────────────────────────
 
   const addGame = async (game) => {
+    const firstColId = columns[0]?.id;
     await fetch(`${API}/boards/${activeBoardId}/games`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ appid: game.appid }),
+      body: JSON.stringify({ appid: game.appid, column: firstColId }),
     });
     fetchGames(activeBoardId);
   };
@@ -176,22 +227,42 @@ export default function App() {
           {boards.map(b => (
             <div
               key={b.id}
-              onClick={() => { setActiveBoardId(b.id); setColumns(b.columns || []); }}
+              onClick={() => { setActiveBoardId(b.id); setColumns(b.columns || []); setEmojiPickerFor(null); }}
               style={{
-                padding: '8px 10px', borderRadius: 7, cursor: 'pointer', marginBottom: 2,
+                padding: '6px 8px', borderRadius: 7, cursor: 'pointer', marginBottom: 2,
                 background: activeBoardId === b.id ? 'var(--accent-dim)' : 'transparent',
                 borderLeft: activeBoardId === b.id ? '3px solid var(--accent)' : '3px solid transparent',
                 color: activeBoardId === b.id ? 'var(--text)' : 'var(--text-muted)',
-                display: 'flex', alignItems: 'center', gap: 6,
-                transition: 'background .12s',
+                display: 'flex', alignItems: 'center', gap: 5,
+                transition: 'background .12s', position: 'relative',
               }}
             >
+              {/* Emoji picker trigger */}
+              <button
+                onClick={e => { e.stopPropagation(); setEmojiPickerFor(emojiPickerFor === b.id ? null : b.id); }}
+                title="Choisir un emoji"
+                style={{
+                  background: b.emoji ? 'transparent' : 'var(--surface3)',
+                  border: '1px solid var(--border)', borderRadius: 4,
+                  width: 22, height: 22, fontSize: b.emoji ? 13 : 9,
+                  cursor: 'pointer', color: 'var(--text-muted)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                }}
+              >{b.emoji || '+'}</button>
+
+              {emojiPickerFor === b.id && (
+                <BoardEmojiPicker
+                  current={b.emoji || ''}
+                  onSelect={emoji => { setBoardEmoji(b.id, emoji); setEmojiPickerFor(null); }}
+                  onClose={() => setEmojiPickerFor(null)}
+                />
+              )}
+
               <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 12 }}>{b.name}</span>
               <span style={{ fontSize: 10, color: 'var(--text-muted)', flexShrink: 0 }}>{b.gameCount}</span>
               <button
                 onClick={e => { e.stopPropagation(); deleteBoard(b.id); }}
-                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 12, padding: 0, opacity: 0, cursor: 'pointer' }}
-                className="del-btn"
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 11, padding: 0, opacity: 0.4, cursor: 'pointer', flexShrink: 0 }}
               >✕</button>
             </div>
           ))}
