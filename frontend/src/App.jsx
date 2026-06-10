@@ -11,6 +11,7 @@ import SteamSettings from './components/SteamSettings.jsx';
 import PublicBoards from './components/PublicBoards.jsx';
 import ProfilePage from './components/ProfilePage.jsx';
 import GameStatsWidget from './components/GameStatsWidget.jsx';
+import GlobalSearch from './components/GlobalSearch.jsx';
 
 const DISCORD_ICON_URL = 'https://cdn.discordapp.com/icons/983316258302877747/ebcf20448ef8818f93e8f31afad9f8d9.webp?size=64';
 
@@ -167,6 +168,9 @@ export default function App() {
   // Steam game info for active board
   const [gameInfo, setGameInfo] = useState(null);
 
+  // Global search: pending game to open after board loads
+  const [pendingOpenGameId, setPendingOpenGameId] = useState(null);
+
   // Board game search
   const [boardSearchQuery, setBoardSearchQuery] = useState('');
   const [boardSearchResults, setBoardSearchResults] = useState([]);
@@ -277,6 +281,28 @@ export default function App() {
     try { const res = await fetch(`${API}/boards/${boardId}/games`, { headers: { Authorization: `Bearer ${token}` } }); setGames(await res.json()); }
     catch { setGames([]); } finally { setLoading(false); }
   }, [token]);
+
+  // Open a game from global search after its board's games have loaded
+  useEffect(() => {
+    if (!pendingOpenGameId || games.length === 0) return;
+    const game = games.find(g => g.appid === pendingOpenGameId);
+    if (game) { setSelectedGame(game); setPendingOpenGameId(null); }
+  }, [games, pendingOpenGameId]);
+
+  const handleSearchGoToBoard = (boardId) => {
+    setActiveBoardId(boardId);
+    setShowHome(false);
+    setPublicBoardMode(null);
+    setShowPublicBoards(false);
+  };
+
+  const handleSearchOpenGame = (boardId, gameId) => {
+    setActiveBoardId(boardId);
+    setShowHome(false);
+    setPublicBoardMode(null);
+    setShowPublicBoards(false);
+    setPendingOpenGameId(gameId);
+  };
 
   useEffect(() => {
     if (!token) return;
@@ -1118,8 +1144,7 @@ export default function App() {
                   📦 Archives{archiveCount > 0 ? ` (${archiveCount})` : ''}
                 </button>
               )}
-              <input type="search" placeholder="Filtrer..." value={search} onChange={e => setSearch(e.target.value)}
-                style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 10px', color: 'var(--text)', fontSize: 12, outline: 'none', maxWidth: 200 }} />
+              <GlobalSearch token={token} onGoToBoard={handleSearchGoToBoard} onOpenGame={handleSearchOpenGame} />
               {activeBoardId && (
                 <button onClick={() => { if (activeBoardId) fetchGames(activeBoardId); }} title="Rafraîchir" style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 9px', color: 'var(--text-muted)', fontSize: 15, cursor: 'pointer', lineHeight: 1, flexShrink: 0 }}>↻</button>
               )}
