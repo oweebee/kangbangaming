@@ -6,6 +6,34 @@ export default function ProfilePage({ token, currentUser, onClose }) {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showPwd, setShowPwd] = useState(false);
+  const [pwdCurrent, setPwdCurrent] = useState('');
+  const [pwdNew, setPwdNew] = useState('');
+  const [pwdConfirm, setPwdConfirm] = useState('');
+  const [pwdError, setPwdError] = useState('');
+  const [pwdSuccess, setPwdSuccess] = useState('');
+  const [pwdLoading, setPwdLoading] = useState(false);
+
+  async function handlePwdChange(e) {
+    e.preventDefault();
+    setPwdError(''); setPwdSuccess('');
+    if (pwdNew !== pwdConfirm) { setPwdError('Les mots de passe ne correspondent pas'); return; }
+    if (pwdNew.length < 6) { setPwdError('Minimum 6 caractères'); return; }
+    setPwdLoading(true);
+    try {
+      const res = await fetch(`${API}/user/password`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ currentPassword: pwdCurrent, newPassword: pwdNew }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erreur');
+      setPwdSuccess('Mot de passe modifié !');
+      setPwdCurrent(''); setPwdNew(''); setPwdConfirm('');
+      setTimeout(() => { setPwdSuccess(''); setShowPwd(false); }, 2000);
+    } catch (err) { setPwdError(err.message); }
+    finally { setPwdLoading(false); }
+  }
 
   useEffect(() => {
     async function load() {
@@ -94,6 +122,35 @@ export default function ProfilePage({ token, currentUser, onClose }) {
               </div>
             </>
           )}
+
+          {/* Changer mot de passe */}
+          <div style={{ marginTop: 20, borderTop: '1px solid var(--border)', paddingTop: 16 }}>
+            <button onClick={() => { setShowPwd(v => !v); setPwdError(''); setPwdSuccess(''); }}
+              style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 14px', color: 'var(--text-muted)', fontSize: 12, fontWeight: 600, cursor: 'pointer', width: '100%', textAlign: 'left' }}>
+              🔑 {showPwd ? 'Annuler' : 'Changer le mot de passe'}
+            </button>
+            {showPwd && (
+              <form onSubmit={handlePwdChange} style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {['Mot de passe actuel', 'Nouveau mot de passe', 'Confirmer le nouveau'].map((label, i) => {
+                  const vals = [pwdCurrent, pwdNew, pwdConfirm];
+                  const setters = [setPwdCurrent, setPwdNew, setPwdConfirm];
+                  return (
+                    <div key={i}>
+                      <label style={{ display: 'block', fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>{label}</label>
+                      <input type="password" value={vals[i]} onChange={e => setters[i](e.target.value)} required
+                        style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 7, color: 'var(--text)', fontSize: 13, outline: 'none' }} />
+                    </div>
+                  );
+                })}
+                {pwdError && <div style={{ background: 'rgba(220,50,50,.15)', border: '1px solid rgba(220,50,50,.4)', borderRadius: 7, padding: '7px 10px', color: '#f88', fontSize: 12 }}>{pwdError}</div>}
+                {pwdSuccess && <div style={{ background: 'rgba(50,200,100,.15)', border: '1px solid rgba(50,200,100,.4)', borderRadius: 7, padding: '7px 10px', color: '#5c5', fontSize: 12 }}>✓ {pwdSuccess}</div>}
+                <button type="submit" disabled={pwdLoading}
+                  style={{ padding: '9px', background: 'var(--accent)', border: 'none', borderRadius: 7, color: '#fff', fontSize: 13, fontWeight: 700, cursor: pwdLoading ? 'not-allowed' : 'pointer', opacity: pwdLoading ? 0.7 : 1 }}>
+                  {pwdLoading ? 'Enregistrement…' : 'Enregistrer'}
+                </button>
+              </form>
+            )}
+          </div>
         </div>
       </div>
     </div>

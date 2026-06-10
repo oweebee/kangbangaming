@@ -5,7 +5,7 @@ echo ============================
 cd /d "%~dp0"
 del .git\index.lock 2>nul
 git add -A
-git commit -m "fix: null bytes dans App.jsx (crash vite build) + RegisterPage.jsx tronque"
+git commit -m "feat: changement de mot de passe depuis le profil utilisateur"
 git push
 echo.
 echo Termine ! Redeploi dans Coolify.

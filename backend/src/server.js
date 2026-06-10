@@ -207,6 +207,21 @@ app.patch('/api/user/settings', requireAuth, async (req, res) => {
   res.json({ ok: true, steamAvatar: users[idx].steamAvatar || null, steamPersonaName: users[idx].steamPersonaName || null });
 });
 
+
+app.patch('/api/user/password', requireAuth, async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  if (!currentPassword || !newPassword) return res.status(400).json({ error: 'Champs manquants' });
+  if (newPassword.length < 6) return res.status(400).json({ error: 'Nouveau mot de passe trop court (min. 6 caract.)' });
+  const users = readUsers();
+  const idx = users.findIndex(u => u.id === req.user.id);
+  if (idx === -1) return res.status(404).json({ error: 'User not found' });
+  const ok = await bcrypt.compare(currentPassword, users[idx].passwordHash);
+  if (!ok) return res.status(403).json({ error: 'Mot de passe actuel incorrect' });
+  users[idx].passwordHash = await bcrypt.hash(newPassword, 10);
+  writeUsers(users);
+  res.json({ ok: true });
+});
+
 // ── Admin routes ──────────────────────────────────────────────────────────────
 
 app.get('/api/admin/users', requireAdmin, (req, res) => {
@@ -430,16 +445,4 @@ app.patch('/api/boards/:boardId/games/:appid', requireAuth, (req, res) => {
 });
 
 app.delete('/api/boards/:boardId/games/:appid', requireAuth, (req, res) => {
-  const userBoards = getUserBoards(req.user.id);
-  const board = userBoards[req.params.boardId];
-  if (!board) return res.status(404).json({ error: 'Board not found' });
-  if (!board.games?.[req.params.appid]) return res.status(404).json({ error: 'Game not found' });
-  delete board.games[req.params.appid];
-  setUserBoards(req.user.id, userBoards);
-  res.json({ ok: true });
-});
-
-// ── Start ─────────────────────────────────────────────────────────────────────
-
-await ensureAdmin();
-app.listen(PORT, () => console.log(`Backend running on port ${PORT}`));
+  const userBoards = getUserB
