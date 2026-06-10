@@ -324,11 +324,149 @@ app.get('/api/public/boards', requireAuth, (req, res) => {
   for (const [userId, userBoards] of Object.entries(all)) {
     for (const [boardId, board] of Object.entries(userBoards || {})) {
       if (board.public) {
-        result.push({ id: boardId, name: board.name, emoji: board.emoji || '', gameIcon: board.gameIcon || null, columns: board.columns || [], games: Object.values(board.games || {}), gameCount: Object.keys(board.games || {}).length, ownerUsername: userMap.get(userId) || 'unknown', ownerId: userId, isOwner: userId === req.user.id });
+        const user = readUsers().find(u => u.id === req.user.id); const favIds = new Set(user?.favorites || []); result.push({ id: boardId, name: board.name, emoji: board.emoji || '', gameIcon: board.gameIcon || null, columns: board.columns || [], games: Object.values(board.games || {}), gameCount: Object.keys(board.games || {}).length, ownerUsername: userMap.get(userId) || 'unknown', ownerId: userId, isOwner: userId === req.user.id, isFavorite: favIds.has(boardId) });
       }
     }
   }
   res.json(result);
+});
+
+// ── Favorites ─────────────────────────────────────────────────────────────────
+
+app.get('/api/user/favorites', requireAuth, (req, res) => {
+  const users = readUsers();
+  const me = users.find(u => u.id === req.user.id);
+  const favIds = new Set(me?.favorites || []);
+  if (favIds.size === 0) return res.json([]);
+  const all = readBoards();
+  const userMap = new Map(users.map(u => [u.id, u.username]));
+  const result = [];
+  for (const [userId, userBoards] of Object.entries(all)) {
+    for (const [boardId, board] of Object.entries(userBoards || {})) {
+      if (favIds.has(boardId) && board.public) {
+        result.push({ id: boardId, name: board.name, emoji: board.emoji || '', gameIcon: board.gameIcon || null, ownerUsername: userMap.get(userId) || 'unknown', ownerId: userId, isFavorite: true });
+      }
+    }
+  }
+  res.json(result);
+});
+
+app.post('/api/user/favorites/:boardId', requireAuth, (req, res) => {
+  const users = readUsers();
+  const idx = users.findIndex(u => u.id === req.user.id);
+  if (idx === -1) return res.status(404).json({ error: 'Not found' });
+  if (!users[idx].favorites) users[idx].favorites = [];
+  if (!users[idx].favorites.includes(req.params.boardId)) users[idx].favorites.push(req.params.boardId);
+  writeUsers(users);
+  res.json({ ok: true });
+});
+
+app.delete('/api/user/favorites/:boardId', requireAuth, (req, res) => {
+  const users = readUsers();
+  const idx = users.findIndex(u => u.id === req.user.id);
+  if (idx === -1) return res.status(404).json({ error: 'Not found' });
+  users[idx].favorites = (users[idx].favorites || []).filter(id => id !== req.params.boardId);
+  writeUsers(users);
+  res.json({ ok: true });
+});
+
+
+// ── Collaborative public board routes ─────────────────────────────────────────
+
+function findPublicBoard(boardId) {
+  const all = readBoards();
+  for (const [userId, userBoards] of Object.entries(all)) {
+    if (userBoards[boardId]?.public) {
+      return { userId, board: userBoards[boardId], all, userBoards };
+    }
+  }
+  return null;
+}
+
+app.get('/api/public/boards/:boardId/columns', requireAuth, (req, res) => {
+  const f = findPublicBoard(req.params.boardId);
+  if (!f) return res.status(404).json({ error: 'Not found' });
+  res.json(f.board.columns || []);
+});
+
+app.post('/api/public/boards/:boardId/columns', requireAuth, (req, res) => {
+  const f = findPublicBoard(req.params.boardId);
+  if (!f) return res.status(404).json({ error: 'Not found' });
+  const col = { id: `col_${Date.now()}`, label: req.body.label || 'Nouvelle colonne', emoji: req.body.emoji || '' };
+  f.board.columns = [...(f.board.columns || []), col];
+  f.userBoards[req.params.boardId] = f.board;
+  f.all[f.userId] = f.userBoards;
+  writeBoards(f.all);
+  res.status(201).json(col);
+});
+
+app.patch('/api/public/boards/:boardId/columns/:colId', requireAuth, (req, res) => {
+  const f = findPublicBoard(req.params.boardId);
+  if (!f) return res.status(404).json({ error: 'Not found' });
+  const col = (f.board.columns || []).find(c => c.id === req.params.colId);
+  if (!col) return res.status(404).json({ error: 'Column not found' });
+  if (req.body.label !== undefined) col.label = req.body.label;
+  if (req.body.emoji !== undefined) col.emoji = req.body.emoji;
+  f.userBoards[req.params.boardId] = f.board;
+  f.all[f.userId] = f.userBoards;
+  writeBoards(f.all);
+  res.json(col);
+});
+
+app.delete('/api/public/boards/:boardId/columns/:colId', requireAuth, (req, res) => {
+  const f = findPublicBoard(req.params.boardId);
+  if (!f) return res.status(404).json({ error: 'Not found' });
+  f.board.columns = (f.board.columns || []).filter(c => c.id !== req.params.colId);
+  if (f.board.games) Object.values(f.board.games).forEach(g => { if (g.column === req.params.colId) g.column = f.board.columns[0]?.id || ''; });
+  f.userBoards[req.params.boardId] = f.board;
+  f.all[f.userId] = f.userBoards;
+  writeBoards(f.all);
+  res.json({ ok: true });
+});
+
+app.get('/api/public/boards/:boardId/games', requireAuth, (req, res) => {
+  const f = findPublicBoard(req.params.boardId);
+  if (!f) return res.status(404).json({ error: 'Not found' });
+  res.json(Object.values(f.board.games || {}));
+});
+
+app.post('/api/public/boards/:boardId/games', requireAuth, (req, res) => {
+  const f = findPublicBoard(req.params.boardId);
+  if (!f) return res.status(404).json({ error: 'Not found' });
+  const { appid, name, header_img, icon_img, column, type, emoji } = req.body;
+  if (!appid || !column) return res.status(400).json({ error: 'Missing fields' });
+  if (!f.board.games) f.board.games = {};
+  f.board.games[appid] = { appid, name, header_img: header_img || null, icon_img: icon_img || null, column, type: type || 'steam', emoji: emoji || null, addedAt: new Date().toISOString() };
+  f.userBoards[req.params.boardId] = f.board;
+  f.all[f.userId] = f.userBoards;
+  writeBoards(f.all);
+  res.status(201).json(f.board.games[appid]);
+});
+
+app.patch('/api/public/boards/:boardId/games/:appid', requireAuth, (req, res) => {
+  const f = findPublicBoard(req.params.boardId);
+  if (!f) return res.status(404).json({ error: 'Not found' });
+  const game = (f.board.games || {})[req.params.appid];
+  if (!game) return res.status(404).json({ error: 'Game not found' });
+  if (req.body.column !== undefined) game.column = req.body.column;
+  if (req.body.notes !== undefined) game.notes = req.body.notes;
+  if (req.body.name !== undefined) game.name = req.body.name;
+  if (req.body.emoji !== undefined) game.emoji = req.body.emoji;
+  f.userBoards[req.params.boardId] = f.board;
+  f.all[f.userId] = f.userBoards;
+  writeBoards(f.all);
+  res.json(game);
+});
+
+app.delete('/api/public/boards/:boardId/games/:appid', requireAuth, (req, res) => {
+  const f = findPublicBoard(req.params.boardId);
+  if (!f) return res.status(404).json({ error: 'Not found' });
+  if (!(f.board.games || {})[req.params.appid]) return res.status(404).json({ error: 'Not found' });
+  delete f.board.games[req.params.appid];
+  f.userBoards[req.params.boardId] = f.board;
+  f.all[f.userId] = f.userBoards;
+  writeBoards(f.all);
+  res.json({ ok: true });
 });
 
 // ── Board routes ──────────────────────────────────────────────────────────────

@@ -90,6 +90,11 @@ export default function App() {
   const [showPublicBoards, setShowPublicBoards] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
 
+  // Favorites (public boards pinned to sidebar)
+  const [favBoards, setFavBoards] = useState([]);
+  // Collaborative public board currently open (null = own boards mode)
+  const [publicBoardMode, setPublicBoardMode] = useState(null); // { id, name, ownerUsername }
+
   // Board state
   const [boards, setBoards] = useState([]);
   const [activeBoardId, setActiveBoardId] = useState(null);
@@ -130,6 +135,63 @@ export default function App() {
     setCurrentUser(null); setToken(null); setBoards([]); setActiveBoardId(null); setColumns([]); setGames([]);
   };
 
+  const fetchFavorites = useCallback(async () => {
+    if (!token) return;
+    try {
+      const res = await fetch(`${API}/user/favorites`, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) setFavBoards(await res.json());
+    } catch {}
+  }, [token]);
+
+  const toggleFavorite = async (boardId, boardData, isFav) => {
+    const method = isFav ? 'DELETE' : 'POST';
+    await fetch(`${API}/user/favorites/${boardId}`, { method, headers: { Authorization: `Bearer ${token}` } });
+    if (isFav) {
+      setFavBoards(prev => prev.filter(b => b.id !== boardId));
+    } else {
+      setFavBoards(prev => [...prev, { ...boardData, isFavorite: true }]);
+    }
+  };
+
+  // Returns the right API base for the active board context
+  const boardApi = publicBoardMode ? `/api/public/boards/${publicBoardMode.id}` : null;
+
+  const openPublicBoard = async (board) => {
+    setPublicBoardMode(board);
+    setShowPublicBoards(false);
+    setActiveBoardId(null);
+    setLoading(true);
+    try {
+      const h = { Authorization: `Bearer ${token}` };
+      const [cols, gms] = await Promise.all([
+        fetch(`${API}/public/boards/${board.id}/columns`, { headers: h }).then(r => r.json()),
+        fetch(`${API}/public/boards/${board.id}/games`, { headers: h }).then(r => r.json()),
+      ]);
+      setColumns(cols);
+      setGames(gms);
+    } catch {} finally { setLoading(false); }
+  };
+
+  const closePublicBoard = () => {
+    setPublicBoardMode(null);
+    setColumns([]); setGames([]);
+    if (boards.length > 0) { setActiveBoardId(boards[0].id); setColumns(boards[0].columns || []); fetchGames(boards[0].id); }
+  };
+
+  const refreshPublicBoard = async () => {
+    if (!publicBoardMode) return;
+    setLoading(true);
+    try {
+      const h = { Authorization: `Bearer ${token}` };
+      const [cols, gms] = await Promise.all([
+        fetch(`${API}/public/boards/${publicBoardMode.id}/columns`, { headers: h }).then(r => r.json()),
+        fetch(`${API}/public/boards/${publicBoardMode.id}/games`, { headers: h }).then(r => r.json()),
+      ]);
+      setColumns(cols);
+      setGames(gms);
+    } catch {} finally { setLoading(false); }
+  };
+
   const fetchBoards = useCallback(async () => {
     if (!token) return;
     const res = await fetch(`${API}/boards`, { headers: { Authorization: `Bearer ${token}` } });
@@ -146,7 +208,7 @@ export default function App() {
     catch { setGames([]); } finally { setLoading(false); }
   }, [token]);
 
-  useEffect(() => { if (token) fetchBoards(); }, [token]);
+  useEffect(() => { if (token) { fetchBoards(); fetchFavorites(); } }, [token]);
   useEffect(() => {
     if (!activeBoardId) return;
     const board = boards.find(b => b.id === activeBoardId);
@@ -207,46 +269,66 @@ export default function App() {
 
   // Columns CRUD
   const addColumn = async () => {
-    const res = await fetch(`${API}/boards/${activeBoardId}/columns`, { method: 'POST', headers: authHeaders(token), body: JSON.stringify({ label: 'Nouvelle colonne' }) });
+    const boardApi = publicBoardMode ? `${API}/public/boards/${publicBoardMode.id}` : `${API}/boards/${activeBoardId}`;
+    const res = await fetch(`${boardApi}/columns`, { method: 'POST', headers: authHeaders(token), body: JSON.stringify({ label: 'Nouvelle colonne' }) });
     const col = await res.json();
     setColumns(prev => [...prev, col]);
-    setBoards(prev => prev.map(b => b.id === activeBoardId ? { ...b, columns: [...(b.columns || []), col] } : b));
+    if (!publicBoardMode) setBoards(prev => prev.map(b => b.id === activeBoardId ? { ...b, columns: [...(b.columns || []), col] } : b));
   };
   const renameColumn = async (colId, label) => {
-    await fetch(`${API}/boards/${activeBoardId}/columns/${colId}`, { method: 'PATCH', headers: authHeaders(token), body: JSON.stringify({ label }) });
+    const boardApi = publicBoardMode ? `${API}/public/boards/${publicBoardMode.id}` : `${API}/boards/${activeBoardId}`;
+    await fetch(`${boardApi}/columns/${colId}`, { method: 'PATCH', headers: authHeaders(token), body: JSON.stringify({ label }) });
     const updated = columns.map(c => c.id === colId ? { ...c, label } : c);
-    setColumns(updated); setBoards(prev => prev.map(b => b.id === activeBoardId ? { ...b, columns: updated } : b));
+    setColumns(updated);
+    if (!publicBoardMode) setBoards(prev => prev.map(b => b.id === activeBoardId ? { ...b, columns: updated } : b));
   };
   const setColumnEmoji = async (colId, emoji) => {
-    await fetch(`${API}/boards/${activeBoardId}/columns/${colId}`, { method: 'PATCH', headers: authHeaders(token), body: JSON.stringify({ emoji }) });
+    const boardApi = publicBoardMode ? `${API}/public/boards/${publicBoardMode.id}` : `${API}/boards/${activeBoardId}`;
+    await fetch(`${boardApi}/columns/${colId}`, { method: 'PATCH', headers: authHeaders(token), body: JSON.stringify({ emoji }) });
     const updated = columns.map(c => c.id === colId ? { ...c, emoji } : c);
-    setColumns(updated); setBoards(prev => prev.map(b => b.id === activeBoardId ? { ...b, columns: updated } : b));
+    setColumns(updated);
+    if (!publicBoardMode) setBoards(prev => prev.map(b => b.id === activeBoardId ? { ...b, columns: updated } : b));
   };
   const deleteColumn = async (colId) => {
     if (!confirm('Supprimer cette colonne ? Les jeux seront déplacés dans la première colonne.')) return;
-    await fetch(`${API}/boards/${activeBoardId}/columns/${colId}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+    const boardApi = publicBoardMode ? `${API}/public/boards/${publicBoardMode.id}` : `${API}/boards/${activeBoardId}`;
+    await fetch(`${boardApi}/columns/${colId}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
     const updated = columns.filter(c => c.id !== colId);
-    setColumns(updated); setBoards(prev => prev.map(b => b.id === activeBoardId ? { ...b, columns: updated } : b));
-    fetchGames(activeBoardId);
+    setColumns(updated);
+    if (!publicBoardMode) {
+      setBoards(prev => prev.map(b => b.id === activeBoardId ? { ...b, columns: updated } : b));
+      fetchGames(activeBoardId);
+    } else {
+      const res = await fetch(`${API}/public/boards/${publicBoardMode.id}/games`, { headers: authHeaders(token) });
+      if (res.ok) setGames(await res.json());
+    }
   };
 
   // Games CRUD
   const addGame = async (game) => {
     const firstColId = columns[0]?.id;
-    await fetch(`${API}/boards/${activeBoardId}/games`, {
+    const boardApi = publicBoardMode ? `${API}/public/boards/${publicBoardMode.id}` : `${API}/boards/${activeBoardId}`;
+    await fetch(`${boardApi}/games`, {
       method: 'POST', headers: authHeaders(token),
       body: JSON.stringify({ appid: game.appid, name: game.name, header_img: game.header_img, icon_img: game.icon_img, column: firstColId, type: game.type || 'steam', emoji: game.emoji || null }),
     });
-    fetchGames(activeBoardId);
+    if (publicBoardMode) {
+      const res = await fetch(`${boardApi}/games`, { headers: authHeaders(token) });
+      if (res.ok) setGames(await res.json());
+    } else {
+      fetchGames(activeBoardId);
+    }
   };
   const removeGame = async (appid) => {
-    await fetch(`${API}/boards/${activeBoardId}/games/${appid}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+    const boardApi = publicBoardMode ? `${API}/public/boards/${publicBoardMode.id}` : `${API}/boards/${activeBoardId}`;
+    await fetch(`${boardApi}/games/${appid}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
     setGames(prev => prev.filter(g => g.appid !== appid));
   };
   const moveGame = useCallback(async (appid, column) => {
     setGames(prev => prev.map(g => g.appid === appid ? { ...g, column } : g));
-    await fetch(`${API}/boards/${activeBoardId}/games/${appid}`, { method: 'PATCH', headers: authHeaders(token), body: JSON.stringify({ column }) });
-  }, [activeBoardId, token]);
+    const boardApi = publicBoardMode ? `${API}/public/boards/${publicBoardMode.id}` : `${API}/boards/${activeBoardId}`;
+    await fetch(`${boardApi}/games/${appid}`, { method: 'PATCH', headers: authHeaders(token), body: JSON.stringify({ column }) });
+  }, [activeBoardId, token, publicBoardMode]);
 
   // Auth screens
   if (!currentUser) {
@@ -287,8 +369,12 @@ export default function App() {
             cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 6,
           }}
         >
-          <span style={{ fontSize: 13 }}>🌐</span>
-          <span>Boards Publics</span>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M2 12h20"/>
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+            </svg>
+          <span style={{ color: 'var(--accent)', fontWeight: 600 }}>Boards Publics</span>
         </button>
       </div>
 
@@ -325,11 +411,48 @@ export default function App() {
               onClick={e => { e.stopPropagation(); toggleBoardPublic(b.id, !b.public); }}
               title={b.public ? 'Board public — cliquer pour rendre privé' : 'Board privé — cliquer pour rendre public'}
               style={{ background: 'none', border: 'none', fontSize: 11, padding: 0, cursor: 'pointer', flexShrink: 0, opacity: b.public ? 1 : 0.3, lineHeight: 1 }}
-            >{b.public ? '🌐' : '🔒'}</button>
+            >{b.public ? (
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="var(--accent)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M2 12h20"/>
+                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+              </svg>
+            ) : '🔒'}</button>
             <button onClick={e => { e.stopPropagation(); deleteBoard(b.id); }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 11, padding: 0, opacity: 0.4, cursor: 'pointer', flexShrink: 0 }}>✕</button>
           </div>
         ))}
       </div>
+
+      {/* Favorited public boards */}
+      {favBoards.length > 0 && (
+        <div style={{ padding: '4px 6px 0', borderTop: '1px solid var(--border)' }}>
+          <div style={{ fontSize: 10, color: 'var(--text-muted)', padding: '4px 2px 4px 4px', letterSpacing: '0.06em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <svg viewBox="0 0 24 24" width="10" height="10" fill="var(--accent)" stroke="var(--accent)" strokeWidth="1.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            Publics favoris
+          </div>
+          {favBoards.map(b => (
+            <div key={b.id}
+              onClick={() => { setActiveBoardId(null); setShowPublicBoards(true); if (isMobile) setShowDrawer(false); }}
+              style={{
+                padding: '6px 8px', borderRadius: 7, cursor: 'pointer', marginBottom: 2,
+                background: 'transparent', borderLeft: '3px solid transparent',
+                color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 5,
+                transition: 'background .12s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--surface2)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+            >
+              {b.gameIcon ? (
+                <img src={b.gameIcon} alt="" style={{ width: 22, height: 22, objectFit: 'cover', borderRadius: '50%', flexShrink: 0, border: '1px solid var(--border)', opacity: 0.8 }} />
+              ) : (
+                <span style={{ fontSize: 13, flexShrink: 0 }}>{b.emoji || '🎮'}</span>
+              )}
+              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 12 }}>{b.name}</span>
+              <svg viewBox="0 0 24 24" width="10" height="10" fill="var(--accent)" stroke="var(--accent)" strokeWidth="1.5" style={{ flexShrink: 0, opacity: 0.7 }}><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* New board form */}
       <div style={{ padding: '8px', borderTop: '1px solid var(--border)' }}>
@@ -422,10 +545,32 @@ export default function App() {
         )}
         <header style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
           <button onClick={() => setShowDrawer(true)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 20, cursor: 'pointer', lineHeight: 1, flexShrink: 0 }}>☰</button>
-          <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--accent)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{activeBoard?.name || 'KangBanGaming'}</span>
-          {activeBoardId && <button onClick={() => setShowSearch(true)} style={{ background: 'var(--accent)', border: 'none', borderRadius: 7, padding: '7px 14px', color: '#fff', fontWeight: 700, fontSize: 12, flexShrink: 0 }}>+ Carte</button>}
+          {publicBoardMode ? (
+            <>
+              <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--accent)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {publicBoardMode.name}
+                <span style={{ fontSize: 10, fontWeight: 400, color: 'var(--text-muted)', marginLeft: 6 }}>par {publicBoardMode.ownerUsername} · collab</span>
+              </span>
+              <button onClick={refreshPublicBoard} title="Rafraîchir" style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', color: 'var(--text-muted)', fontSize: 14, cursor: 'pointer', flexShrink: 0, lineHeight: 1 }}>↻</button>
+              <button onClick={closePublicBoard} style={{ background: 'rgba(255,255,255,.08)', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 10px', color: 'var(--text-muted)', fontSize: 11, cursor: 'pointer', flexShrink: 0 }}>✕ Quitter</button>
+              <button onClick={() => setShowSearch(true)} style={{ background: 'var(--accent)', border: 'none', borderRadius: 7, padding: '7px 14px', color: '#fff', fontWeight: 700, fontSize: 12, flexShrink: 0 }}>+ Carte</button>
+            </>
+          ) : (
+            <>
+              <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--accent)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{activeBoard?.name || 'KangBanGaming'}</span>
+              {activeBoardId && <button onClick={() => setShowSearch(true)} style={{ background: 'var(--accent)', border: 'none', borderRadius: 7, padding: '7px 14px', color: '#fff', fontWeight: 700, fontSize: 12, flexShrink: 0 }}>+ Carte</button>}
+            </>
+          )}
         </header>
-        {!activeBoardId ? (
+        {showPublicBoards ? (
+          <PublicBoards token={token} currentUser={currentUser} favBoardIds={new Set(favBoards.map(b => b.id))} onToggleFavorite={toggleFavorite} onOpenBoard={openPublicBoard} onClose={() => setShowPublicBoards(false)} />
+        ) : publicBoardMode ? (
+          loading ? (
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Chargement...</div>
+          ) : (
+            <MobileBoard columns={columns} byColumn={byColumn} onCardClick={setSelectedGame} onRemoveGame={removeGame} />
+          )
+        ) : !activeBoardId ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Crée un board pour commencer</div>
         ) : loading ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Chargement...</div>
@@ -438,7 +583,7 @@ export default function App() {
         ) : (
           <MobileBoard columns={columns} byColumn={byColumn} onCardClick={setSelectedGame} onRemoveGame={removeGame} />
         )}
-        {activeBoardId && (
+        {(activeBoardId || publicBoardMode) && (
           <div style={{ background: 'var(--surface)', borderTop: '1px solid var(--border)', padding: '8px 12px', display: 'flex', gap: 8, flexShrink: 0 }}>
             <button onClick={addColumn} style={{ flex: 1, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '8px', color: 'var(--text-muted)', fontSize: 12 }}>+ Colonne</button>
           </div>
@@ -448,7 +593,7 @@ export default function App() {
         {selectedGame && <GameModal game={selectedGame} onClose={() => setSelectedGame(null)} api={API} token={token} />}
         {showAdmin && <AdminPanel token={token} currentUser={currentUser} onClose={() => setShowAdmin(false)} />}
         {showSteamSettings && <SteamSettings token={token} onSave={handleSteamSave} onClose={() => setShowSteamSettings(false)} />}
-        {showPublicBoards && <PublicBoards token={token} currentUser={currentUser} onClose={() => setShowPublicBoards(false)} />}
+
         {showProfile && <ProfilePage token={token} currentUser={currentUser} onClose={() => setShowProfile(false)} />}
       </div>
     );
@@ -463,26 +608,59 @@ export default function App() {
       </aside>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <header style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
-          <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--accent)' }}>{activeBoard?.name || '—'}</span>
-          {activeBoard && (
-            <span
-              onClick={() => toggleBoardPublic(activeBoard.id, !activeBoard.public)}
-              title={activeBoard.public ? 'Public — cliquer pour rendre privé' : 'Privé — cliquer pour rendre public'}
-              style={{ fontSize: 12, color: activeBoard.public ? 'var(--accent)' : 'var(--text-muted)', cursor: 'pointer', userSelect: 'none', display: 'flex', alignItems: 'center', gap: 4 }}
-            >
-              {activeBoard.public ? '🌐 Public' : '🔒 Privé'}
-            </span>
-          )}
-          <input type="search" placeholder="Filtrer..." value={search} onChange={e => setSearch(e.target.value)}
-            style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 10px', color: 'var(--text)', fontSize: 12, outline: 'none', maxWidth: 200 }} />
-          {activeBoardId && (
+          {publicBoardMode ? (
             <>
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                <circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+              </svg>
+              <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--accent)' }}>{publicBoardMode.name}</span>
+              <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                par <strong style={{ color: 'var(--text)' }}>{publicBoardMode.ownerUsername}</strong>
+                <span style={{ background: 'rgba(232,129,58,.18)', border: '1px solid rgba(232,129,58,.35)', borderRadius: 99, padding: '1px 7px', color: 'var(--accent)', fontSize: 10, fontWeight: 700 }}>collaboration</span>
+              </span>
+              <input type="search" placeholder="Filtrer..." value={search} onChange={e => setSearch(e.target.value)}
+                style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 10px', color: 'var(--text)', fontSize: 12, outline: 'none', maxWidth: 200 }} />
               <button onClick={addColumn} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>+ Colonne</button>
-              <button onClick={() => setShowSearch(true)} style={{ marginLeft: 'auto', background: 'var(--accent)', border: 'none', borderRadius: 7, padding: '7px 16px', color: '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>+ Ajouter une carte</button>
+              <button onClick={() => setShowSearch(true)} style={{ background: 'var(--accent)', border: 'none', borderRadius: 7, padding: '7px 16px', color: '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>+ Ajouter une carte</button>
+              <button onClick={refreshPublicBoard} title="Rafraîchir" style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 10px', color: 'var(--text-muted)', fontSize: 15, cursor: 'pointer', lineHeight: 1 }}>↻</button>
+              <button onClick={closePublicBoard} style={{ marginLeft: 'auto', background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>✕ Quitter</button>
+            </>
+          ) : (
+            <>
+              <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--accent)' }}>{activeBoard?.name || '—'}</span>
+              {activeBoard && (
+                <span
+                  onClick={() => toggleBoardPublic(activeBoard.id, !activeBoard.public)}
+                  title={activeBoard.public ? 'Public — cliquer pour rendre privé' : 'Privé — cliquer pour rendre public'}
+                  style={{ fontSize: 12, color: activeBoard.public ? 'var(--accent)' : 'var(--text-muted)', cursor: 'pointer', userSelect: 'none', display: 'flex', alignItems: 'center', gap: 4 }}
+                >
+                  {activeBoard.public ? <><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M2 12h20"/>
+                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                  </svg> Public</> : '🔒 Privé'}
+                </span>
+              )}
+              <input type="search" placeholder="Filtrer..." value={search} onChange={e => setSearch(e.target.value)}
+                style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 10px', color: 'var(--text)', fontSize: 12, outline: 'none', maxWidth: 200 }} />
+              {activeBoardId && (
+                <>
+                  <button onClick={addColumn} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>+ Colonne</button>
+                  <button onClick={() => setShowSearch(true)} style={{ marginLeft: 'auto', background: 'var(--accent)', border: 'none', borderRadius: 7, padding: '7px 16px', color: '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>+ Ajouter une carte</button>
+                </>
+              )}
             </>
           )}
         </header>
-        {!activeBoardId ? (
+        {showPublicBoards ? (
+          <PublicBoards token={token} currentUser={currentUser} favBoardIds={new Set(favBoards.map(b => b.id))} onToggleFavorite={toggleFavorite} onOpenBoard={openPublicBoard} onClose={() => setShowPublicBoards(false)} />
+        ) : publicBoardMode ? (
+          loading ? (
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Chargement...</div>
+          ) : (
+            <KanbanBoard columns={columns} byColumn={byColumn} dragging={dragging} setDragging={setDragging} moveGame={moveGame} onCardClick={setSelectedGame} onRemoveGame={removeGame} onRenameColumn={renameColumn} onDeleteColumn={deleteColumn} onSetEmoji={setColumnEmoji} />
+          )
+        ) : !activeBoardId ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Crée un board pour commencer</div>
         ) : loading ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Chargement...</div>
@@ -492,7 +670,6 @@ export default function App() {
             <div style={{ fontWeight: 700, color: 'var(--text)' }}>Board vide</div>
             <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Ajoute un jeu Steam ou crée une carte personnalisée</div>
             <button onClick={() => setShowSearch(true)} style={{ background: 'var(--accent)', border: 'none', borderRadius: 8, padding: '10px 24px', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>+ Ajouter une carte</button>
-       
           </div>
         ) : (
           <KanbanBoard columns={columns} byColumn={byColumn} dragging={dragging} setDragging={setDragging} moveGame={moveGame} onCardClick={setSelectedGame} onRemoveGame={removeGame} onRenameColumn={renameColumn} onDeleteColumn={deleteColumn} onSetEmoji={setColumnEmoji} />
@@ -507,7 +684,6 @@ export default function App() {
       {selectedGame && <GameModal game={selectedGame} onClose={() => setSelectedGame(null)} api={API} token={token} />}
       {showAdmin && <AdminPanel token={token} currentUser={currentUser} onClose={() => setShowAdmin(false)} />}
       {showSteamSettings && <SteamSettings token={token} onSave={handleSteamSave} onClose={() => setShowSteamSettings(false)} />}
-      {showPublicBoards && <PublicBoards token={token} currentUser={currentUser} onClose={() => setShowPublicBoards(false)} />}
       {showProfile && <ProfilePage token={token} currentUser={currentUser} onClose={() => setShowProfile(false)} />}
     </div>
   );
