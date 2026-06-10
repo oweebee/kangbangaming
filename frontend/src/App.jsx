@@ -305,14 +305,15 @@ export default function App() {
 
   // Fetch Steam game info when board changes
   // NOTE: activeSteamAppId is computed after the early return, so we derive it here from state
+  // Use same fallback as the render path: board.headerImg OR first game with header_img
   useEffect(() => {
     const board = boards.find(b => b.id === activeBoardId);
-    const headerImg = board?.headerImg || null;
+    const headerImg = board?.headerImg || games.find(g => g.header_img)?.header_img || null;
     const appId = headerImg?.match(/apps\/(\d+)\//)?.[1] || null;
     if (!appId || !token) { setGameInfo(null); return; }
     fetch(`${API}/steam/gameinfo/${appId}`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.ok ? r.json() : null).then(setGameInfo).catch(() => setGameInfo(null));
-  }, [activeBoardId, boards, token]);
+  }, [activeBoardId, boards, token]); // games intentionally omitted — backend cache makes extra calls cheap
 
   // Board game search
   const searchBoardGames = useCallback(async (q) => {
@@ -1030,7 +1031,7 @@ export default function App() {
                 <button onClick={addColumn} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>+ Colonne</button>
               )}
               {/* ── Steam game info — encart centre du header ── */}
-              <div style={{ flex: 1, display: 'flex', justifyContent: 'center', minWidth: 0 }}>
+              <div style={{ flex: '1 1 0', display: 'flex', justifyContent: 'center', minWidth: gameInfo ? 200 : 0, overflow: 'hidden' }}>
                 {gameInfo && (() => {
                   const reviewColor = gameInfo.reviewScore >= 8 ? '#4cd882' : gameInfo.reviewScore >= 5 ? '#f5c518' : '#f87575';
                   const reviewBg    = gameInfo.reviewScore >= 8 ? 'rgba(60,200,100,.1)' : gameInfo.reviewScore >= 5 ? 'rgba(245,197,24,.1)' : 'rgba(248,117,117,.1)';
@@ -1055,7 +1056,11 @@ export default function App() {
                       )}
                       {/* Avis Steam */}
                       {gameInfo.reviewScoreDesc && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '6px 14px', background: reviewBg, borderRight: gameInfo.metacritic || gameInfo.price ? '1px solid rgba(255,255,255,0.08)' : undefined }}>
+                        <div
+                          style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '6px 14px', background: reviewBg, borderRight: gameInfo.metacritic || gameInfo.price ? '1px solid rgba(255,255,255,0.08)' : undefined, cursor: 'pointer' }}
+                          onClick={() => window.open(`https://store.steampowered.com/app/${gameInfo.appid}/#app_reviews_hash`, '_blank')}
+                          title="Voir les avis Steam"
+                        >
                           <span style={{ fontSize: 15, lineHeight: 1 }}>{gameInfo.reviewScore >= 8 ? '👍' : gameInfo.reviewScore >= 5 ? '😐' : '👎'}</span>
                           <div>
                             <div style={{ fontWeight: 700, color: reviewColor, lineHeight: 1.2 }}>{gameInfo.reviewScoreDesc}</div>
