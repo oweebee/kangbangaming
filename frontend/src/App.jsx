@@ -304,11 +304,15 @@ export default function App() {
   }, [activeBoardId]);
 
   // Fetch Steam game info when board changes
+  // NOTE: activeSteamAppId is computed after the early return, so we derive it here from state
   useEffect(() => {
-    if (!activeSteamAppId || !token) { setGameInfo(null); return; }
-    fetch(`${API}/steam/gameinfo/${activeSteamAppId}`, { headers: { Authorization: `Bearer ${token}` } })
+    const board = boards.find(b => b.id === activeBoardId);
+    const headerImg = board?.headerImg || null;
+    const appId = headerImg?.match(/apps\/(\d+)\//)?.[1] || null;
+    if (!appId || !token) { setGameInfo(null); return; }
+    fetch(`${API}/steam/gameinfo/${appId}`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.ok ? r.json() : null).then(setGameInfo).catch(() => setGameInfo(null));
-  }, [activeSteamAppId, token]);
+  }, [activeBoardId, boards, token]);
 
   // Board game search
   const searchBoardGames = useCallback(async (q) => {
