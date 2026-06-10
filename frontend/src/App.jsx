@@ -151,6 +151,7 @@ export default function App() {
   const [selectedGame, setSelectedGame] = useState(null);
   const [editingGame,  setEditingGame]  = useState(null);
   const [showArchived, setShowArchived] = useState(false);
+  const [searchTargetCol, setSearchTargetCol] = useState(null);
   const [showSearch, setShowSearch] = useState(false);
   const [dragging, setDragging] = useState(null);
   const [newBoardName, setNewBoardName] = useState('');
@@ -371,12 +372,12 @@ export default function App() {
   };
 
   // Games CRUD
-  const addGame = async (game) => {
-    const firstColId = columns[0]?.id;
+  const addGame = async (game, targetColId) => {
+    const colId = targetColId || columns[0]?.id;
     const boardApi = publicBoardMode ? `${API}/public/boards/${publicBoardMode.id}` : `${API}/boards/${activeBoardId}`;
     await fetch(`${boardApi}/games`, {
       method: 'POST', headers: authHeaders(token),
-      body: JSON.stringify({ appid: game.appid, name: game.name, header_img: game.header_img, icon_img: game.icon_img, column: firstColId, type: game.type || 'steam', emoji: game.emoji || null, taskType: game.taskType || null }),
+      body: JSON.stringify({ appid: game.appid, name: game.name, header_img: game.header_img, icon_img: game.icon_img, column: colId, type: game.type || 'steam', emoji: game.emoji || null, taskType: game.taskType || null }),
     });
     if (publicBoardMode) {
       const res = await fetch(`${boardApi}/games`, { headers: authHeaders(token) });
@@ -402,6 +403,19 @@ export default function App() {
     await fetch(`${boardApi}/games/${appid}`, { method: 'PATCH', headers: authHeaders(token), body: JSON.stringify({ archived: false }) });
     setGames(prev => prev.map(g => g.appid === appid ? { ...g, archived: false } : g));
   };
+
+  const reorderGamesInColumn = useCallback(async (colId, orderedAppids) => {
+    setGames(prev => prev.map(g => {
+      const idx = orderedAppids.indexOf(g.appid);
+      if (idx !== -1) return { ...g, sortOrder: idx, column: colId };
+      return g;
+    }));
+    const boardApi = publicBoardMode ? `${API}/public/boards/${publicBoardMode.id}` : `${API}/boards/${activeBoardId}`;
+    await fetch(`${boardApi}/columns/${colId}/games/reorder`, {
+      method: 'PATCH', headers: authHeaders(token),
+      body: JSON.stringify({ order: orderedAppids }),
+    });
+  }, [activeBoardId, token, publicBoardMode]);
 
   const updateGame = async (updatedGame) => {
     const boardApi = publicBoardMode ? `${API}/public/boards/${publicBoardMode.id}` : `${API}/boards/${activeBoardId}`;
@@ -435,7 +449,16 @@ export default function App() {
 
   const filtered = games.filter(g => g.name?.toLowerCase().includes(search.toLowerCase()));
   const filteredForBoard = filtered.filter(g => showArchived ? true : !g.archived);
-  const byColumn = columns.reduce((acc, col) => { acc[col.id] = filteredForBoard.filter(g => g.column === col.id); return acc; }, {});
+  const byColumn = columns.reduce((acc, col) => {
+    acc[col.id] = filteredForBoard
+      .filter(g => g.column === col.id)
+      .sort((a, b) => {
+        const sa = a.sortOrder ?? new Date(a.addedAt || 0).getTime();
+        const sb = b.sortOrder ?? new Date(b.addedAt || 0).getTime();
+        return sa - sb;
+      });
+    return acc;
+  }, {});
   const knownColIds = new Set(columns.map(c => c.id));
   const activeBoard = boards.find(b => b.id === activeBoardId);
   // true when the active board was created from a Steam game (task board)
@@ -720,7 +743,7 @@ export default function App() {
             </div>
           </div>
         ) : (
-          <button onClick={() => setShowNewBoard(true)} style={{ width: '100%', background: 'none', border: '1px dashed var(--border)', borderRadius: 7, padding: '7px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>+ Nouveau board</button>
+          <button onClick={() => setShowNewBoard(true)} style={{ width: '100%', background: 'var(--accent)', border: 'none', borderRadius: 7, padding: '9px', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>+ Nouveau board</button>
         )}
       </div>
 
@@ -870,7 +893,6 @@ export default function App() {
               <span style={{ fontWeight: 700, fontSize: 14, color: '#3db86a', flexShrink: 0 }}>Board Public</span>
               <span style={{ fontSize: 12, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 180 }}>{publicBoardMode.name}</span>
               <button onClick={addColumn} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>+ Colonne</button>
-              <button onClick={() => setShowSearch(true)} style={{ background: 'var(--accent)', border: 'none', borderRadius: 7, padding: '7px 16px', color: '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>{isTaskBoard ? '+ Ajouter une tâche' : '+ Ajouter un jeu'}</button>
               <button onClick={refreshPublicBoard} style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 11px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ fontSize: 15, lineHeight: 1 }}>↻</span> Rafraîchir</button>
               <div style={{ flex: 1 }} />
               <input type="search" placeholder="Filtrer..." value={search} onChange={e => setSearch(e.target.value)}
@@ -903,11 +925,11 @@ export default function App() {
             <>
               {/* Board icon */}
               {activeBoard?.gameIcon ? (
-                <img src={activeBoard.gameIcon} alt="" style={{ width: 22, height: 22, borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border)', flexShrink: 0 }} />
+                <img src={activeBoard.gameIcon} alt="" style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border)', flexShrink: 0 }} />
               ) : activeBoard ? (
-                <span style={{ fontSize: 18, flexShrink: 0 }}>{activeBoard.emoji || '🎮'}</span>
+                <span style={{ fontSize: 36, flexShrink: 0 }}>{activeBoard.emoji || '🎮'}</span>
               ) : null}
-              <button onClick={() => { setActiveBoardId(null); setShowHome(true); }} title="Accueil" style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', padding: '2px 4px', opacity: 0.6 }}>←</button>
+              <button onClick={() => { setActiveBoardId(null); setShowHome(true); }} title="Accueil" style={{ background: 'none', border: 'none', color: 'var(--text)', fontSize: 18, cursor: 'pointer', padding: '2px 5px', opacity: 0.75, fontWeight: 700 }}>←</button>
               <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 220 }}>{activeBoard?.name || '—'}</span>
               {activeBoard && (
                 <span
@@ -923,10 +945,7 @@ export default function App() {
                 </span>
               )}
               {activeBoardId && (
-                <>
-                  <button onClick={addColumn} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>+ Colonne</button>
-                  <button onClick={() => setShowSearch(true)} style={{ background: 'var(--accent)', border: 'none', borderRadius: 7, padding: '7px 16px', color: '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>{isTaskBoard ? '+ Ajouter une tâche' : '+ Ajouter un jeu'}</button>
-                </>
+                <button onClick={addColumn} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>+ Colonne</button>
               )}
               <div style={{ flex: 1 }} />
               {(activeBoardId || publicBoardMode) && archiveCount > 0 && (
@@ -959,14 +978,14 @@ export default function App() {
           loading ? (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Chargement...</div>
           ) : (
-            <KanbanBoard columns={columns} byColumn={byColumn} dragging={dragging} setDragging={setDragging} moveGame={moveGame} onCardClick={setSelectedGame} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} onRenameColumn={renameColumn} onDeleteColumn={deleteColumn} onSetEmoji={setColumnEmoji} onReorderColumns={reorderColumns} isTaskBoard={isTaskBoard} />
+            <KanbanBoard columns={columns} byColumn={byColumn} dragging={dragging} setDragging={setDragging} moveGame={moveGame} onCardClick={setSelectedGame} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} onRenameColumn={renameColumn} onDeleteColumn={deleteColumn} onSetEmoji={setColumnEmoji} onReorderColumns={reorderColumns} onAddToColumn={colId => { setSearchTargetCol(colId); setShowSearch(true); }} onReorderGames={reorderGamesInColumn} isTaskBoard={isTaskBoard} />
           )
         ) : !activeBoardId ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Crée un board pour commencer</div>
         ) : loading ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Chargement...</div>
         ) : (
-          <KanbanBoard columns={columns} byColumn={byColumn} dragging={dragging} setDragging={setDragging} moveGame={moveGame} onCardClick={setSelectedGame} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onRenameColumn={renameColumn} onDeleteColumn={deleteColumn} onSetEmoji={setColumnEmoji} onReorderColumns={reorderColumns} isTaskBoard={isTaskBoard} />
+          <KanbanBoard columns={columns} byColumn={byColumn} dragging={dragging} setDragging={setDragging} moveGame={moveGame} onCardClick={setSelectedGame} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onRenameColumn={renameColumn} onDeleteColumn={deleteColumn} onSetEmoji={setColumnEmoji} onReorderColumns={reorderColumns} onAddToColumn={colId => { setSearchTargetCol(colId); setShowSearch(true); }} onReorderGames={reorderGamesInColumn} isTaskBoard={isTaskBoard} />
         )}
       </div>
       <footer style={{ position: 'fixed', bottom: 0, right: 0, padding: '5px 12px', display: 'flex', alignItems: 'center', gap: 8, fontSize: 10, color: 'var(--text-muted)' }}>
@@ -974,7 +993,7 @@ export default function App() {
         <a href="https://discord.gg/9mXpM9wv" target="_blank" rel="noreferrer" style={{ color: '#7289da', textDecoration: 'none' }}>Discord</a>
         <a href="https://github.com/oweebee/kangbangaming" target="_blank" rel="noreferrer" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>GitHub</a>
       </footer>
-      {showSearch && <SearchModal api={API} token={token} boardGames={games} onAdd={addGame} onRemove={removeGame} onClose={() => setShowSearch(false)} customOnly={isTaskBoard} />}
+      {showSearch && <SearchModal api={API} token={token} boardGames={games} onAdd={g => addGame(g, searchTargetCol)} onRemove={removeGame} onClose={() => { setShowSearch(false); setSearchTargetCol(null); }} customOnly={isTaskBoard} />}
       {editingGame && <SearchModal api={API} token={token} boardGames={games} onAdd={addGame} onRemove={removeGame} onClose={() => setEditingGame(null)} customOnly={isTaskBoard} initialGame={editingGame} onSave={async g => { await updateGame(g); setEditingGame(null); }} />}
       {selectedGame && selectedGame.type === 'custom'
         ? <TaskModal game={selectedGame} onClose={() => setSelectedGame(null)} onEdit={() => { setEditingGame(selectedGame); setSelectedGame(null); }} />

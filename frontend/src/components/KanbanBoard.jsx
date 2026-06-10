@@ -101,9 +101,10 @@ function ColumnHeader({ col, onRename, onDelete, onSetEmoji, onColDragStart, onC
   );
 }
 
-export default function KanbanBoard({ columns, byColumn, dragging, setDragging, moveGame, onCardClick, onArchiveGame, onUnarchiveGame, onDeleteGame, onEditGame, onRenameColumn, onDeleteColumn, onSetEmoji, onReorderColumns, isTaskBoard }) {
+export default function KanbanBoard({ columns, byColumn, dragging, setDragging, moveGame, onCardClick, onArchiveGame, onUnarchiveGame, onDeleteGame, onEditGame, onRenameColumn, onDeleteColumn, onSetEmoji, onReorderColumns, onAddToColumn, onReorderGames, isTaskBoard }) {
   const [draggingColId, setDraggingColId] = useState(null);
   const [dragOverColId, setDragOverColId] = useState(null);
+  const [dragInsert, setDragInsert] = useState(null); // { colId, beforeAppid: string|null }
 
   const handleColDragStart = (colId) => setDraggingColId(colId);
   const handleColDragEnd   = () => { setDraggingColId(null); setDragOverColId(null); };
@@ -133,20 +134,41 @@ export default function KanbanBoard({ columns, byColumn, dragging, setDragging, 
           <div key={col.id}
             onDragOver={e => {
               e.preventDefault();
-              if (draggingColId) setDragOverColId(col.id);
-              else e.dataTransfer.dropEffect = 'move';
+              if (draggingColId) { setDragOverColId(col.id); return; }
+              e.dataTransfer.dropEffect = 'move';
+              // Only fires when over empty column area (card wrappers use stopPropagation)
+              if (!dragInsert || dragInsert.colId !== col.id || dragInsert.beforeAppid !== null) {
+                setDragInsert({ colId: col.id, beforeAppid: null });
+              }
             }}
             onDrop={e => {
               e.preventDefault();
-              if (draggingColId) { handleColDrop(col.id); }
-              else {
-                e.currentTarget.style.background = '';
-                if (dragging && dragging.column !== col.id) moveGame(dragging.appid, col.id);
+              if (draggingColId) { handleColDrop(col.id); return; }
+              e.currentTarget.style.background = '';
+              if (dragging) {
+                if (dragInsert?.colId === col.id) {
+                  // Reorder within same column OR cross-column with specific position
+                  const colGames = byColumn[col.id] || [];
+                  const newOrder = colGames.map(g => g.appid).filter(id => id !== dragging.appid);
+                  const insertIdx = dragInsert.beforeAppid
+                    ? newOrder.indexOf(dragInsert.beforeAppid)
+                    : newOrder.length;
+                  newOrder.splice(insertIdx < 0 ? newOrder.length : insertIdx, 0, dragging.appid);
+                  onReorderGames(col.id, newOrder);
+                } else if (dragging.column !== col.id) {
+                  moveGame(dragging.appid, col.id);
+                }
                 setDragging(null);
+                setDragInsert(null);
               }
             }}
             onDragEnter={e => { if (!draggingColId) e.currentTarget.style.background = 'rgba(192,87,10,.07)'; }}
-            onDragLeave={e => { if (!draggingColId) e.currentTarget.style.background = ''; }}
+            onDragLeave={e => {
+              if (!e.currentTarget.contains(e.relatedTarget)) {
+                if (!draggingColId) e.currentTarget.style.background = '';
+                setDragInsert(null);
+              }
+            }}
             style={{
               flex: '1 1 0', minWidth: 210, maxWidth: 300,
               display: 'flex', flexDirection: 'column',
@@ -168,18 +190,58 @@ export default function KanbanBoard({ columns, byColumn, dragging, setDragging, 
                   {isTaskBoard ? 'Glisse une tâche ici' : 'Glisse des jeux ici'}
                 </div>
               )}
-              {games.map(game => (
-                <GameCard key={game.appid} game={game}
-                  onDragStart={() => setDragging(game)} onDragEnd={() => setDragging(null)}
-                  onClick={() => onCardClick(game)}
-                  onArchive={() => onArchiveGame(game.appid)}
-                  onUnarchive={() => onUnarchiveGame(game.appid)}
-                  onDelete={() => onDeleteGame(game.appid)}
-                  onEdit={onEditGame}
-                  isDragging={dragging?.appid === game.appid}
-                  isTaskBoard={isTaskBoard}
-                />
+              {games.map((game, idx) => (
+                <div
+                  key={game.appid}
+                  onDragOver={e => {
+                    if (draggingColId || !dragging || dragging.appid === game.appid) return;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const isTopHalf = e.clientY < rect.top + rect.height / 2;
+                    const beforeAppid = isTopHalf ? game.appid : (games[idx + 1]?.appid ?? null);
+                    if (dragInsert?.colId !== col.id || dragInsert?.beforeAppid !== beforeAppid) {
+                      setDragInsert({ colId: col.id, beforeAppid });
+                    }
+                  }}
+                >
+                  {dragInsert?.colId === col.id && dragInsert?.beforeAppid === game.appid && (
+                    <div style={{ height: 3, background: 'var(--accent)', borderRadius: 3, margin: '0 2px 4px', opacity: 0.85 }} />
+                  )}
+                  <GameCard game={game}
+                    onDragStart={() => setDragging(game)}
+                    onDragEnd={() => { setDragging(null); setDragInsert(null); }}
+                    onClick={() => onCardClick(game)}
+                    onArchive={() => onArchiveGame(game.appid)}
+                    onUnarchive={() => onUnarchiveGame(game.appid)}
+                    onDelete={() => onDeleteGame(game.appid)}
+                    onEdit={onEditGame}
+                    isDragging={dragging?.appid === game.appid}
+                    isTaskBoard={isTaskBoard}
+                  />
+                </div>
               ))}
+              {dragInsert?.colId === col.id && dragInsert?.beforeAppid === null && (
+                <div style={{ height: 3, background: 'var(--accent)', borderRadius: 3, margin: '4px 2px 0', opacity: 0.85 }} />
+              )}
+              {onAddToColumn && (
+                <button
+                  onClick={() => onAddToColumn(col.id)}
+                  style={{
+                    width: '100%', background: 'none',
+                    border: '1px dashed rgba(255,255,255,0.12)',
+                    borderRadius: 7, padding: '7px 8px',
+                    color: 'var(--text-muted)', fontSize: 11,
+                    cursor: 'pointer', textAlign: 'center',
+                    opacity: 0.6, transition: 'opacity .15s, border-color .15s',
+                    marginTop: games.length > 0 ? 2 : 0,
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.opacity = 1; e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.color = 'var(--accent)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.opacity = 0.6; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; e.currentTarget.style.color = 'var(--text-muted)'; }}
+                >
+                  + {isTaskBoard ? 'Ajouter une tâche' : 'Ajouter une tâche / Un jeu'}
+                </button>
+              )}
             </div>
           </div>
         );
