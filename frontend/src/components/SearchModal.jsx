@@ -121,16 +121,21 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
         {tab === 'steam' && (
           <>
             <div style={{ padding: '12px 16px 8px', flexShrink: 0 }}>
-              <input
-                autoFocus type="search"
-                placeholder="Rechercher un jeu Steam..."
-                value={query} onChange={handleInput}
-                style={{
-                  width: '100%', background: 'var(--surface2)',
-                  border: '1px solid var(--border)', borderRadius: 7,
-                  padding: '9px 14px', color: 'var(--text)', fontSize: 13, outline: 'none',
-                }}
-              />
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <svg viewBox="0 0 496 512" xmlns="http://www.w3.org/2000/svg" style={{ position: 'absolute', left: 12, width: 14, height: 14, fill: 'var(--accent)', pointerEvents: 'none', flexShrink: 0 }}>
+                  <path d="M496 256c0 137-111.2 248-248.4 248-113.8 0-209.7-76.3-239-180.4l95.2 39.3c6.4 32.1 34.9 56.4 68.9 56.4 38.2 0 69.1-31.1 68.9-69.3l84.5-60.2c52.1 1.3 95.8-40.9 95.8-93.5 0-51.6-42-93.5-93.7-93.5s-93.7 42-93.7 93.5v1.2L176.6 279c-15.5-.9-30.7 3.4-43.5 12.1L0 236.1C10.2 108.4 117.1 8 247.6 8 384.8 8 496 119 496 256z"/>
+                </svg>
+                <input
+                  autoFocus type="search"
+                  placeholder="Rechercher un jeu Steam..."
+                  value={query} onChange={handleInput}
+                  style={{
+                    width: '100%', background: 'var(--surface2)',
+                    border: '1px solid var(--border)', borderRadius: 7,
+                    padding: '9px 14px 9px 34px', color: 'var(--text)', fontSize: 13, outline: 'none',
+                  }}
+                />
+              </div>
             </div>
             <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px 16px' }}>
               {loading && <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 32 }}>Recherche...</div>}

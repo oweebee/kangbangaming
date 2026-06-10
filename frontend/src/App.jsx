@@ -134,6 +134,9 @@ export default function App() {
 
   // Board state
   const [boards, setBoards] = useState([]);
+  const [boardOrder, setBoardOrder] = useState([]);  // persisted drag order
+  const [boardDragId, setBoardDragId] = useState(null);
+  const [boardDragOverId, setBoardDragOverId] = useState(null);
   const [activeBoardId, setActiveBoardId] = useState(null);
   const [columns, setColumns] = useState([]);
   const [games, setGames] = useState([]);
@@ -246,7 +249,12 @@ export default function App() {
     catch { setGames([]); } finally { setLoading(false); }
   }, [token]);
 
-  useEffect(() => { if (token) { fetchBoards(); fetchFavorites(); } }, [token]);
+  useEffect(() => {
+    if (token && currentUser) {
+      fetchBoards(); fetchFavorites();
+      try { const saved = JSON.parse(localStorage.getItem(`boardOrder_${currentUser.id}`) || 'null'); if (Array.isArray(saved)) setBoardOrder(saved); } catch {}
+    }
+  }, [token]);
   useEffect(() => {
     if (!showHome || !token) return;
     fetch(`${API}/public/boards`, { headers: { Authorization: `Bearer ${token}` } })
@@ -403,6 +411,33 @@ export default function App() {
   const orphans = filtered.filter(g => !knownColIds.has(g.column));
   if (orphans.length > 0 && columns[0]) byColumn[columns[0].id] = [...(byColumn[columns[0].id] || []), ...orphans];
 
+  // Sorted boards (respects drag order)
+  const sortedBoards = boardOrder.length > 0
+    ? [...boards].sort((a, b) => {
+        const ai = boardOrder.indexOf(a.id);
+        const bi = boardOrder.indexOf(b.id);
+        if (ai === -1 && bi === -1) return 0;
+        if (ai === -1) return 1;
+        if (bi === -1) return -1;
+        return ai - bi;
+      })
+    : boards;
+
+  const handleBoardDrop = (targetId) => {
+    if (!boardDragId || boardDragId === targetId) { setBoardDragId(null); setBoardDragOverId(null); return; }
+    const base = boardOrder.length > 0 ? boardOrder : sortedBoards.map(b => b.id);
+    const fromIdx = base.indexOf(boardDragId) !== -1 ? base.indexOf(boardDragId) : sortedBoards.findIndex(b => b.id === boardDragId);
+    const toIdx   = base.indexOf(targetId)   !== -1 ? base.indexOf(targetId)   : sortedBoards.findIndex(b => b.id === targetId);
+    const newOrder = [...base];
+    // ensure all current board IDs are in newOrder
+    sortedBoards.forEach(b => { if (!newOrder.includes(b.id)) newOrder.push(b.id); });
+    const [moved] = newOrder.splice(fromIdx, 1);
+    newOrder.splice(toIdx, 0, moved);
+    setBoardOrder(newOrder);
+    localStorage.setItem(`boardOrder_${currentUser.id}`, JSON.stringify(newOrder));
+    setBoardDragId(null); setBoardDragOverId(null);
+  };
+
   const openBoard = (b) => {
     setActiveBoardId(b.id);
     setColumns(b.columns || []);
@@ -442,13 +477,13 @@ export default function App() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
             <span style={{ fontSize: 14 }}>🔒</span>
             <span style={{ fontSize: 12, fontWeight: 700, color: '#f5a500', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Mes Boards</span>
-            <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--surface2)', borderRadius: 99, padding: '1px 7px' }}>{boards.length}</span>
+            <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--surface2)', borderRadius: 99, padding: '1px 7px' }}>{sortedBoards.length}</span>
           </div>
-          {boards.length === 0 ? (
+          {sortedBoards.length === 0 ? (
             <div style={{ color: 'var(--text-muted)', fontSize: 12, padding: '16px 0' }}>Crée un board pour commencer.</div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
-              {boards.map(b => (
+              {sortedBoards.map(b => (
                 <HomeBoardCard key={b.id} board={b} onClick={() => openBoard(b)} />
               ))}
             </div>
@@ -493,16 +528,22 @@ export default function App() {
 
       {/* Boards list */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '6px 6px' }}>
-        {boards.map(b => (
+        {sortedBoards.map(b => (
           <div key={b.id}
+            draggable
+            onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; setBoardDragId(b.id); }}
+            onDragEnd={() => { setBoardDragId(null); setBoardDragOverId(null); }}
+            onDragOver={e => { e.preventDefault(); setBoardDragOverId(b.id); }}
+            onDrop={e => { e.preventDefault(); handleBoardDrop(b.id); }}
             onClick={() => { setActiveBoardId(b.id); setColumns(b.columns || []); setEmojiPickerFor(null); setShowHome(false); setPublicBoardMode(null); setShowPublicBoards(false); if (isMobile) setShowDrawer(false); }}
             style={{
-              padding: '6px 8px', borderRadius: 7, cursor: 'pointer', marginBottom: 2,
-              background: activeBoardId === b.id ? 'var(--accent-dim)' : 'transparent',
-              borderLeft: activeBoardId === b.id ? '3px solid var(--accent)' : '3px solid transparent',
+              padding: '6px 8px', borderRadius: 7, cursor: 'grab', marginBottom: 2,
+              background: boardDragOverId === b.id && boardDragId !== b.id ? 'var(--accent-dim)' : activeBoardId === b.id ? 'var(--accent-dim)' : 'transparent',
+              borderLeft: activeBoardId === b.id ? '3px solid var(--accent)' : boardDragOverId === b.id && boardDragId !== b.id ? '3px solid #3db86a' : '3px solid transparent',
               color: activeBoardId === b.id ? 'var(--text)' : 'var(--text-muted)',
               display: 'flex', alignItems: 'center', gap: 5,
-              transition: 'background .12s', position: 'relative',
+              opacity: boardDragId === b.id ? 0.4 : 1,
+              transition: 'background .12s, opacity .12s', position: 'relative',
             }}
           >
             {b.gameIcon ? (
@@ -598,11 +639,14 @@ export default function App() {
                     )}
                   </>
                 ) : (
-                  <button onClick={() => setShowBoardSearch(true)} style={{ width: '100%', background: 'var(--surface2)', border: '1px dashed var(--border)', borderRadius: 6, padding: '5px 8px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', textAlign: 'left' }}>🎮 Associer un jeu Steam...</button>
+                  <button onClick={() => setShowBoardSearch(true)} style={{ width: '100%', background: 'var(--surface2)', border: '1px dashed var(--border)', borderRadius: 6, padding: '5px 8px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <svg viewBox="0 0 496 512" xmlns="http://www.w3.org/2000/svg" style={{ width: 12, height: 12, fill: 'var(--accent)', flexShrink: 0 }}><path d="M496 256c0 137-111.2 248-248.4 248-113.8 0-209.7-76.3-239-180.4l95.2 39.3c6.4 32.1 34.9 56.4 68.9 56.4 38.2 0 69.1-31.1 68.9-69.3l84.5-60.2c52.1 1.3 95.8-40.9 95.8-93.5 0-51.6-42-93.5-93.7-93.5s-93.7 42-93.7 93.5v1.2L176.6 279c-15.5-.9-30.7 3.4-43.5 12.1L0 236.1C10.2 108.4 117.1 8 247.6 8 384.8 8 496 119 496 256z"/></svg>
+                    Associer un jeu Steam...
+                  </button>
                 )}
               </div>
             )}
-            <input autoFocus={!showBoardSearch} value={newBoardName} onChange={e => setNewBoardName(e.target.value)} onKeyDown={e => e.key === 'Enter' && createBoard()} placeholder="Nom du board"
+            <input autoFocus={!showBoardSearch} value={newBoardName} onChange={e => setNewBoardName(e.target.value)} onKeyDown={e => e.key === 'Enter' && createBoard()} placeholder="Board Personnalisée"
               style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 8px', color: 'var(--text)', fontSize: 12, outline: 'none' }} />
             <div style={{ display: 'flex', gap: 4 }}>
               <button onClick={createBoard} style={{ flex: 1, background: 'var(--accent)', border: 'none', borderRadius: 5, padding: '5px', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Créer</button>
@@ -742,9 +786,9 @@ export default function App() {
               )}
               <span style={{ fontWeight: 700, fontSize: 14, color: '#3db86a', flexShrink: 0 }}>Board Public</span>
               <span style={{ fontSize: 12, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 180 }}>{publicBoardMode.name}</span>
-              <button onClick={refreshPublicBoard} title="Rafraîchir" style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 9px', color: 'var(--text-muted)', fontSize: 15, cursor: 'pointer', lineHeight: 1, flexShrink: 0 }}>↻</button>
               <button onClick={addColumn} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>+ Colonne</button>
               <button onClick={() => setShowSearch(true)} style={{ background: 'var(--accent)', border: 'none', borderRadius: 7, padding: '7px 16px', color: '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>+ Carte</button>
+              <button onClick={refreshPublicBoard} style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 11px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ fontSize: 15, lineHeight: 1 }}>↻</span> Rafraîchir</button>
               <div style={{ flex: 1 }} />
               <input type="search" placeholder="Filtrer..." value={search} onChange={e => setSearch(e.target.value)}
                 style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 10px', color: 'var(--text)', fontSize: 12, outline: 'none', maxWidth: 180 }} />

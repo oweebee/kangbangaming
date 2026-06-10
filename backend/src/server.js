@@ -334,7 +334,7 @@ app.get('/api/public/boards', requireAuth, (req, res) => {
   for (const [userId, userBoards] of Object.entries(all)) {
     for (const [boardId, board] of Object.entries(userBoards || {})) {
       if (board.public) {
-        const user = readUsers().find(u => u.id === req.user.id); const favIds = new Set(user?.favorites || []); result.push({ id: boardId, name: board.name, emoji: board.emoji || '', gameIcon: board.gameIcon || null, headerImg: board.headerImg || null, columns: board.columns || [], games: Object.values(board.games || {}), gameCount: Object.keys(board.games || {}).length, ownerUsername: userMap.get(userId) || 'unknown', ownerId: userId, isOwner: userId === req.user.id, isFavorite: favIds.has(boardId) });
+        const user = readUsers().find(u => u.id === req.user.id); const favIds = new Set(user?.favorites || []); const firstGame = Object.values(board.games || {})[0]; const headerImg = board.headerImg || firstGame?.header_img || null; result.push({ id: boardId, name: board.name, emoji: board.emoji || '', gameIcon: board.gameIcon || null, headerImg, columns: board.columns || [], games: Object.values(board.games || {}), gameCount: Object.keys(board.games || {}).length, ownerUsername: userMap.get(userId) || 'unknown', ownerId: userId, isOwner: userId === req.user.id, isFavorite: favIds.has(boardId) });
       }
     }
   }
@@ -354,7 +354,7 @@ app.get('/api/user/favorites', requireAuth, (req, res) => {
   for (const [userId, userBoards] of Object.entries(all)) {
     for (const [boardId, board] of Object.entries(userBoards || {})) {
       if (favIds.has(boardId) && board.public) {
-        result.push({ id: boardId, name: board.name, emoji: board.emoji || '', gameIcon: board.gameIcon || null, headerImg: board.headerImg || null, ownerUsername: userMap.get(userId) || 'unknown', ownerId: userId, isFavorite: true });
+        const firstGame2 = Object.values(board.games || {})[0]; const headerImg2 = board.headerImg || firstGame2?.header_img || null; result.push({ id: boardId, name: board.name, emoji: board.emoji || '', gameIcon: board.gameIcon || null, headerImg: headerImg2, ownerUsername: userMap.get(userId) || 'unknown', ownerId: userId, isFavorite: true });
       }
     }
   }
@@ -495,7 +495,11 @@ app.delete('/api/public/boards/:boardId/games/:appid', requireAuth, (req, res) =
 
 app.get('/api/boards', requireAuth, (req, res) => {
   const userBoards = getUserBoards(req.user.id);
-  res.json(Object.entries(userBoards).map(([id, b]) => ({ id, name: b.name, emoji: b.emoji || '🎮', gameIcon: b.gameIcon || null, headerImg: b.headerImg || null, columns: b.columns || [], public: b.public || false })));
+  res.json(Object.entries(userBoards).map(([id, b]) => {
+    const firstGame = Object.values(b.games || {})[0];
+    const headerImg = b.headerImg || firstGame?.header_img || null;
+    return { id, name: b.name, emoji: b.emoji || '🎮', gameIcon: b.gameIcon || null, headerImg, columns: b.columns || [], public: b.public || false };
+  }));
 });
 
 app.post('/api/boards', requireAuth, (req, res) => {
