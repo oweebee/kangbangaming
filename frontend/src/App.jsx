@@ -406,19 +406,19 @@ export default function App() {
             }}
           >
             {b.gameIcon ? (
-              <img src={b.gameIcon} alt="" style={{ width: 28, height: 28, objectFit: 'cover', borderRadius: '50%', flexShrink: 0, border: '1px solid var(--border)' }} />
+              <img src={b.gameIcon} alt="" style={{ width: 34, height: 34, objectFit: 'cover', borderRadius: '50%', flexShrink: 0, border: '2px solid white' }} />
             ) : (
               <div style={{ position: 'relative' }}>
                 <button
                   onClick={e => { e.stopPropagation(); setEmojiPickerFor(emojiPickerFor === b.id ? null : b.id); }}
-                  style={{ background: b.emoji ? 'transparent' : 'var(--surface3)', border: '1px solid var(--border)', borderRadius: 4, width: 28, height: 28, fontSize: b.emoji ? 16 : 11, cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                  style={{ background: b.emoji ? 'transparent' : 'var(--surface3)', border: '2px solid white', borderRadius: 4, width: 34, height: 34, fontSize: b.emoji ? 18 : 11, cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
                 >{b.emoji || '+'}</button>
                 {emojiPickerFor === b.id && (
                   <BoardEmojiPicker current={b.emoji || ''} onSelect={emoji => { setBoardEmoji(b.id, emoji); setEmojiPickerFor(null); }} onClose={() => setEmojiPickerFor(null)} />
                 )}
               </div>
             )}
-            <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 14 }}>{b.name}</span>
+            <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 14, fontWeight: 700 }}>{b.name}</span>
             {/* Public toggle */}
             <button
               onClick={e => { e.stopPropagation(); toggleBoardPublic(b.id, !b.public); }}
@@ -454,11 +454,11 @@ export default function App() {
               onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
             >
               {b.gameIcon ? (
-                <img src={b.gameIcon} alt="" style={{ width: 28, height: 28, objectFit: 'cover', borderRadius: '50%', flexShrink: 0, border: '1px solid var(--border)', opacity: 0.8 }} />
+                <img src={b.gameIcon} alt="" style={{ width: 34, height: 34, objectFit: 'cover', borderRadius: '50%', flexShrink: 0, border: '2px solid white', opacity: 0.85 }} />
               ) : (
-                <span style={{ fontSize: 18, flexShrink: 0 }}>{b.emoji || '🎮'}</span>
+                <span style={{ fontSize: 20, flexShrink: 0 }}>{b.emoji || '🎮'}</span>
               )}
-              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 14 }}>{b.name}</span>
+              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 14, fontWeight: 700 }}>{b.name}</span>
               <svg viewBox="0 0 24 24" width="10" height="10" fill="var(--accent)" stroke="var(--accent)" strokeWidth="1.5" style={{ flexShrink: 0, opacity: 0.7 }}><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
             </div>
           ))}
