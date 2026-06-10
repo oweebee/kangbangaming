@@ -486,10 +486,10 @@ app.get('/api/public/boards/:boardId/games', requireAuth, (req, res) => {
 app.post('/api/public/boards/:boardId/games', requireAuth, (req, res) => {
   const f = findPublicBoard(req.params.boardId);
   if (!f) return res.status(404).json({ error: 'Not found' });
-  const { appid, name, header_img, icon_img, column, type, emoji } = req.body;
+  const { appid, name, header_img, icon_img, column, type, emoji, taskType } = req.body;
   if (!appid || !column) return res.status(400).json({ error: 'Missing fields' });
   if (!f.board.games) f.board.games = {};
-  f.board.games[appid] = { appid, name, header_img: header_img || null, icon_img: icon_img || null, column, type: type || 'steam', emoji: emoji || null, addedAt: new Date().toISOString() };
+  f.board.games[appid] = { appid, name, header_img: header_img || null, icon_img: icon_img || null, column, type: type || 'steam', emoji: emoji || null, taskType: taskType || null, addedAt: new Date().toISOString() };
   f.userBoards[req.params.boardId] = f.board;
   f.all[f.userId] = f.userBoards;
   writeBoards(f.all);
@@ -505,6 +505,7 @@ app.patch('/api/public/boards/:boardId/games/:appid', requireAuth, (req, res) =>
   if (req.body.notes !== undefined) game.notes = req.body.notes;
   if (req.body.name !== undefined) game.name = req.body.name;
   if (req.body.emoji !== undefined) game.emoji = req.body.emoji;
+  if (req.body.taskType !== undefined) game.taskType = req.body.taskType;
   f.userBoards[req.params.boardId] = f.board;
   f.all[f.userId] = f.userBoards;
   writeBoards(f.all);
@@ -643,13 +644,13 @@ app.get('/api/boards/:boardId/games', requireAuth, (req, res) => {
 });
 
 app.post('/api/boards/:boardId/games', requireAuth, (req, res) => {
-  const { appid, name, header_img, column, icon_img, type, emoji } = req.body;
+  const { appid, name, header_img, column, icon_img, type, emoji, taskType } = req.body;
   if (!appid || !column) return res.status(400).json({ error: 'Missing fields' });
   const userBoards = getUserBoards(req.user.id);
   const board = userBoards[req.params.boardId];
   if (!board) return res.status(404).json({ error: 'Board not found' });
   if (!board.games) board.games = {};
-  board.games[appid] = { appid, name, header_img: header_img || null, icon_img: icon_img || null, column, type: type || 'steam', emoji: emoji || null, addedAt: new Date().toISOString() };
+  board.games[appid] = { appid, name, header_img: header_img || null, icon_img: icon_img || null, column, type: type || 'steam', emoji: emoji || null, taskType: taskType || null, addedAt: new Date().toISOString() };
   setUserBoards(req.user.id, userBoards);
   res.status(201).json(board.games[appid]);
 });
@@ -664,6 +665,7 @@ app.patch('/api/boards/:boardId/games/:appid', requireAuth, (req, res) => {
   if (req.body.notes !== undefined) game.notes = req.body.notes;
   if (req.body.name !== undefined) game.name = req.body.name;
   if (req.body.emoji !== undefined) game.emoji = req.body.emoji;
+  if (req.body.taskType !== undefined) game.taskType = req.body.taskType;
   setUserBoards(req.user.id, userBoards);
   res.json(game);
 });

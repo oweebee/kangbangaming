@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
+import { TASK_TYPES, getTaskType } from '../taskTypes.jsx';
 
 const CARD_EMOJIS = [
   '🎮','🕹️','🏆','🥇','⭐','💎','🔥','❄️','⚡','🎯',
@@ -35,6 +36,7 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
   const [customName, setCustomName] = useState('');
   const [customEmoji, setCustomEmoji] = useState('🎮');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [customTaskType, setCustomTaskType] = useState(null);
 
   const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
 
@@ -69,7 +71,7 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
   const handleAddCustom = () => {
     if (!customName.trim()) return;
     const appid = `custom_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-    onAdd({ appid, name: customName.trim(), type: 'custom', emoji: customEmoji, header_img: null, icon_img: null });
+    onAdd({ appid, name: customName.trim(), type: 'custom', emoji: customEmoji, header_img: null, icon_img: null, taskType: customTaskType });
     onClose();
   };
 
@@ -190,21 +192,41 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
             <p style={{ margin: 0, fontSize: 12, color: 'var(--text-muted)' }}>Crée une carte libre : projet perso, objectif, note de jeu…</p>
 
             {/* Preview */}
-            <div style={{ display: 'flex', justifyContent: 'center' }}>
-              <div style={{
-                background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8,
-                width: 160, overflow: 'hidden',
-              }}>
-                <div style={{ width: '100%', height: 88, background: 'var(--steam)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 44 }}>
-                  {customEmoji}
-                </div>
-                <div style={{ padding: '8px 10px' }}>
-                  <div style={{ fontWeight: 600, fontSize: 12, color: customName ? 'var(--text)' : 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {customName || 'Nom de la carte…'}
+            {(() => {
+              const tt = customTaskType ? getTaskType(customTaskType) : null;
+              const TtIcon = tt?.Icon;
+              return (
+                <div style={{ display: 'flex', justifyContent: 'center' }}>
+                  <div style={{
+                    background: 'var(--surface2)',
+                    border: tt ? `1.5px solid ${tt.border}` : '1px solid var(--border)',
+                    borderRadius: 8, width: 160, overflow: 'hidden',
+                  }}>
+                    <div style={{
+                      width: '100%', height: 88,
+                      background: tt ? tt.imgBg : 'var(--steam)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: tt ? 0 : 44, position: 'relative',
+                    }}>
+                      {tt ? <TtIcon /> : customEmoji}
+                      {tt && (
+                        <div style={{
+                          position: 'absolute', bottom: 4, left: 6,
+                          background: tt.badgeBg, color: tt.badgeText,
+                          fontSize: 8, fontWeight: 700, padding: '2px 6px',
+                          borderRadius: 4, letterSpacing: '0.04em',
+                        }}>{tt.label.toUpperCase()}</div>
+                      )}
+                    </div>
+                    <div style={{ padding: '8px 10px' }}>
+                      <div style={{ fontWeight: 600, fontSize: 12, color: customName ? 'var(--text)' : 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {customName || 'Nom de la tâche…'}
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
+              );
+            })()}
 
             {/* Emoji picker */}
             <div>
@@ -255,6 +277,41 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
               />
             </div>
 
+            {/* Task type selector — only on Steam boards (customOnly) */}
+            {customOnly && (
+              <div>
+                <label style={{ display: 'block', fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>
+                  Type de tâche <span style={{ opacity: 0.55 }}>(facultatif)</span>
+                </label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {TASK_TYPES.map(t => {
+                    const active = customTaskType === t.id;
+                    return (
+                      <button
+                        key={t.id}
+                        onClick={() => setCustomTaskType(active ? null : t.id)}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 5,
+                          padding: '5px 10px',
+                          background: active ? t.bg : 'var(--surface2)',
+                          border: active ? `1.5px solid ${t.border}` : '1.5px solid var(--border)',
+                          borderRadius: 20,
+                          color: active ? t.textColor : 'var(--text-muted)',
+                          fontSize: 11, fontWeight: active ? 700 : 400,
+                          cursor: 'pointer',
+                          transition: 'all .15s',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        <span style={{ fontSize: 13 }}>{t.emoji}</span>
+                        <span>{t.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             <button
               onClick={handleAddCustom}
               disabled={!customName.trim()}
@@ -263,7 +320,7 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
                 color: '#fff', fontWeight: 700, fontSize: 14, cursor: customName.trim() ? 'pointer' : 'not-allowed',
                 opacity: customName.trim() ? 1 : 0.5,
               }}
-            >+ Créer la carte</button>
+            >+ Créer la tâche</button>
           </div>
         )}
       </div>

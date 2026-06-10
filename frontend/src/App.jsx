@@ -373,7 +373,7 @@ export default function App() {
     const boardApi = publicBoardMode ? `${API}/public/boards/${publicBoardMode.id}` : `${API}/boards/${activeBoardId}`;
     await fetch(`${boardApi}/games`, {
       method: 'POST', headers: authHeaders(token),
-      body: JSON.stringify({ appid: game.appid, name: game.name, header_img: game.header_img, icon_img: game.icon_img, column: firstColId, type: game.type || 'steam', emoji: game.emoji || null }),
+      body: JSON.stringify({ appid: game.appid, name: game.name, header_img: game.header_img, icon_img: game.icon_img, column: firstColId, type: game.type || 'steam', emoji: game.emoji || null, taskType: game.taskType || null }),
     });
     if (publicBoardMode) {
       const res = await fetch(`${boardApi}/games`, { headers: authHeaders(token) });

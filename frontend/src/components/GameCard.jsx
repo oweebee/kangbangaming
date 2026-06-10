@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { getTaskType } from '../taskTypes.jsx';
 
 function formatPlaytime(minutes) {
   if (!minutes || minutes === 0) return null;
@@ -11,6 +12,8 @@ function formatPlaytime(minutes) {
 export default function GameCard({ game, onDragStart, onDragEnd, onClick, onRemove, isDragging, readOnly }) {
   const [imgError, setImgError] = useState(false);
   const isCustom = game.type === 'custom';
+  const tt = game.taskType ? getTaskType(game.taskType) : null;
+  const TtIcon = tt?.Icon;
 
   return (
     <div
@@ -19,8 +22,8 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onRemo
       onDragEnd={readOnly ? undefined : onDragEnd}
       onClick={readOnly ? undefined : onClick}
       style={{
-        background: 'var(--surface2)',
-        border: '1px solid var(--border)',
+        background: tt ? tt.bg : 'var(--surface2)',
+        border: tt ? `1.5px solid ${tt.border}` : '1px solid var(--border)',
         borderRadius: 8,
         overflow: 'hidden',
         cursor: readOnly ? 'default' : 'grab',
@@ -30,17 +33,32 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onRemo
       }}
       onMouseEnter={readOnly ? undefined : e => {
         e.currentTarget.style.transform = 'translateY(-1px)';
-        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.4)';
-        e.currentTarget.style.borderColor = '#444';
+        e.currentTarget.style.boxShadow = `0 4px 12px rgba(0,0,0,0.4)`;
+        e.currentTarget.style.borderColor = tt ? tt.border : '#444';
       }}
       onMouseLeave={readOnly ? undefined : e => {
         e.currentTarget.style.transform = '';
         e.currentTarget.style.boxShadow = '';
-        e.currentTarget.style.borderColor = 'var(--border)';
+        e.currentTarget.style.borderColor = tt ? tt.border : 'var(--border)';
       }}
     >
       {/* Image area */}
-      {isCustom ? (
+      {isCustom && tt ? (
+        /* Task-typed card — illustration + badge */
+        <div style={{
+          width: '100%', height: 88, position: 'relative',
+          background: tt.imgBg,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <TtIcon />
+          <div style={{
+            position: 'absolute', bottom: 4, left: 5,
+            background: tt.badgeBg, color: tt.badgeText,
+            fontSize: 8, fontWeight: 700, padding: '2px 6px',
+            borderRadius: 4, letterSpacing: '0.04em',
+          }}>{tt.label.toUpperCase()}</div>
+        </div>
+      ) : isCustom ? (
         <div style={{
           width: '100%', height: 88,
           background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
@@ -82,7 +100,9 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onRemo
         </div>
         <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
           {isCustom
-            ? <span style={{ color: 'var(--accent)', opacity: 0.7 }}>Carte perso</span>
+            ? <span style={{ color: tt ? tt.textColor : 'var(--accent)', opacity: 0.8 }}>
+                {tt ? `${tt.emoji} ${tt.label}` : 'Carte perso'}
+              </span>
             : formatPlaytime(game.playtime_minutes)
           }
         </div>
