@@ -153,32 +153,37 @@ app.get('/api/auth/me', requireAuth, (req, res) => {
 // ── User profile + settings ───────────────────────────────────────────────────
 
 app.get('/api/user/profile', requireAuth, (req, res) => {
-  const users = readUsers();
-  const user = users.find(u => u.id === req.user.id);
-  if (!user) return res.status(404).json({ error: 'Not found' });
+  try {
+    const users = readUsers();
+    const user = users.find(u => u.id === req.user.id);
+    if (!user) return res.status(404).json({ error: 'Not found' });
 
-  const userBoards = getUserBoards(req.user.id);
-  const boardList = Object.entries(userBoards);
-  const boardCount = boardList.length;
-  const publicBoardCount = boardList.filter(([, b]) => b.public).length;
-  let totalGames = 0, customCards = 0, totalColumns = 0;
-  for (const [, board] of boardList) {
-    const games = Object.values(board.games || {});
-    totalGames += games.length;
-    customCards += games.filter(g => g.type === 'custom').length;
-    totalColumns += (board.columns || []).length;
+    const userBoards = getUserBoards(req.user.id);
+    const boardList = Object.entries(userBoards);
+    const boardCount = boardList.length;
+    const publicBoardCount = boardList.filter(([, b]) => b.public).length;
+    let totalGames = 0, customCards = 0, totalColumns = 0;
+    for (const [, board] of boardList) {
+      const games = Object.values(board.games || {});
+      totalGames += games.length;
+      customCards += games.filter(g => g.type === 'custom').length;
+      totalColumns += (board.columns || []).length;
+    }
+
+    res.json({
+      id: user.id,
+      username: user.username,
+      role: user.role,
+      createdAt: user.createdAt || null,
+      steamId: user.steamId || null,
+      steamAvatar: user.steamAvatar || null,
+      steamPersonaName: user.steamPersonaName || null,
+      stats: { boardCount, publicBoardCount, totalGames, customCards, totalColumns },
+    });
+  } catch (err) {
+    console.error('[profile]', err);
+    res.status(500).json({ error: err.message || 'Server error' });
   }
-
-  res.json({
-    id: user.id,
-    username: user.username,
-    role: user.role,
-    createdAt: user.createdAt,
-    steamId: user.steamId || null,
-    steamAvatar: user.steamAvatar || null,
-    steamPersonaName: user.steamPersonaName || null,
-    stats: { boardCount, publicBoardCount, totalGames, customCards, totalColumns },
-  });
 });
 
 app.get('/api/user/settings', requireAuth, (req, res) => {
@@ -489,26 +494,31 @@ app.get('/api/boards', requireAuth, (req, res) => {
 });
 
 app.post('/api/boards', requireAuth, (req, res) => {
-  const { name, emoji, gameIcon, gameBoard } = req.body;
-  if (!name) return res.status(400).json({ error: 'Missing name' });
-  const id = `board_${Date.now()}`;
-  const t = Date.now();
-  const defaultColumns = (gameBoard || gameIcon) ? [
-    { id: `col_${t}_1`, label: 'Tâches à accomplir', emoji: '⏳' },
-    { id: `col_${t}_2`, label: 'Tâches en cours',    emoji: '⛏️' },
-    { id: `col_${t}_3`, label: 'Tâches en pause',    emoji: '⏸️' },
-    { id: `col_${t}_4`, label: 'Tâches abandonnées', emoji: '❌' },
-    { id: `col_${t}_5`, label: 'Tâches accomplies',  emoji: '✅', color: '#3db86a' },
-  ] : [
-    { id: `col_${t}_1`, label: 'À jouer', emoji: '📋' },
-    { id: `col_${t}_2`, label: 'En cours', emoji: '🎮' },
-    { id: `col_${t}_3`, label: 'Terminé',  emoji: '✅' },
-  ];
-  const board = { name, emoji: emoji || '🎮', gameIcon: gameIcon || null, public: false, columns: defaultColumns, games: {} };
-  const userBoards = getUserBoards(req.user.id);
-  userBoards[id] = board;
-  setUserBoards(req.user.id, userBoards);
-  res.status(201).json({ id, name: board.name, emoji: board.emoji, gameIcon: board.gameIcon, columns: board.columns, public: false });
+  try {
+    const { name, emoji, gameIcon, gameBoard } = req.body;
+    if (!name) return res.status(400).json({ error: 'Missing name' });
+    const id = `board_${Date.now()}`;
+    const t = Date.now();
+    const defaultColumns = (gameBoard || gameIcon) ? [
+      { id: `col_${t}_1`, label: 'Tâches à accomplir', emoji: '⏳' },
+      { id: `col_${t}_2`, label: 'Tâches en cours',    emoji: '⛏️' },
+      { id: `col_${t}_3`, label: 'Tâches en pause',    emoji: '⏸️' },
+      { id: `col_${t}_4`, label: 'Tâches abandonnées', emoji: '❌' },
+      { id: `col_${t}_5`, label: 'Tâches accomplies',  emoji: '✅', color: '#3db86a' },
+    ] : [
+      { id: `col_${t}_1`, label: 'À jouer', emoji: '📋' },
+      { id: `col_${t}_2`, label: 'En cours', emoji: '🎮' },
+      { id: `col_${t}_3`, label: 'Terminé',  emoji: '✅' },
+    ];
+    const board = { name, emoji: emoji || '🎮', gameIcon: gameIcon || null, public: false, columns: defaultColumns, games: {} };
+    const userBoards = getUserBoards(req.user.id);
+    userBoards[id] = board;
+    setUserBoards(req.user.id, userBoards);
+    res.status(201).json({ id, name: board.name, emoji: board.emoji, gameIcon: board.gameIcon, columns: board.columns, public: false });
+  } catch (err) {
+    console.error('[POST /boards]', err);
+    res.status(500).json({ error: err.message || 'Server error' });
+  }
 });
 
 app.patch('/api/boards/:boardId', requireAuth, (req, res) => {

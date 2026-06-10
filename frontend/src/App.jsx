@@ -239,14 +239,17 @@ export default function App() {
   const createBoard = async () => {
     const name = newBoardName.trim();
     if (!name) return;
-    const res = await fetch(`${API}/boards`, {
-      method: 'POST', headers: authHeaders(token),
-      body: JSON.stringify({ name, emoji: '', gameIcon: selectedBoardGame ? (selectedBoardGame.icon_img || selectedBoardGame.header_img) : null, gameBoard: !!selectedBoardGame }),
-    });
-    const board = await res.json();
-    setBoards(prev => [...prev, board]);
-    setActiveBoardId(board.id); setColumns(board.columns || []); setGames([]);
-    resetNewBoard();
+    try {
+      const res = await fetch(`${API}/boards`, {
+        method: 'POST', headers: authHeaders(token),
+        body: JSON.stringify({ name, emoji: '', gameIcon: selectedBoardGame ? (selectedBoardGame.icon_img || selectedBoardGame.header_img) : null, gameBoard: !!selectedBoardGame }),
+      });
+      if (!res.ok) { const e = await res.json().catch(() => ({})); alert('Erreur création board: ' + (e.error || res.status)); return; }
+      const board = await res.json();
+      setBoards(prev => [...prev, board]);
+      setActiveBoardId(board.id); setColumns(board.columns || []); setGames([]);
+      resetNewBoard();
+    } catch (err) { alert('Erreur réseau: ' + err.message); }
   };
 
   const setBoardEmoji = async (boardId, emoji) => {
@@ -552,17 +555,32 @@ export default function App() {
           <button onClick={() => setShowDrawer(true)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 20, cursor: 'pointer', lineHeight: 1, flexShrink: 0 }}>☰</button>
           {publicBoardMode ? (
             <>
-              <span style={{ fontWeight: 700, fontSize: 13, color: '#3db86a', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {publicBoardMode.gameIcon ? (
+                <img src={publicBoardMode.gameIcon} alt="" style={{ width: 20, height: 20, borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border)', flexShrink: 0 }} />
+              ) : (
+                <span style={{ fontSize: 16, flexShrink: 0 }}>{publicBoardMode.emoji || '🎮'}</span>
+              )}
+              <span style={{ fontWeight: 700, fontSize: 13, color: '#3db86a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
                 Board Public
                 <span style={{ fontSize: 10, fontWeight: 400, color: 'var(--text-muted)', marginLeft: 6 }}>{publicBoardMode.name}</span>
               </span>
               <button onClick={refreshPublicBoard} title="Rafraîchir" style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', color: 'var(--text-muted)', fontSize: 14, cursor: 'pointer', flexShrink: 0, lineHeight: 1 }}>↻</button>
-              <button onClick={closePublicBoard} style={{ background: 'rgba(255,255,255,.08)', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 10px', color: 'var(--text-muted)', fontSize: 11, cursor: 'pointer', flexShrink: 0 }}>✕ Quitter</button>
+              <button onClick={closePublicBoard} style={{ background: 'rgba(255,255,255,.08)', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 10px', color: 'var(--text-muted)', fontSize: 11, cursor: 'pointer', flexShrink: 0 }}>✕</button>
               <button onClick={() => setShowSearch(true)} style={{ background: 'var(--accent)', border: 'none', borderRadius: 7, padding: '7px 14px', color: '#fff', fontWeight: 700, fontSize: 12, flexShrink: 0 }}>+ Carte</button>
             </>
           ) : (
             <>
-              <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--accent)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{activeBoard?.name || 'KangBanGaming'}</span>
+              {activeBoard?.gameIcon ? (
+                <img src={activeBoard.gameIcon} alt="" style={{ width: 20, height: 20, borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border)', flexShrink: 0 }} />
+              ) : activeBoard ? (
+                <span style={{ fontSize: 16, flexShrink: 0 }}>{activeBoard.emoji || '🎮'}</span>
+              ) : null}
+              <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{activeBoard?.name || 'KangBanGaming'}</span>
+              {activeBoard && (
+                <span style={{ fontSize: 10, fontWeight: 700, color: activeBoard.public ? '#3db86a' : '#f5a500', border: `1px solid ${activeBoard.public ? '#3db86a' : '#f5a500'}`, borderRadius: 4, padding: '1px 5px', flexShrink: 0 }}>
+                  {activeBoard.public ? 'Public' : 'Privé'}
+                </span>
+              )}
               {activeBoardId && <button onClick={() => setShowSearch(true)} style={{ background: 'var(--accent)', border: 'none', borderRadius: 7, padding: '7px 14px', color: '#fff', fontWeight: 700, fontSize: 12, flexShrink: 0 }}>+ Carte</button>}
             </>
           )}
@@ -615,38 +633,51 @@ export default function App() {
         <header style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
           {publicBoardMode ? (
             <>
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-                <circle cx="10" cy="7" r="4"/><path d="M4 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M15 3.13a4 4 0 0 1 0 7.75"/><path d="M20 21v-2a4 4 0 0 0-3-3.85"/>
-              </svg>
-              <span style={{ fontWeight: 700, fontSize: 14, color: '#3db86a' }}>Board Public</span>
-              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{publicBoardMode.name}</span>
+              {/* Board icon */}
+              {publicBoardMode.gameIcon ? (
+                <img src={publicBoardMode.gameIcon} alt="" style={{ width: 22, height: 22, borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border)', flexShrink: 0 }} />
+              ) : (
+                <span style={{ fontSize: 18, flexShrink: 0 }}>{publicBoardMode.emoji || '🎮'}</span>
+              )}
+              <span style={{ fontWeight: 700, fontSize: 14, color: '#3db86a', flexShrink: 0 }}>Board Public</span>
+              <span style={{ fontSize: 12, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 180 }}>{publicBoardMode.name}</span>
+              <button onClick={refreshPublicBoard} title="Rafraîchir" style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 9px', color: 'var(--text-muted)', fontSize: 15, cursor: 'pointer', lineHeight: 1, flexShrink: 0 }}>↻</button>
+              <div style={{ flex: 1 }} />
               <input type="search" placeholder="Filtrer..." value={search} onChange={e => setSearch(e.target.value)}
-                style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 10px', color: 'var(--text)', fontSize: 12, outline: 'none', maxWidth: 200 }} />
-              <button onClick={addColumn} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>+ Colonne</button>
-              <button onClick={() => setShowSearch(true)} style={{ background: 'var(--accent)', border: 'none', borderRadius: 7, padding: '7px 16px', color: '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>+ Ajouter une carte</button>
-              <button onClick={refreshPublicBoard} title="Rafraîchir" style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 10px', color: 'var(--text-muted)', fontSize: 15, cursor: 'pointer', lineHeight: 1 }}>↻</button>
-              <button onClick={closePublicBoard} style={{ marginLeft: 'auto', background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>✕ Quitter</button>
+                style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 10px', color: 'var(--text)', fontSize: 12, outline: 'none', maxWidth: 180 }} />
+              <button onClick={addColumn} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>+ Colonne</button>
+              <button onClick={() => setShowSearch(true)} style={{ background: 'var(--accent)', border: 'none', borderRadius: 7, padding: '7px 16px', color: '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>+ Ajouter une carte</button>
+              <button onClick={closePublicBoard} style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>✕ Quitter</button>
             </>
           ) : (
             <>
-              <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--accent)' }}>{activeBoard?.name || '—'}</span>
+              {/* Board icon */}
+              {activeBoard?.gameIcon ? (
+                <img src={activeBoard.gameIcon} alt="" style={{ width: 22, height: 22, borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border)', flexShrink: 0 }} />
+              ) : activeBoard ? (
+                <span style={{ fontSize: 18, flexShrink: 0 }}>{activeBoard.emoji || '🎮'}</span>
+              ) : null}
+              <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 220 }}>{activeBoard?.name || '—'}</span>
               {activeBoard && (
                 <span
                   onClick={() => toggleBoardPublic(activeBoard.id, !activeBoard.public)}
                   title={activeBoard.public ? 'Public — cliquer pour rendre privé' : 'Privé — cliquer pour rendre public'}
-                  style={{ fontSize: 12, color: activeBoard.public ? 'var(--accent)' : 'var(--text-muted)', cursor: 'pointer', userSelect: 'none', display: 'flex', alignItems: 'center', gap: 4 }}
+                  style={{ fontSize: 11, fontWeight: 700, color: activeBoard.public ? '#3db86a' : '#f5a500', cursor: 'pointer', userSelect: 'none', display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0, border: `1px solid ${activeBoard.public ? '#3db86a' : '#f5a500'}`, borderRadius: 5, padding: '2px 7px' }}
                 >
-                  {activeBoard.public ? <><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="10" cy="7" r="4"/><path d="M4 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M15 3.13a4 4 0 0 1 0 7.75"/><path d="M20 21v-2a4 4 0 0 0-3-3.85"/>
-                  </svg> Public</> : '🔒 Privé'}
+                  {activeBoard.public ? (
+                    <><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="10" cy="7" r="4"/><path d="M4 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M15 3.13a4 4 0 0 1 0 7.75"/><path d="M20 21v-2a4 4 0 0 0-3-3.85"/>
+                    </svg> Public</>
+                  ) : '🔒 Privé'}
                 </span>
               )}
+              <div style={{ flex: 1 }} />
               <input type="search" placeholder="Filtrer..." value={search} onChange={e => setSearch(e.target.value)}
                 style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 10px', color: 'var(--text)', fontSize: 12, outline: 'none', maxWidth: 200 }} />
               {activeBoardId && (
                 <>
-                  <button onClick={addColumn} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>+ Colonne</button>
-                  <button onClick={() => setShowSearch(true)} style={{ marginLeft: 'auto', background: 'var(--accent)', border: 'none', borderRadius: 7, padding: '7px 16px', color: '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>+ Ajouter une carte</button>
+                  <button onClick={addColumn} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>+ Colonne</button>
+                  <button onClick={() => setShowSearch(true)} style={{ background: 'var(--accent)', border: 'none', borderRadius: 7, padding: '7px 16px', color: '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>+ Ajouter une carte</button>
                 </>
               )}
             </>

@@ -39,7 +39,11 @@ export default function ProfilePage({ token, currentUser, onClose }) {
     async function load() {
       try {
         const res = await fetch(`${API}/user/profile`, { headers: { Authorization: `Bearer ${token}` } });
-        if (!res.ok) throw new Error('Erreur chargement');
+        if (!res.ok) {
+          let msg = `Erreur ${res.status}`;
+          try { const d = await res.json(); msg = d.error || msg; } catch {}
+          throw new Error(msg);
+        }
         setProfile(await res.json());
       } catch (e) { setError(e.message); }
       finally { setLoading(false); }
@@ -108,7 +112,7 @@ export default function ProfilePage({ token, currentUser, onClose }) {
                     ['🎮', profile.stats.totalGames - profile.stats.customCards, 'Jeux Steam'],
                     ['✨', profile.stats.customCards, 'Cartes perso'],
                     ['📋', profile.stats.totalColumns, 'Colonnes'],
-                    ['📅', new Date(profile.createdAt).toLocaleDateString('fr-FR'), 'Membre depuis'],
+                    ['📅', profile.createdAt ? new Date(profile.createdAt).toLocaleDateString('fr-FR') : '—', 'Membre depuis'],
                   ].map(([icon, value, label]) => (
                     <div key={label} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px', textAlign: 'center' }}>
                       <div style={{ fontSize: 22, marginBottom: 4 }}>{icon}</div>
