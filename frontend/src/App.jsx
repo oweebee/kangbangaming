@@ -137,6 +137,9 @@ export default function App() {
   const [boardOrder, setBoardOrder] = useState([]);  // persisted drag order
   const [boardDragId, setBoardDragId] = useState(null);
   const [boardDragOverId, setBoardDragOverId] = useState(null);
+  const [favOrder, setFavOrder] = useState([]);
+  const [favDragId, setFavDragId] = useState(null);
+  const [favDragOverId, setFavDragOverId] = useState(null);
   const [activeBoardId, setActiveBoardId] = useState(null);
   const [columns, setColumns] = useState([]);
   const [games, setGames] = useState([]);
@@ -253,6 +256,7 @@ export default function App() {
     if (token && currentUser) {
       fetchBoards(); fetchFavorites();
       try { const saved = JSON.parse(localStorage.getItem(`boardOrder_${currentUser.id}`) || 'null'); if (Array.isArray(saved)) setBoardOrder(saved); } catch {}
+      try { const saved = JSON.parse(localStorage.getItem(`favOrder_${currentUser.id}`) || 'null'); if (Array.isArray(saved)) setFavOrder(saved); } catch {}
     }
   }, [token]);
   useEffect(() => {
@@ -438,6 +442,32 @@ export default function App() {
     setBoardDragId(null); setBoardDragOverId(null);
   };
 
+  // Sorted favBoards (respects drag order)
+  const sortedFavBoards = favOrder.length > 0
+    ? [...favBoards].sort((a, b) => {
+        const ai = favOrder.indexOf(a.id);
+        const bi = favOrder.indexOf(b.id);
+        if (ai === -1 && bi === -1) return 0;
+        if (ai === -1) return 1;
+        if (bi === -1) return -1;
+        return ai - bi;
+      })
+    : favBoards;
+
+  const handleFavDrop = (targetId) => {
+    if (!favDragId || favDragId === targetId) { setFavDragId(null); setFavDragOverId(null); return; }
+    const base = favOrder.length > 0 ? favOrder : sortedFavBoards.map(b => b.id);
+    const fromIdx = base.indexOf(favDragId) !== -1 ? base.indexOf(favDragId) : sortedFavBoards.findIndex(b => b.id === favDragId);
+    const toIdx   = base.indexOf(targetId)   !== -1 ? base.indexOf(targetId)   : sortedFavBoards.findIndex(b => b.id === targetId);
+    const newOrder = [...base];
+    sortedFavBoards.forEach(b => { if (!newOrder.includes(b.id)) newOrder.push(b.id); });
+    const [moved] = newOrder.splice(fromIdx, 1);
+    newOrder.splice(toIdx, 0, moved);
+    setFavOrder(newOrder);
+    localStorage.setItem(`favOrder_${currentUser.id}`, JSON.stringify(newOrder));
+    setFavDragId(null); setFavDragOverId(null);
+  };
+
   const openBoard = (b) => {
     setActiveBoardId(b.id);
     setColumns(b.columns || []);
@@ -582,17 +612,24 @@ export default function App() {
             <svg viewBox="0 0 24 24" width="10" height="10" fill="var(--accent)" stroke="var(--accent)" strokeWidth="1.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
             Publics favoris
           </div>
-          {favBoards.map(b => (
+          {sortedFavBoards.map(b => (
             <div key={b.id}
+              draggable
+              onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; setFavDragId(b.id); }}
+              onDragEnd={() => { setFavDragId(null); setFavDragOverId(null); }}
+              onDragOver={e => { e.preventDefault(); setFavDragOverId(b.id); }}
+              onDrop={e => { e.preventDefault(); handleFavDrop(b.id); }}
               onClick={() => { openPublicBoard(b); if (isMobile) setShowDrawer(false); }}
               style={{
-                padding: '6px 8px', borderRadius: 7, cursor: 'pointer', marginBottom: 2,
-                background: 'transparent', borderLeft: '3px solid transparent',
+                padding: '6px 8px', borderRadius: 7, cursor: 'grab', marginBottom: 2,
+                background: favDragOverId === b.id && favDragId !== b.id ? 'var(--accent-dim)' : 'transparent',
+                borderLeft: favDragOverId === b.id && favDragId !== b.id ? '3px solid #3db86a' : '3px solid transparent',
                 color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 5,
-                transition: 'background .12s',
+                opacity: favDragId === b.id ? 0.4 : 1,
+                transition: 'background .12s, opacity .12s',
               }}
-              onMouseEnter={e => e.currentTarget.style.background = 'var(--surface2)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              onMouseEnter={e => { if (favDragOverId !== b.id) e.currentTarget.style.background = 'var(--surface2)'; }}
+              onMouseLeave={e => { if (favDragOverId !== b.id) e.currentTarget.style.background = 'transparent'; }}
             >
               {b.gameIcon ? (
                 <img src={b.gameIcon} alt="" style={{ width: 34, height: 34, objectFit: 'cover', borderRadius: '50%', flexShrink: 0, border: '1.5px solid white', opacity: 0.85 }} />
@@ -794,11 +831,26 @@ export default function App() {
                 style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 10px', color: 'var(--text)', fontSize: 12, outline: 'none', maxWidth: 180 }} />
               <button onClick={closePublicBoard} style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>✕ Quitter</button>
             </>
+          ) : showPublicBoards ? (
+            <>
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                <circle cx="10" cy="7" r="4"/><path d="M4 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M15 3.13a4 4 0 0 1 0 7.75"/><path d="M20 21v-2a4 4 0 0 0-3-3.85"/>
+              </svg>
+              <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--accent)' }}>Boards Publics</span>
+              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Boards partagés par la communauté</span>
+              <div style={{ flex: 1 }} />
+              <button onClick={() => setShowPublicBoards(false)} style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>✕ Fermer</button>
+            </>
           ) : showHome ? (
             <>
               <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>Mes Boards</span>
               <div style={{ flex: 1 }} />
-              <button onClick={() => { setShowPublicBoards(true); }} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: 'var(--accent)', fontSize: 12, cursor: 'pointer', fontWeight: 600, flexShrink: 0 }}>🌐 Boards Publics</button>
+              <button onClick={() => { setShowPublicBoards(true); }} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: 'var(--accent)', fontSize: 12, cursor: 'pointer', fontWeight: 600, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="10" cy="7" r="4"/><path d="M4 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M15 3.13a4 4 0 0 1 0 7.75"/><path d="M20 21v-2a4 4 0 0 0-3-3.85"/>
+                </svg>
+                Boards Publics
+              </button>
             </>
           ) : (
             <>
