@@ -160,7 +160,7 @@ export default function App() {
       body: JSON.stringify({
         name,
         emoji: '',
-        gameIcon: selectedBoardGame ? selectedBoardGame.header_img : null,
+        gameIcon: selectedBoardGame ? (selectedBoardGame.icon_img || selectedBoardGame.header_img) : null,
       }),
     });
     const board = await res.json();
@@ -303,7 +303,7 @@ export default function App() {
           >
             {/* Board icon: game cover image OR emoji picker */}
             {b.gameIcon ? (
-              <img src={b.gameIcon} alt="" style={{ width: 28, height: 16, objectFit: 'cover', borderRadius: 3, flexShrink: 0 }} />
+              <img src={b.gameIcon} alt="" style={{ width: 22, height: 22, objectFit: 'cover', borderRadius: '50%', flexShrink: 0, border: '1px solid var(--border)' }} />
             ) : (
               <div style={{ position: 'relative' }}>
                 <button
@@ -341,7 +341,7 @@ export default function App() {
             {/* Selected game display */}
             {selectedBoardGame && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--surface2)', borderRadius: 6, padding: '5px 8px' }}>
-                <img src={selectedBoardGame.header_img} alt="" style={{ width: 36, height: 20, objectFit: 'cover', borderRadius: 3, flexShrink: 0 }} />
+                <img src={selectedBoardGame.icon_img || selectedBoardGame.header_img} alt="" style={{ width: 22, height: 22, objectFit: 'cover', borderRadius: '50%', flexShrink: 0, border: '1px solid var(--border)' }} />
                 <span style={{ flex: 1, fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text)' }}>{selectedBoardGame.name}</span>
                 <button onClick={clearBoardGame} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>✕</button>
               </div>
@@ -433,7 +433,7 @@ export default function App() {
           <>
             <div onClick={() => setShowDrawer(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.6)', zIndex: 200 }} />
             <aside style={{
-              position: 'fixed', left: 0, top: 0, bottom: 0, width: 240,
+              position: 'fixed', left: 0, top: 0, bottom: 0, width: 288,
               background: '#111', borderRight: '1px solid var(--border)',
               display: 'flex', flexDirection: 'column', zIndex: 201,
               boxShadow: '4px 0 24px rgba(0,0,0,.5)',
@@ -494,7 +494,7 @@ export default function App() {
 
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
-      <aside style={{ width: 210, background: '#111', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
+      <aside style={{ width: 252, background: '#111', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
         {sidebarContent}
       </aside>
 

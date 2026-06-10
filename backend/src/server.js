@@ -21,15 +21,24 @@ let libraryCache = null;
 let libraryCacheAt = 0;
 const LIBRARY_TTL = 10 * 60 * 1000;
 
-async function getLibrarySet() {
+// Map<appid, { icon_url: string|null }>
+async function getLibraryMap() {
   if (libraryCache && Date.now() - libraryCacheAt < LIBRARY_TTL) return libraryCache;
   try {
     const url = `https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key=${STEAM_API_KEY}&steamid=${STEAM_ID}&include_appinfo=1&include_played_free_games=1&format=json`;
     const data = await steamFetch(url);
-    libraryCache = new Set((data.response?.games || []).map(g => g.appid));
+    libraryCache = new Map((data.response?.games || []).map(g => [
+      g.appid,
+      {
+        icon_url: g.img_icon_url
+          ? `https://media.steampowered.com/steamcommunity/public/images/apps/${g.appid}/${g.img_icon_url}.jpg`
+          : null,
+        playtime_forever: g.playtime_forever || 0,
+      }
+    ]));
     libraryCacheAt = Date.now();
   } catch {
-    libraryCache = new Set();
+    libraryCache = new Map();
   }
   return libraryCache;
 }
@@ -99,17 +108,22 @@ app.get('/api/search/store', async (req, res) => {
     if (!q) return res.json([]);
     const [storeData, library] = await Promise.all([
       steamFetch(`https://store.steampowered.com/api/storesearch/?term=${encodeURIComponent(q)}&l=french&cc=FR`),
-      getLibrarySet(),
+      getLibraryMap(),
     ]);
-    const results = (storeData.items || []).slice(0, 20).map(g => ({
-      appid: g.id, name: g.name,
-      playtime_minutes: 0, playtime_hours: 0,
-      header_img: `https://cdn.akamai.steamstatic.com/steam/apps/${g.id}/header.jpg`,
-      library_img: `https://cdn.akamai.steamstatic.com/steam/apps/${g.id}/library_600x900.jpg`,
-      icon_img: g.tiny_image || `https://cdn.akamai.steamstatic.com/steam/apps/${g.id}/capsule_sm_120.jpg`,
-      price: g.price?.final_formatted || null,
-      owned: library.has(g.id),
-    }));
+    const results = (storeData.items || []).slice(0, 20).map(g => {
+      const libEntry = library.get(g.id);
+      return {
+        appid: g.id, name: g.name,
+        playtime_minutes: 0, playtime_hours: 0,
+        header_img: `https://cdn.akamai.steamstatic.com/steam/apps/${g.id}/header.jpg`,
+        library_img: `https://cdn.akamai.steamstatic.com/steam/apps/${g.id}/library_600x900.jpg`,
+        // Icône ronde Steam (img_icon_url pour jeux possédés, sinon null)
+        icon_img: libEntry?.icon_url || null,
+        price: g.price?.final_formatted || null,
+        owned: !!libEntry,
+        playtime_hours: libEntry ? Math.round((libEntry.playtime_forever || 0) / 60 * 10) / 10 : 0,
+      };
+    });
     res.json(results);
   } catch (err) {
     res.status(500).json({ error: err.message });
