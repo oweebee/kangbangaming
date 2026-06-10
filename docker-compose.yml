@@ -3,8 +3,6 @@ services:
     build: ./backend
     restart: unless-stopped
     environment:
-      - STEAM_API_KEY=${STEAM_API_KEY}
-      - STEAM_ID=${STEAM_ID}
       - PORT=3001
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}
       - JWT_SECRET=${JWT_SECRET}
