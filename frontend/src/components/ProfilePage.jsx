@@ -68,9 +68,7 @@ export default function ProfilePage({ token, currentUser, onClose }) {
           {profile?.steamPersonaName && (
             <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>@{profile.username}</div>
           )}
-          {profile?.role === 'admin' && (
-            <div style={{ marginTop: 6, display: 'inline-block', padding: '2px 10px', borderRadius: 20, background: 'rgba(245,165,0,.2)', color: '#f5a500', fontSize: 10, fontWeight: 700, textTransform: 'uppercase' }}>Admin</div>
-          )}
+
         </div>
 
         {/* Body */}

@@ -413,6 +413,18 @@ app.patch('/api/public/boards/:boardId/columns/:colId', requireAuth, (req, res) 
   res.json(col);
 });
 
+app.patch('/api/public/boards/:boardId/columns/reorder', requireAuth, (req, res) => {
+  const { order } = req.body;
+  if (!Array.isArray(order)) return res.status(400).json({ error: 'order must be array' });
+  const f = findPublicBoard(req.params.boardId);
+  if (!f) return res.status(404).json({ error: 'Board not found' });
+  const colMap = Object.fromEntries((f.board.columns || []).map(c => [c.id, c]));
+  f.board.columns = order.filter(id => colMap[id]).map(id => colMap[id]);
+  f.all[f.userId] = f.userBoards;
+  writeBoards(f.all);
+  res.json(f.board.columns);
+});
+
 app.delete('/api/public/boards/:boardId/columns/:colId', requireAuth, (req, res) => {
   const f = findPublicBoard(req.params.boardId);
   if (!f) return res.status(404).json({ error: 'Not found' });
@@ -480,7 +492,19 @@ app.post('/api/boards', requireAuth, (req, res) => {
   const { name, emoji, gameIcon } = req.body;
   if (!name) return res.status(400).json({ error: 'Missing name' });
   const id = `board_${Date.now()}`;
-  const board = { name, emoji: emoji || '🎮', gameIcon: gameIcon || null, public: false, columns: [{ id: `col_${Date.now()}_1`, label: 'À jouer', emoji: '📋' }, { id: `col_${Date.now()}_2`, label: 'En cours', emoji: '🎮' }, { id: `col_${Date.now()}_3`, label: 'Terminé', emoji: '✅' }], games: {} };
+  const t = Date.now();
+  const defaultColumns = gameIcon ? [
+    { id: `col_${t}_1`, label: 'Tâches à accomplir', emoji: '⏳' },
+    { id: `col_${t}_2`, label: 'Tâches en cours',    emoji: '⛏️' },
+    { id: `col_${t}_3`, label: 'Tâches en pause',    emoji: '⏸️' },
+    { id: `col_${t}_4`, label: 'Tâches abandonnées', emoji: '❌' },
+    { id: `col_${t}_5`, label: 'Tâches accomplies',  emoji: '✅', color: '#3db86a' },
+  ] : [
+    { id: `col_${t}_1`, label: 'À jouer', emoji: '📋' },
+    { id: `col_${t}_2`, label: 'En cours', emoji: '🎮' },
+    { id: `col_${t}_3`, label: 'Terminé',  emoji: '✅' },
+  ];
+  const board = { name, emoji: emoji || '🎮', gameIcon: gameIcon || null, public: false, columns: defaultColumns, games: {} };
   const userBoards = getUserBoards(req.user.id);
   userBoards[id] = board;
   setUserBoards(req.user.id, userBoards);
@@ -525,6 +549,18 @@ app.post('/api/boards/:boardId/columns', requireAuth, (req, res) => {
   board.columns = [...(board.columns || []), col];
   setUserBoards(req.user.id, userBoards);
   res.status(201).json(col);
+});
+
+app.patch('/api/boards/:boardId/columns/reorder', requireAuth, (req, res) => {
+  const { order } = req.body; // array of colIds
+  if (!Array.isArray(order)) return res.status(400).json({ error: 'order must be array' });
+  const userBoards = getUserBoards(req.user.id);
+  const board = userBoards[req.params.boardId];
+  if (!board) return res.status(404).json({ error: 'Board not found' });
+  const colMap = Object.fromEntries((board.columns || []).map(c => [c.id, c]));
+  board.columns = order.filter(id => colMap[id]).map(id => colMap[id]);
+  setUserBoards(req.user.id, userBoards);
+  res.json(board.columns);
 });
 
 app.patch('/api/boards/:boardId/columns/:colId', requireAuth, (req, res) => {

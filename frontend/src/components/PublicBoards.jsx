@@ -101,18 +101,15 @@ export default function PublicBoards({ token, currentUser, favBoardIds = new Set
                       {' · '}{board.gameCount} jeu{board.gameCount !== 1 ? 'x' : ''}
                     </div>
                   </div>
-                  <span style={{ color: 'var(--text-muted)', fontSize: 11, flexShrink: 0 }}>{isOpen ? '▲' : '▼'}</span>
                 </div>
                 {/* Action bar — always visible */}
                 <div style={{ display: 'flex', gap: 6, padding: '0 12px 10px', alignItems: 'center' }}>
-                  {onOpenBoard && (
-                    <button
-                      onClick={() => onOpenBoard({ id: board.id, name: board.name, ownerUsername: board.ownerUsername })}
-                      style={{ flex: 1, background: 'var(--accent)', border: 'none', borderRadius: 6, padding: '5px 0', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
-                    >
-                      ▶ Ouvrir en collab
-                    </button>
-                  )}
+                  <button
+                    onClick={() => setExpanded(isOpen ? null : board.id)}
+                    style={{ flex: 1, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 0', color: 'var(--text-muted)', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
+                  >
+                    {isOpen ? '▲ Masquer' : '▼ Afficher'}
+                  </button>
                   {!board.isOwner && (
                     <button
                       onClick={e => handleFavorite(e, board)}

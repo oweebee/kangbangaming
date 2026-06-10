@@ -330,6 +330,15 @@ export default function App() {
     await fetch(`${boardApi}/games/${appid}`, { method: 'PATCH', headers: authHeaders(token), body: JSON.stringify({ column }) });
   }, [activeBoardId, token, publicBoardMode]);
 
+  const reorderColumns = async (orderedIds) => {
+    // Optimistic update
+    const reordered = orderedIds.map(id => columns.find(c => c.id === id)).filter(Boolean);
+    setColumns(reordered);
+    if (!publicBoardMode) setBoards(prev => prev.map(b => b.id === activeBoardId ? { ...b, columns: reordered } : b));
+    const boardApi = publicBoardMode ? `${API}/public/boards/${publicBoardMode.id}` : `${API}/boards/${activeBoardId}`;
+    await fetch(`${boardApi}/columns/reorder`, { method: 'PATCH', headers: authHeaders(token), body: JSON.stringify({ order: orderedIds }) });
+  };
+
   // Auth screens
   if (!currentUser) {
     if (authPage === 'register') return <RegisterPage onLogin={handleLogin} onGoLogin={() => setAuthPage('login')} />;
@@ -543,9 +552,9 @@ export default function App() {
           <button onClick={() => setShowDrawer(true)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 20, cursor: 'pointer', lineHeight: 1, flexShrink: 0 }}>☰</button>
           {publicBoardMode ? (
             <>
-              <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--accent)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {publicBoardMode.name}
-                <span style={{ fontSize: 10, fontWeight: 400, color: 'var(--text-muted)', marginLeft: 6 }}>par {publicBoardMode.ownerUsername} · collab</span>
+              <span style={ fontWeight: 700, fontSize: 13, color: '#3db86a', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }>
+                Board Public
+                <span style={ fontSize: 10, fontWeight: 400, color: 'var(--text-muted)', marginLeft: 6 }>{publicBoardMode.name}</span>
               </span>
               <button onClick={refreshPublicBoard} title="Rafraîchir" style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', color: 'var(--text-muted)', fontSize: 14, cursor: 'pointer', flexShrink: 0, lineHeight: 1 }}>↻</button>
               <button onClick={closePublicBoard} style={{ background: 'rgba(255,255,255,.08)', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 10px', color: 'var(--text-muted)', fontSize: 11, cursor: 'pointer', flexShrink: 0 }}>✕ Quitter</button>
@@ -609,11 +618,8 @@ export default function App() {
               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
                 <circle cx="10" cy="7" r="4"/><path d="M4 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M15 3.13a4 4 0 0 1 0 7.75"/><path d="M20 21v-2a4 4 0 0 0-3-3.85"/>
               </svg>
-              <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--accent)' }}>{publicBoardMode.name}</span>
-              <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                par <strong style={{ color: 'var(--text)' }}>{publicBoardMode.ownerUsername}</strong>
-                <span style={{ background: 'rgba(232,129,58,.18)', border: '1px solid rgba(232,129,58,.35)', borderRadius: 99, padding: '1px 7px', color: 'var(--accent)', fontSize: 10, fontWeight: 700 }}>collaboration</span>
-              </span>
+              <span style={{ fontWeight: 700, fontSize: 14, color: '#3db86a' }}>Board Public</span>
+              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{publicBoardMode.name}</span>
               <input type="search" placeholder="Filtrer..." value={search} onChange={e => setSearch(e.target.value)}
                 style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 10px', color: 'var(--text)', fontSize: 12, outline: 'none', maxWidth: 200 }} />
               <button onClick={addColumn} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>+ Colonne</button>
@@ -652,7 +658,7 @@ export default function App() {
           loading ? (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Chargement...</div>
           ) : (
-            <KanbanBoard columns={columns} byColumn={byColumn} dragging={dragging} setDragging={setDragging} moveGame={moveGame} onCardClick={setSelectedGame} onRemoveGame={removeGame} onRenameColumn={renameColumn} onDeleteColumn={deleteColumn} onSetEmoji={setColumnEmoji} />
+            <KanbanBoard columns={columns} byColumn={byColumn} dragging={dragging} setDragging={setDragging} moveGame={moveGame} onCardClick={setSelectedGame} onRemoveGame={removeGame} onRenameColumn={renameColumn} onDeleteColumn={deleteColumn} onSetEmoji={setColumnEmoji} onReorderColumns={reorderColumns} />
           )
         ) : !activeBoardId ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Crée un board pour commencer</div>
@@ -666,7 +672,7 @@ export default function App() {
             <button onClick={() => setShowSearch(true)} style={{ background: 'var(--accent)', border: 'none', borderRadius: 8, padding: '10px 24px', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>+ Ajouter une carte</button>
           </div>
         ) : (
-          <KanbanBoard columns={columns} byColumn={byColumn} dragging={dragging} setDragging={setDragging} moveGame={moveGame} onCardClick={setSelectedGame} onRemoveGame={removeGame} onRenameColumn={renameColumn} onDeleteColumn={deleteColumn} onSetEmoji={setColumnEmoji} />
+          <KanbanBoard columns={columns} byColumn={byColumn} dragging={dragging} setDragging={setDragging} moveGame={moveGame} onCardClick={setSelectedGame} onRemoveGame={removeGame} onRenameColumn={renameColumn} onDeleteColumn={deleteColumn} onSetEmoji={setColumnEmoji} onReorderColumns={reorderColumns} />
         )}
       </div>
       <footer style={{ position: 'fixed', bottom: 0, right: 0, padding: '5px 12px', display: 'flex', alignItems: 'center', gap: 8, fontSize: 10, color: 'var(--text-muted)' }}>

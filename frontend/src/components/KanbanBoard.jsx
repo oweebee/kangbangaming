@@ -42,7 +42,7 @@ function EmojiPicker({ current, onSelect, onClose }) {
   );
 }
 
-function ColumnHeader({ col, onRename, onDelete, onSetEmoji }) {
+function ColumnHeader({ col, onRename, onDelete, onSetEmoji, onColDragStart, onColDragEnd, isDragOver }) {
   const [editing, setEditing] = useState(false);
   const [label, setLabel] = useState(col.label);
   const [showEmoji, setShowEmoji] = useState(false);
@@ -56,11 +56,21 @@ function ColumnHeader({ col, onRename, onDelete, onSetEmoji }) {
 
   return (
     <div style={{
-      padding: '10px 10px 10px 12px',
-      borderBottom: '2px solid var(--accent)',
+      padding: '10px 10px 10px 8px',
+      borderBottom: isDragOver ? '2px solid #3db86a' : '2px solid var(--accent)',
       display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0,
       position: 'relative',
+      transition: 'border-color .15s',
     }}>
+      {/* Drag handle */}
+      <div
+        draggable
+        onDragStart={e => { e.stopPropagation(); e.dataTransfer.effectAllowed = 'move'; onColDragStart(col.id); }}
+        onDragEnd={onColDragEnd}
+        title="Déplacer la colonne"
+        style={{ cursor: 'grab', color: 'var(--text-muted)', opacity: 0.35, fontSize: 14, lineHeight: 1, flexShrink: 0, padding: '0 2px', userSelect: 'none' }}
+      >⠿</div>
+
       <div style={{ position: 'relative' }}>
         <button onClick={() => setShowEmoji(v => !v)} title="Choisir un emoji" style={{
           background: col.emoji ? 'transparent' : 'var(--surface3)',
@@ -93,6 +103,7 @@ function ColumnHeader({ col, onRename, onDelete, onSetEmoji }) {
           style={{
             flex: 1, fontWeight: 600, fontSize: 12, cursor: 'text', userSelect: 'none',
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            color: col.color || 'var(--text)',
           }}
         >{col.label}</span>
       )}
@@ -110,10 +121,33 @@ function ColumnHeader({ col, onRename, onDelete, onSetEmoji }) {
   );
 }
 
-export default function KanbanBoard({ columns, byColumn, dragging, setDragging, moveGame, onCardClick, onRemoveGame, onRenameColumn, onDeleteColumn, onSetEmoji }) {
-  const handleDragOver = e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; };
+export default function KanbanBoard({ columns, byColumn, dragging, setDragging, moveGame, onCardClick, onRemoveGame, onRenameColumn, onDeleteColumn, onSetEmoji, onReorderColumns }) {
+  const [draggingColId, setDraggingColId] = useState(null);
+  const [dragOverColId, setDragOverColId] = useState(null);
 
-  const handleDrop = (e, colId) => {
+  const handleColDragStart = (colId) => setDraggingColId(colId);
+  const handleColDragEnd   = () => { setDraggingColId(null); setDragOverColId(null); };
+
+  const handleColDrop = (targetColId) => {
+    if (!draggingColId || draggingColId === targetColId) { handleColDragEnd(); return; }
+    const newOrder = [...columns];
+    const fromIdx = newOrder.findIndex(c => c.id === draggingColId);
+    const toIdx   = newOrder.findIndex(c => c.id === targetColId);
+    const [moved] = newOrder.splice(fromIdx, 1);
+    newOrder.splice(toIdx, 0, moved);
+    onReorderColumns(newOrder.map(c => c.id));
+    handleColDragEnd();
+  };
+
+  // Game drag handlers (only active when NOT dragging a column)
+  const handleGameDragOver = (e, colId) => {
+    if (draggingColId) return; // column drag in progress
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleGameDrop = (e, colId) => {
+    if (draggingColId) return;
     e.preventDefault();
     e.currentTarget.style.background = '';
     if (dragging && dragging.column !== colId) moveGame(dragging.appid, colId);
@@ -129,22 +163,39 @@ export default function KanbanBoard({ columns, byColumn, dragging, setDragging, 
       )}
       {columns.map(col => {
         const games = byColumn[col.id] || [];
+        const isColDragOver = dragOverColId === col.id && draggingColId && draggingColId !== col.id;
         return (
           <div
             key={col.id}
-            onDragOver={handleDragOver}
-            onDrop={e => handleDrop(e, col.id)}
-            onDragEnter={e => { e.currentTarget.style.background = 'rgba(192,87,10,.07)'; }}
-            onDragLeave={e => { e.currentTarget.style.background = ''; }}
+            onDragOver={e => {
+              if (draggingColId) { e.preventDefault(); setDragOverColId(col.id); }
+              else handleGameDragOver(e, col.id);
+            }}
+            onDrop={e => {
+              if (draggingColId) { e.preventDefault(); handleColDrop(col.id); }
+              else handleGameDrop(e, col.id);
+            }}
+            onDragEnter={e => { if (!draggingColId) e.currentTarget.style.background = 'rgba(192,87,10,.07)'; }}
+            onDragLeave={e => { if (!draggingColId) e.currentTarget.style.background = ''; }}
             style={{
               flex: '1 1 0', minWidth: 210, maxWidth: 300,
               display: 'flex', flexDirection: 'column',
               background: 'var(--surface)', borderRadius: 'var(--radius)',
-              border: '1px solid var(--border)', overflow: 'hidden',
-              transition: 'background .15s',
+              border: isColDragOver ? '1px solid #3db86a' : '1px solid var(--border)',
+              overflow: 'hidden',
+              transition: 'background .15s, border-color .15s',
+              opacity: draggingColId === col.id ? 0.45 : 1,
             }}
           >
-            <ColumnHeader col={{ ...col, _count: games.length }} onRename={onRenameColumn} onDelete={onDeleteColumn} onSetEmoji={onSetEmoji} />
+            <ColumnHeader
+              col={{ ...col, _count: games.length }}
+              onRename={onRenameColumn}
+              onDelete={onDeleteColumn}
+              onSetEmoji={onSetEmoji}
+              onColDragStart={handleColDragStart}
+              onColDragEnd={handleColDragEnd}
+              isDragOver={isColDragOver}
+            />
             <div style={{ flex: 1, overflowY: 'auto', padding: '8px', display: 'flex', flexDirection: 'column', gap: '7px' }}>
               {games.length === 0 && (
                 <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 11, padding: '20px 8px', border: '1px dashed var(--border)', borderRadius: 7 }}>
