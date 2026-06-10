@@ -325,6 +325,36 @@ app.get('/api/steam/achievements/:appid', requireAuth, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+app.get('/api/steam/gamestats/:appid', requireAuth, async (req, res) => {
+  const { appid } = req.params;
+  const creds = getUserSteamCreds(req.user.id);
+  if (!creds.apiKey || !creds.steamId) return res.status(400).json({ error: 'No Steam credentials' });
+  try {
+    const [lib, statsData, schemaData] = await Promise.all([
+      getLibraryMap(req.user.id),
+      steamFetch(`https://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/v1/?key=${creds.apiKey}&steamid=${creds.steamId}&appid=${appid}&l=french`).catch(() => null),
+      steamFetch(`https://api.steampowered.com/ISteamUserStats/GetSchemaForGame/v2/?key=${creds.apiKey}&appid=${appid}`).catch(() => null),
+    ]);
+    const libEntry = lib.get(parseInt(appid));
+    const playtime_minutes = libEntry ? libEntry.playtime_forever : 0;
+    const playerAchs = statsData?.playerstats?.achievements || [];
+    const totalAchs = schemaData?.game?.availableGameStats?.achievements?.length || 0;
+    const unlockedAchs = playerAchs.filter(a => a.achieved === 1).length;
+    const gameName = statsData?.playerstats?.gameName || '';
+    res.json({
+      name: gameName,
+      playtime_minutes,
+      playtime_hours: Math.floor(playtime_minutes / 60),
+      playtime_display: playtime_minutes >= 60
+        ? `${Math.floor(playtime_minutes / 60)}h ${playtime_minutes % 60}min`
+        : `${playtime_minutes} min`,
+      achievements_unlocked: unlockedAchs,
+      achievements_total: totalAchs,
+      header_img: `https://cdn.cloudflare.steamstatic.com/steam/apps/${appid}/header.jpg`,
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // ── Public boards ─────────────────────────────────────────────────────────────
 
 app.get('/api/public/boards', requireAuth, (req, res) => {

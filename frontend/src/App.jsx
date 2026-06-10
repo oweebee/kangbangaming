@@ -9,6 +9,7 @@ import AdminPanel from './components/AdminPanel.jsx';
 import SteamSettings from './components/SteamSettings.jsx';
 import PublicBoards from './components/PublicBoards.jsx';
 import ProfilePage from './components/ProfilePage.jsx';
+import GameStatsWidget from './components/GameStatsWidget.jsx';
 
 const DISCORD_ICON_URL = 'https://cdn.discordapp.com/icons/983316258302877747/ebcf20448ef8818f93e8f31afad9f8d9.webp?size=64';
 
@@ -920,6 +921,14 @@ export default function App() {
       {showAdmin && <AdminPanel token={token} currentUser={currentUser} onClose={() => setShowAdmin(false)} />}
       {showSteamSettings && <SteamSettings token={token} onSave={handleSteamSave} onClose={() => setShowSteamSettings(false)} />}
       {showProfile && <ProfilePage token={token} currentUser={currentUser} onClose={() => setShowProfile(false)} />}
+      {/* Game stats widget — shown only when viewing a Steam-based board */}
+      {isTaskBoard && !showHome && !showPublicBoards && (
+        <GameStatsWidget
+          api={API}
+          token={token}
+          board={publicBoardMode || activeBoard}
+        />
+      )}
     </div>
   );
 }
