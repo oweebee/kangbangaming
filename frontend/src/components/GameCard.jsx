@@ -8,7 +8,7 @@ function formatPlaytime(minutes) {
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 
-export default function GameCard({ game, onDragStart, onDragEnd, onClick, isDragging }) {
+export default function GameCard({ game, onDragStart, onDragEnd, onClick, onRemove, isDragging }) {
   const [imgError, setImgError] = useState(false);
 
   return (
@@ -64,18 +64,22 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, isDrag
 
       {/* Info */}
       <div style={{ padding: '8px 10px' }}>
-        <div style={{
-          fontWeight: 600,
-          fontSize: 12,
-          lineHeight: '1.3',
-          marginBottom: 6,
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-        }} title={game.name}>
-          {game.name}
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 4 }}>
+          <div style={{
+            fontWeight: 600, fontSize: 12, lineHeight: '1.3', marginBottom: 6,
+            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1,
+          }} title={game.name}>
+            {game.name}
+          </div>
+          <button
+            onClick={e => { e.stopPropagation(); onRemove(); }}
+            style={{
+              background: 'none', border: 'none', color: 'var(--text-muted)',
+              fontSize: 11, cursor: 'pointer', padding: '0 2px', flexShrink: 0, opacity: 0.5,
+            }}
+            title="Retirer du board"
+          >✕</button>
         </div>
-
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-muted)', fontSize: 11 }}>
           <span>⏱ {formatPlaytime(game.playtime_minutes)}</span>
         </div>

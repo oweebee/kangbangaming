@@ -1,57 +1,106 @@
 import { useState, useEffect, useCallback } from 'react';
 import KanbanBoard from './components/KanbanBoard.jsx';
 import GameModal from './components/GameModal.jsx';
+import SearchModal from './components/SearchModal.jsx';
 
 const API = import.meta.env.VITE_API_URL || '/api';
 
 const COLUMNS = [
-  { id: 'backlog',    label: 'Backlog',     emoji: '📦', color: '#4a4a6a' },
-  { id: 'playing',   label: 'En cours',    emoji: '🎮', color: '#1a6b3c' },
-  { id: 'finished',  label: 'Terminé',     emoji: '✅', color: '#1a4a6b' },
-  { id: 'platinum',  label: 'Platine',     emoji: '🏆', color: '#7a5a1a' },
+  { id: 'backlog',   label: 'Backlog',   emoji: '📦', color: '#4a4a6a' },
+  { id: 'playing',  label: 'En cours',  emoji: '🎮', color: '#1a6b3c' },
+  { id: 'finished', label: 'Terminé',   emoji: '✅', color: '#1a4a6b' },
+  { id: 'platinum', label: 'Platine',   emoji: '🏆', color: '#7a5a1a' },
 ];
 
 export default function App() {
+  const [boards, setBoards] = useState([]);
+  const [activeBoardId, setActiveBoardId] = useState(null);
   const [games, setGames] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [selectedGame, setSelectedGame] = useState(null);
+  const [showSearch, setShowSearch] = useState(false);
   const [dragging, setDragging] = useState(null);
+  const [newBoardName, setNewBoardName] = useState('');
+  const [showNewBoard, setShowNewBoard] = useState(false);
 
-  const fetchGames = useCallback(async () => {
+  const fetchBoards = useCallback(async () => {
+    const res = await fetch(`${API}/boards`);
+    const data = await res.json();
+    setBoards(data);
+    if (data.length > 0 && !activeBoardId) {
+      setActiveBoardId(data[0].id);
+    }
+  }, [activeBoardId]);
+
+  const fetchGames = useCallback(async (boardId) => {
+    if (!boardId) return;
+    setLoading(true);
     try {
-      setLoading(true);
-      setError(null);
-      const res = await fetch(`${API}/games`);
-      if (!res.ok) throw new Error(await res.text());
+      const res = await fetch(`${API}/boards/${boardId}/games`);
       const data = await res.json();
-      setGames(data);
-    } catch (e) {
-      setError(e.message);
+      setGames(Array.isArray(data) ? data : []);
+    } catch {
+      setGames([]);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => { fetchGames(); }, [fetchGames]);
+  useEffect(() => { fetchBoards(); }, []);
+  useEffect(() => { if (activeBoardId) fetchGames(activeBoardId); }, [activeBoardId]);
+
+  const createBoard = async () => {
+    const name = newBoardName.trim();
+    if (!name) return;
+    const res = await fetch(`${API}/boards`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    });
+    const board = await res.json();
+    setBoards(prev => [...prev, board]);
+    setActiveBoardId(board.id);
+    setNewBoardName('');
+    setShowNewBoard(false);
+  };
+
+  const deleteBoard = async (boardId) => {
+    if (!confirm('Supprimer ce board ?')) return;
+    await fetch(`${API}/boards/${boardId}`, { method: 'DELETE' });
+    const remaining = boards.filter(b => b.id !== boardId);
+    setBoards(remaining);
+    if (activeBoardId === boardId) {
+      setActiveBoardId(remaining[0]?.id || null);
+      setGames([]);
+    }
+  };
+
+  const addGame = async (game) => {
+    await fetch(`${API}/boards/${activeBoardId}/games`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ appid: game.appid, column: 'backlog' }),
+    });
+    fetchGames(activeBoardId);
+  };
+
+  const removeGame = async (appid) => {
+    await fetch(`${API}/boards/${activeBoardId}/games/${appid}`, { method: 'DELETE' });
+    setGames(prev => prev.filter(g => g.appid !== appid));
+  };
 
   const moveGame = useCallback(async (appid, column) => {
-    // Optimistic update
     setGames(prev => prev.map(g => g.appid === appid ? { ...g, column } : g));
-    try {
-      await fetch(`${API}/kanban`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ appid, column }),
-      });
-    } catch (e) {
-      console.error('Erreur sauvegarde kanban:', e);
-    }
-  }, []);
+    await fetch(`${API}/boards/${activeBoardId}/games/${appid}/column`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ column }),
+    });
+  }, [activeBoardId]);
 
   const filtered = games.filter(g =>
-    g.name.toLowerCase().includes(search.toLowerCase())
+    g.name?.toLowerCase().includes(search.toLowerCase())
   );
 
   const byColumn = COLUMNS.reduce((acc, col) => {
@@ -59,109 +108,168 @@ export default function App() {
     return acc;
   }, {});
 
+  const activeBoard = boards.find(b => b.id === activeBoardId);
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
-      {/* Header */}
-      <header style={{
-        background: 'var(--steam)',
-        borderBottom: '1px solid var(--border)',
-        padding: '12px 20px',
+    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
+
+      {/* Sidebar boards */}
+      <aside style={{
+        width: 200,
+        background: '#111113',
+        borderRight: '1px solid var(--border)',
         display: 'flex',
-        alignItems: 'center',
-        gap: '16px',
+        flexDirection: 'column',
         flexShrink: 0,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <svg width="24" height="24" viewBox="0 0 256 259" fill="none">
-            <path d="M128 0C57.3 0 0 57.3 0 128c0 56.4 36.3 104.5 87.1 121.8L128 128l40.9 121.8C219.7 232.5 256 184.4 256 128 256 57.3 198.7 0 128 0z" fill="#1b2838"/>
-            <path d="M128 22c-58.4 0-106 47.6-106 106S69.6 234 128 234s106-47.6 106-106S186.4 22 128 22z" fill="#c7d5e0"/>
-          </svg>
-          <span style={{ fontWeight: 700, fontSize: '16px', color: 'var(--steam-light)' }}>Steam Kanban</span>
+        <div style={{ padding: '14px 12px 8px', color: '#c7d5e0', fontWeight: 700, fontSize: 13, borderBottom: '1px solid var(--border)' }}>
+          🎮 Mes boards
         </div>
-
-        <input
-          type="search"
-          placeholder="Rechercher un jeu..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          style={{
-            flex: 1,
-            maxWidth: 320,
-            background: 'rgba(255,255,255,0.08)',
-            border: '1px solid var(--border)',
-            borderRadius: 6,
-            padding: '7px 12px',
-            color: 'var(--text)',
-            fontSize: 13,
-            outline: 'none',
-          }}
-        />
-
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: '12px', color: 'var(--text-muted)', fontSize: 13 }}>
-          {COLUMNS.map(col => (
-            <span key={col.id}>{col.emoji} {byColumn[col.id]?.length || 0}</span>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '6px' }}>
+          {boards.map(b => (
+            <div
+              key={b.id}
+              onClick={() => setActiveBoardId(b.id)}
+              style={{
+                padding: '8px 10px',
+                borderRadius: 6,
+                cursor: 'pointer',
+                background: activeBoardId === b.id ? 'var(--surface2)' : 'transparent',
+                color: activeBoardId === b.id ? 'var(--text)' : 'var(--text-muted)',
+                fontSize: 12,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                marginBottom: 2,
+              }}
+            >
+              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.name}</span>
+              <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{b.gameCount}</span>
+              <button
+                onClick={e => { e.stopPropagation(); deleteBoard(b.id); }}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 12, padding: 0, opacity: 0.5 }}
+                title="Supprimer"
+              >✕</button>
+            </div>
           ))}
-          <span style={{ color: 'var(--text-muted)' }}>· {games.length} jeux total</span>
         </div>
 
-        <button
-          onClick={fetchGames}
-          style={{
-            background: 'rgba(255,255,255,0.08)',
-            border: '1px solid var(--border)',
-            borderRadius: 6,
-            padding: '6px 10px',
-            color: 'var(--text)',
-            fontSize: 13,
-          }}
-          title="Actualiser"
-        >↻</button>
-      </header>
+        {/* Nouveau board */}
+        <div style={{ padding: '8px', borderTop: '1px solid var(--border)' }}>
+          {showNewBoard ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <input
+                autoFocus
+                value={newBoardName}
+                onChange={e => setNewBoardName(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && createBoard()}
+                placeholder="Nom du board"
+                style={{
+                  background: 'var(--surface2)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 5,
+                  padding: '5px 8px',
+                  color: 'var(--text)',
+                  fontSize: 12,
+                  outline: 'none',
+                }}
+              />
+              <div style={{ display: 'flex', gap: 4 }}>
+                <button onClick={createBoard} style={{ flex: 1, background: 'var(--accent)', border: 'none', borderRadius: 5, padding: '4px', color: '#000', fontSize: 11, fontWeight: 600 }}>Créer</button>
+                <button onClick={() => setShowNewBoard(false)} style={{ flex: 1, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 5, padding: '4px', color: 'var(--text-muted)', fontSize: 11 }}>Annuler</button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowNewBoard(true)}
+              style={{
+                width: '100%',
+                background: 'none',
+                border: '1px dashed var(--border)',
+                borderRadius: 6,
+                padding: '6px',
+                color: 'var(--text-muted)',
+                fontSize: 11,
+                cursor: 'pointer',
+              }}
+            >+ Nouveau board</button>
+          )}
+        </div>
+      </aside>
 
-      {/* Content */}
-      {loading && (
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
-          <div>
-            <div style={{ fontSize: 32, textAlign: 'center', marginBottom: 12 }}>⏳</div>
-            <div>Chargement de ta bibliothèque Steam...</div>
+      {/* Main */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+
+        {/* Header */}
+        <header style={{
+          background: 'var(--steam)',
+          borderBottom: '1px solid var(--border)',
+          padding: '10px 14px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          flexShrink: 0,
+        }}>
+          <span style={{ fontWeight: 700, fontSize: 14, color: '#c7d5e0' }}>
+            {activeBoard?.name || 'Sélectionne un board'}
+          </span>
+
+          <input
+            type="search"
+            placeholder="Filtrer les jeux..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            style={{
+              flex: 1, maxWidth: 240,
+              background: 'rgba(255,255,255,.08)',
+              border: '1px solid var(--border)',
+              borderRadius: 6, padding: '6px 10px',
+              color: 'var(--text)', fontSize: 12, outline: 'none',
+            }}
+          />
+
+          {activeBoardId && (
+            <button
+              onClick={() => setShowSearch(true)}
+              style={{
+                marginLeft: 'auto',
+                background: 'var(--accent)',
+                border: 'none', borderRadius: 6,
+                padding: '6px 14px',
+                color: '#000', fontWeight: 700, fontSize: 12, cursor: 'pointer',
+              }}
+            >+ Ajouter un jeu</button>
+          )}
+        </header>
+
+        {/* Board content */}
+        {!activeBoardId ? (
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
+            Crée un board pour commencer
           </div>
-        </div>
-      )}
-
-      {error && (
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{
-            background: '#3a1a1a',
-            border: '1px solid #6a2a2a',
-            borderRadius: 10,
-            padding: 24,
-            maxWidth: 500,
-            textAlign: 'center',
-          }}>
-            <div style={{ fontSize: 32, marginBottom: 12 }}>⚠️</div>
-            <div style={{ color: '#ff6b6b', fontWeight: 600, marginBottom: 8 }}>Erreur de connexion</div>
-            <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>{error}</div>
-            <button onClick={fetchGames} style={{
-              marginTop: 16,
-              background: 'var(--accent)',
-              border: 'none',
-              borderRadius: 6,
-              padding: '8px 16px',
-              color: '#000',
-              fontWeight: 600,
-            }}>Réessayer</button>
+        ) : loading ? (
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
+            Chargement...
           </div>
-        </div>
-      )}
+        ) : (
+          <KanbanBoard
+            columns={COLUMNS}
+            byColumn={byColumn}
+            dragging={dragging}
+            setDragging={setDragging}
+            moveGame={moveGame}
+            onCardClick={setSelectedGame}
+            onRemoveGame={removeGame}
+          />
+        )}
+      </div>
 
-      {!loading && !error && (
-        <KanbanBoard
-          columns={COLUMNS}
-          byColumn={byColumn}
-          dragging={dragging}
-          setDragging={setDragging}
-          moveGame={moveGame}
-          onCardClick={setSelectedGame}
+      {showSearch && (
+        <SearchModal
+          api={API}
+          boardGames={games}
+          onAdd={addGame}
+          onClose={() => setShowSearch(false)}
         />
       )}
 

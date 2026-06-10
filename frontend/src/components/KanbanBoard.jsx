@@ -1,6 +1,6 @@
 import GameCard from './GameCard.jsx';
 
-export default function KanbanBoard({ columns, byColumn, dragging, setDragging, moveGame, onCardClick }) {
+export default function KanbanBoard({ columns, byColumn, dragging, setDragging, moveGame, onCardClick, onRemoveGame }) {
 
   const handleDragOver = (e) => {
     e.preventDefault();
@@ -103,6 +103,7 @@ export default function KanbanBoard({ columns, byColumn, dragging, setDragging, 
                   onDragStart={() => setDragging(game)}
                   onDragEnd={() => setDragging(null)}
                   onClick={() => onCardClick(game)}
+                  onRemove={() => onRemoveGame(game.appid)}
                   isDragging={dragging?.appid === game.appid}
                 />
               ))}
