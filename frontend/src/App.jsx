@@ -5,16 +5,10 @@ import SearchModal from './components/SearchModal.jsx';
 
 const API = import.meta.env.VITE_API_URL || '/api';
 
-const COLUMNS = [
-  { id: 'backlog',   label: 'Backlog',   emoji: '📦', color: '#4a4a6a' },
-  { id: 'playing',  label: 'En cours',  emoji: '🎮', color: '#1a6b3c' },
-  { id: 'finished', label: 'Terminé',   emoji: '✅', color: '#1a4a6b' },
-  { id: 'platinum', label: 'Platine',   emoji: '🏆', color: '#7a5a1a' },
-];
-
 export default function App() {
   const [boards, setBoards] = useState([]);
   const [activeBoardId, setActiveBoardId] = useState(null);
+  const [columns, setColumns] = useState([]);
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
@@ -30,6 +24,7 @@ export default function App() {
     setBoards(data);
     if (data.length > 0 && !activeBoardId) {
       setActiveBoardId(data[0].id);
+      setColumns(data[0].columns || []);
     }
   }, [activeBoardId]);
 
@@ -38,29 +33,34 @@ export default function App() {
     setLoading(true);
     try {
       const res = await fetch(`${API}/boards/${boardId}/games`);
-      const data = await res.json();
-      setGames(Array.isArray(data) ? data : []);
-    } catch {
-      setGames([]);
-    } finally {
-      setLoading(false);
-    }
+      setGames(await res.json());
+    } catch { setGames([]); }
+    finally { setLoading(false); }
   }, []);
 
   useEffect(() => { fetchBoards(); }, []);
-  useEffect(() => { if (activeBoardId) fetchGames(activeBoardId); }, [activeBoardId]);
+
+  useEffect(() => {
+    if (!activeBoardId) return;
+    const board = boards.find(b => b.id === activeBoardId);
+    if (board) setColumns(board.columns || []);
+    fetchGames(activeBoardId);
+  }, [activeBoardId]);
+
+  // ── Boards ────────────────────────────────────────────────────────────────
 
   const createBoard = async () => {
     const name = newBoardName.trim();
     if (!name) return;
     const res = await fetch(`${API}/boards`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name }),
     });
     const board = await res.json();
     setBoards(prev => [...prev, board]);
     setActiveBoardId(board.id);
+    setColumns(board.columns || []);
+    setGames([]);
     setNewBoardName('');
     setShowNewBoard(false);
   };
@@ -72,15 +72,49 @@ export default function App() {
     setBoards(remaining);
     if (activeBoardId === boardId) {
       setActiveBoardId(remaining[0]?.id || null);
+      setColumns(remaining[0]?.columns || []);
       setGames([]);
     }
   };
 
+  // ── Colonnes ──────────────────────────────────────────────────────────────
+
+  const addColumn = async () => {
+    const res = await fetch(`${API}/boards/${activeBoardId}/columns`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ label: 'Nouvelle colonne' }),
+    });
+    const col = await res.json();
+    setColumns(prev => [...prev, col]);
+    setBoards(prev => prev.map(b => b.id === activeBoardId
+      ? { ...b, columns: [...(b.columns || []), col] } : b));
+  };
+
+  const renameColumn = async (colId, label) => {
+    await fetch(`${API}/boards/${activeBoardId}/columns/${colId}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ label }),
+    });
+    const updated = columns.map(c => c.id === colId ? { ...c, label } : c);
+    setColumns(updated);
+    setBoards(prev => prev.map(b => b.id === activeBoardId ? { ...b, columns: updated } : b));
+  };
+
+  const deleteColumn = async (colId) => {
+    if (!confirm('Supprimer cette colonne ? Les jeux seront déplacés dans la première colonne.')) return;
+    await fetch(`${API}/boards/${activeBoardId}/columns/${colId}`, { method: 'DELETE' });
+    const updated = columns.filter(c => c.id !== colId);
+    setColumns(updated);
+    setBoards(prev => prev.map(b => b.id === activeBoardId ? { ...b, columns: updated } : b));
+    fetchGames(activeBoardId);
+  };
+
+  // ── Jeux ──────────────────────────────────────────────────────────────────
+
   const addGame = async (game) => {
     await fetch(`${API}/boards/${activeBoardId}/games`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ appid: game.appid, column: 'backlog' }),
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ appid: game.appid }),
     });
     fetchGames(activeBoardId);
   };
@@ -93,17 +127,18 @@ export default function App() {
   const moveGame = useCallback(async (appid, column) => {
     setGames(prev => prev.map(g => g.appid === appid ? { ...g, column } : g));
     await fetch(`${API}/boards/${activeBoardId}/games/${appid}/column`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ column }),
     });
   }, [activeBoardId]);
+
+  // ── Render ────────────────────────────────────────────────────────────────
 
   const filtered = games.filter(g =>
     g.name?.toLowerCase().includes(search.toLowerCase())
   );
 
-  const byColumn = COLUMNS.reduce((acc, col) => {
+  const byColumn = columns.reduce((acc, col) => {
     acc[col.id] = filtered.filter(g => g.column === col.id);
     return acc;
   }, {});
@@ -113,86 +148,69 @@ export default function App() {
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
 
-      {/* Sidebar boards */}
+      {/* Sidebar */}
       <aside style={{
-        width: 200,
-        background: '#111113',
-        borderRight: '1px solid var(--border)',
-        display: 'flex',
-        flexDirection: 'column',
-        flexShrink: 0,
+        width: 210, background: '#111', borderRight: '1px solid var(--border)',
+        display: 'flex', flexDirection: 'column', flexShrink: 0,
       }}>
-        <div style={{ padding: '14px 12px 8px', color: '#c7d5e0', fontWeight: 700, fontSize: 13, borderBottom: '1px solid var(--border)' }}>
-          🎮 Mes boards
+        <div style={{
+          padding: '14px 14px 10px',
+          borderBottom: '1px solid var(--border)',
+          display: 'flex', alignItems: 'center', gap: 8,
+        }}>
+          <span style={{ fontSize: 16 }}>🎮</span>
+          <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)' }}>Steam Kanban</span>
         </div>
-        <div style={{ flex: 1, overflowY: 'auto', padding: '6px' }}>
+
+        <div style={{ flex: 1, overflowY: 'auto', padding: '8px 6px' }}>
           {boards.map(b => (
             <div
               key={b.id}
-              onClick={() => setActiveBoardId(b.id)}
+              onClick={() => { setActiveBoardId(b.id); setColumns(b.columns || []); }}
               style={{
-                padding: '8px 10px',
-                borderRadius: 6,
-                cursor: 'pointer',
-                background: activeBoardId === b.id ? 'var(--surface2)' : 'transparent',
+                padding: '8px 10px', borderRadius: 7, cursor: 'pointer', marginBottom: 2,
+                background: activeBoardId === b.id ? 'var(--accent-dim)' : 'transparent',
+                borderLeft: activeBoardId === b.id ? '3px solid var(--accent)' : '3px solid transparent',
                 color: activeBoardId === b.id ? 'var(--text)' : 'var(--text-muted)',
-                fontSize: 12,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                marginBottom: 2,
+                display: 'flex', alignItems: 'center', gap: 6,
+                transition: 'background .12s',
               }}
             >
-              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.name}</span>
-              <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{b.gameCount}</span>
+              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 12 }}>{b.name}</span>
+              <span style={{ fontSize: 10, color: 'var(--text-muted)', flexShrink: 0 }}>{b.gameCount}</span>
               <button
                 onClick={e => { e.stopPropagation(); deleteBoard(b.id); }}
-                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 12, padding: 0, opacity: 0.5 }}
-                title="Supprimer"
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 12, padding: 0, opacity: 0, cursor: 'pointer' }}
+                className="del-btn"
               >✕</button>
             </div>
           ))}
         </div>
 
-        {/* Nouveau board */}
         <div style={{ padding: '8px', borderTop: '1px solid var(--border)' }}>
           {showNewBoard ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
               <input
-                autoFocus
-                value={newBoardName}
+                autoFocus value={newBoardName}
                 onChange={e => setNewBoardName(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && createBoard()}
                 placeholder="Nom du board"
                 style={{
-                  background: 'var(--surface2)',
-                  border: '1px solid var(--border)',
-                  borderRadius: 5,
-                  padding: '5px 8px',
-                  color: 'var(--text)',
-                  fontSize: 12,
-                  outline: 'none',
+                  background: 'var(--surface2)', border: '1px solid var(--border)',
+                  borderRadius: 6, padding: '6px 8px', color: 'var(--text)', fontSize: 12, outline: 'none',
                 }}
               />
               <div style={{ display: 'flex', gap: 4 }}>
-                <button onClick={createBoard} style={{ flex: 1, background: 'var(--accent)', border: 'none', borderRadius: 5, padding: '4px', color: '#000', fontSize: 11, fontWeight: 600 }}>Créer</button>
-                <button onClick={() => setShowNewBoard(false)} style={{ flex: 1, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 5, padding: '4px', color: 'var(--text-muted)', fontSize: 11 }}>Annuler</button>
+                <button onClick={createBoard} style={{ flex: 1, background: 'var(--accent)', border: 'none', borderRadius: 5, padding: '5px', color: '#fff', fontSize: 11, fontWeight: 700 }}>Créer</button>
+                <button onClick={() => setShowNewBoard(false)} style={{ flex: 1, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 5, padding: '5px', color: 'var(--text-muted)', fontSize: 11 }}>Annuler</button>
               </div>
             </div>
           ) : (
-            <button
-              onClick={() => setShowNewBoard(true)}
-              style={{
-                width: '100%',
-                background: 'none',
-                border: '1px dashed var(--border)',
-                borderRadius: 6,
-                padding: '6px',
-                color: 'var(--text-muted)',
-                fontSize: 11,
-                cursor: 'pointer',
-              }}
-            >+ Nouveau board</button>
+            <button onClick={() => setShowNewBoard(true)} style={{
+              width: '100%', background: 'none',
+              border: '1px dashed var(--border)', borderRadius: 7,
+              padding: '7px', color: 'var(--text-muted)', fontSize: 11, cursor: 'pointer',
+            }}>+ Nouveau board</button>
           )}
         </div>
       </aside>
@@ -202,47 +220,35 @@ export default function App() {
 
         {/* Header */}
         <header style={{
-          background: 'var(--steam)',
-          borderBottom: '1px solid var(--border)',
-          padding: '10px 14px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 12,
-          flexShrink: 0,
+          background: 'var(--surface)', borderBottom: '1px solid var(--border)',
+          padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0,
         }}>
-          <span style={{ fontWeight: 700, fontSize: 14, color: '#c7d5e0' }}>
-            {activeBoard?.name || 'Sélectionne un board'}
+          <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--accent)' }}>
+            {activeBoard?.name || '—'}
           </span>
-
           <input
-            type="search"
-            placeholder="Filtrer les jeux..."
-            value={search}
+            type="search" placeholder="Filtrer..." value={search}
             onChange={e => setSearch(e.target.value)}
             style={{
-              flex: 1, maxWidth: 240,
-              background: 'rgba(255,255,255,.08)',
-              border: '1px solid var(--border)',
-              borderRadius: 6, padding: '6px 10px',
-              color: 'var(--text)', fontSize: 12, outline: 'none',
+              background: 'var(--surface2)', border: '1px solid var(--border)',
+              borderRadius: 6, padding: '6px 10px', color: 'var(--text)', fontSize: 12, outline: 'none', maxWidth: 200,
             }}
           />
-
           {activeBoardId && (
-            <button
-              onClick={() => setShowSearch(true)}
-              style={{
-                marginLeft: 'auto',
-                background: 'var(--accent)',
-                border: 'none', borderRadius: 6,
-                padding: '6px 14px',
-                color: '#000', fontWeight: 700, fontSize: 12, cursor: 'pointer',
-              }}
-            >+ Ajouter un jeu</button>
+            <>
+              <button onClick={addColumn} style={{
+                background: 'var(--surface2)', border: '1px solid var(--border)',
+                borderRadius: 6, padding: '6px 12px', color: 'var(--text-muted)', fontSize: 12,
+              }}>+ Colonne</button>
+              <button onClick={() => setShowSearch(true)} style={{
+                marginLeft: 'auto', background: 'var(--accent)', border: 'none',
+                borderRadius: 7, padding: '7px 16px', color: '#fff', fontWeight: 700, fontSize: 12,
+              }}>+ Ajouter un jeu</button>
+            </>
           )}
         </header>
 
-        {/* Board content */}
+        {/* Content */}
         {!activeBoardId ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
             Crée un board pour commencer
@@ -251,47 +257,36 @@ export default function App() {
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
             Chargement...
           </div>
-        ) : games.length === 0 ? (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, color: 'var(--text-muted)' }}>
-            <div style={{ fontSize: 40 }}>🎮</div>
-            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>Ce board est vide</div>
-            <div style={{ fontSize: 12 }}>Recherche un jeu pour l'ajouter</div>
-            <button
-              onClick={() => setShowSearch(true)}
-              style={{
-                background: 'var(--accent)', border: 'none', borderRadius: 8,
-                padding: '10px 24px', color: '#000', fontWeight: 700, fontSize: 13, cursor: 'pointer',
-              }}
-            >+ Ajouter un jeu</button>
+        ) : games.length === 0 && columns.length > 0 ? (
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14 }}>
+            <div style={{ fontSize: 36 }}>🎮</div>
+            <div style={{ fontWeight: 700, color: 'var(--text)' }}>Board vide</div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Recherche un jeu pour l'ajouter</div>
+            <button onClick={() => setShowSearch(true)} style={{
+              background: 'var(--accent)', border: 'none', borderRadius: 8,
+              padding: '10px 24px', color: '#fff', fontWeight: 700, fontSize: 13,
+            }}>+ Ajouter un jeu</button>
           </div>
         ) : (
           <KanbanBoard
-            columns={COLUMNS}
+            columns={columns}
             byColumn={byColumn}
             dragging={dragging}
             setDragging={setDragging}
             moveGame={moveGame}
             onCardClick={setSelectedGame}
             onRemoveGame={removeGame}
+            onRenameColumn={renameColumn}
+            onDeleteColumn={deleteColumn}
           />
         )}
       </div>
 
       {showSearch && (
-        <SearchModal
-          api={API}
-          boardGames={games}
-          onAdd={addGame}
-          onClose={() => setShowSearch(false)}
-        />
+        <SearchModal api={API} boardGames={games} onAdd={addGame} onClose={() => setShowSearch(false)} />
       )}
-
       {selectedGame && (
-        <GameModal
-          game={selectedGame}
-          onClose={() => setSelectedGame(null)}
-          api={API}
-        />
+        <GameModal game={selectedGame} onClose={() => setSelectedGame(null)} api={API} />
       )}
     </div>
   );

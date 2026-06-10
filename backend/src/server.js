@@ -15,7 +15,7 @@ const DATA_FILE = path.join(__dirname, '..', 'data', 'boards.json');
 app.use(cors());
 app.use(express.json());
 
-// ─── Cache bibliothèque Steam (en mémoire, TTL 10 min) ──────────────────────
+// ─── Cache bibliothèque Steam ────────────────────────────────────────────────
 
 let libraryCache = null;
 let libraryCacheAt = 0;
@@ -26,8 +26,7 @@ async function getLibrarySet() {
   try {
     const url = `https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key=${STEAM_API_KEY}&steamid=${STEAM_ID}&include_appinfo=1&include_played_free_games=1&format=json`;
     const data = await steamFetch(url);
-    const games = data.response?.games || [];
-    libraryCache = new Set(games.map(g => g.appid));
+    libraryCache = new Set((data.response?.games || []).map(g => g.appid));
     libraryCacheAt = Date.now();
   } catch {
     libraryCache = new Set();
@@ -35,12 +34,11 @@ async function getLibrarySet() {
   return libraryCache;
 }
 
-// ─── Persistence ────────────────────────────────────────────────────────────
+// ─── Persistence ─────────────────────────────────────────────────────────────
 
 async function readData() {
   try {
-    const raw = await fs.readFile(DATA_FILE, 'utf-8');
-    return JSON.parse(raw);
+    return JSON.parse(await fs.readFile(DATA_FILE, 'utf-8'));
   } catch {
     return { boards: {} };
   }
@@ -51,32 +49,16 @@ async function writeData(data) {
   await fs.writeFile(DATA_FILE, JSON.stringify(data, null, 2));
 }
 
-// ─── Steam helpers ───────────────────────────────────────────────────────────
+function defaultColumns() {
+  return [{ id: `col_${Date.now()}`, label: 'Renomme moi', color: '#c0570a' }];
+}
+
+// ─── Steam helpers ────────────────────────────────────────────────────────────
 
 async function steamFetch(url) {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Steam API ${res.status}`);
   return res.json();
-}
-
-async function getGameInfo(appid) {
-  // Tente de récupérer les infos depuis la bibliothèque Steam
-  try {
-    const url = `https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key=${STEAM_API_KEY}&steamid=${STEAM_ID}&include_appinfo=1&appids_filter[0]=${appid}&format=json`;
-    const data = await steamFetch(url);
-    const game = data.response?.games?.[0];
-    if (game) return formatGame(game);
-  } catch {}
-
-  // Fallback: infos basiques depuis le store
-  return {
-    appid: parseInt(appid),
-    name: `App ${appid}`,
-    playtime_minutes: 0,
-    playtime_hours: 0,
-    header_img: `https://cdn.akamai.steamstatic.com/steam/apps/${appid}/header.jpg`,
-    library_img: `https://cdn.akamai.steamstatic.com/steam/apps/${appid}/library_600x900.jpg`,
-  };
 }
 
 function formatGame(g) {
@@ -90,88 +72,70 @@ function formatGame(g) {
   };
 }
 
-// ─── Health ──────────────────────────────────────────────────────────────────
-
-app.get('/api/health', (_req, res) => {
-  res.json({ ok: true });
-});
-
-// ─── Search : bibliothèque Steam ─────────────────────────────────────────────
-
-app.get('/api/search/library', async (req, res) => {
+async function getGameInfo(appid) {
   try {
-    const q = (req.query.q || '').toLowerCase().trim();
-    if (!q) return res.json([]);
-
-    const url = `https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key=${STEAM_API_KEY}&steamid=${STEAM_ID}&include_appinfo=1&include_played_free_games=1&format=json`;
+    const url = `https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key=${STEAM_API_KEY}&steamid=${STEAM_ID}&include_appinfo=1&appids_filter[0]=${appid}&format=json`;
     const data = await steamFetch(url);
-    const games = data.response?.games || [];
+    const game = data.response?.games?.[0];
+    if (game) return formatGame(game);
+  } catch {}
+  return {
+    appid: parseInt(appid), name: `App ${appid}`,
+    playtime_minutes: 0, playtime_hours: 0,
+    header_img: `https://cdn.akamai.steamstatic.com/steam/apps/${appid}/header.jpg`,
+    library_img: `https://cdn.akamai.steamstatic.com/steam/apps/${appid}/library_600x900.jpg`,
+  };
+}
 
-    const results = games
-      .filter(g => g.name?.toLowerCase().includes(q))
-      .slice(0, 20)
-      .map(formatGame);
+// ─── Health ───────────────────────────────────────────────────────────────────
 
-    res.json(results);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+app.get('/api/health', (_req, res) => res.json({ ok: true }));
 
-// ─── Search : store Steam ────────────────────────────────────────────────────
+// ─── Search store Steam (avec ownership) ─────────────────────────────────────
 
 app.get('/api/search/store', async (req, res) => {
   try {
     const q = (req.query.q || '').trim();
     if (!q) return res.json([]);
-
     const [storeData, library] = await Promise.all([
       steamFetch(`https://store.steampowered.com/api/storesearch/?term=${encodeURIComponent(q)}&l=french&cc=FR`),
       getLibrarySet(),
     ]);
-
     const results = (storeData.items || []).slice(0, 20).map(g => ({
-      appid: g.id,
-      name: g.name,
-      playtime_minutes: 0,
-      playtime_hours: 0,
+      appid: g.id, name: g.name,
+      playtime_minutes: 0, playtime_hours: 0,
       header_img: `https://cdn.akamai.steamstatic.com/steam/apps/${g.id}/header.jpg`,
       library_img: `https://cdn.akamai.steamstatic.com/steam/apps/${g.id}/library_600x900.jpg`,
       price: g.price?.final_formatted || null,
       owned: library.has(g.id),
     }));
-
     res.json(results);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// ─── Boards ──────────────────────────────────────────────────────────────────
+// ─── Boards ───────────────────────────────────────────────────────────────────
 
-// GET /api/boards
 app.get('/api/boards', async (_req, res) => {
   const data = await readData();
-  const list = Object.entries(data.boards).map(([id, b]) => ({
-    id,
-    name: b.name,
+  res.json(Object.entries(data.boards).map(([id, b]) => ({
+    id, name: b.name,
+    columns: b.columns || defaultColumns(),
     gameCount: Object.keys(b.games || {}).length,
-  }));
-  res.json(list);
+  })));
 });
 
-// POST /api/boards  { name }
 app.post('/api/boards', async (req, res) => {
   const { name } = req.body;
   if (!name) return res.status(400).json({ error: 'name requis' });
   const data = await readData();
   const id = `board_${Date.now()}`;
-  data.boards[id] = { name, games: {} };
+  data.boards[id] = { name, columns: defaultColumns(), games: {} };
   await writeData(data);
-  res.json({ id, name, gameCount: 0 });
+  res.json({ id, name, columns: data.boards[id].columns, gameCount: 0 });
 });
 
-// PATCH /api/boards/:boardId  { name }
 app.patch('/api/boards/:boardId', async (req, res) => {
   const { boardId } = req.params;
   const { name } = req.body;
@@ -182,7 +146,6 @@ app.patch('/api/boards/:boardId', async (req, res) => {
   res.json({ ok: true });
 });
 
-// DELETE /api/boards/:boardId
 app.delete('/api/boards/:boardId', async (req, res) => {
   const { boardId } = req.params;
   const data = await readData();
@@ -191,18 +154,57 @@ app.delete('/api/boards/:boardId', async (req, res) => {
   res.json({ ok: true });
 });
 
-// ─── Games dans un board ─────────────────────────────────────────────────────
+// ─── Colonnes ─────────────────────────────────────────────────────────────────
 
-// GET /api/boards/:boardId/games
+app.post('/api/boards/:boardId/columns', async (req, res) => {
+  const { boardId } = req.params;
+  const { label } = req.body;
+  const data = await readData();
+  if (!data.boards[boardId]) return res.status(404).json({ error: 'Board introuvable' });
+  const col = { id: `col_${Date.now()}`, label: label || 'Nouvelle colonne', color: '#c0570a' };
+  data.boards[boardId].columns = [...(data.boards[boardId].columns || []), col];
+  await writeData(data);
+  res.json(col);
+});
+
+app.patch('/api/boards/:boardId/columns/:colId', async (req, res) => {
+  const { boardId, colId } = req.params;
+  const { label, color } = req.body;
+  const data = await readData();
+  if (!data.boards[boardId]) return res.status(404).json({ error: 'Board introuvable' });
+  const col = (data.boards[boardId].columns || []).find(c => c.id === colId);
+  if (!col) return res.status(404).json({ error: 'Colonne introuvable' });
+  if (label !== undefined) col.label = label;
+  if (color !== undefined) col.color = color;
+  await writeData(data);
+  res.json({ ok: true });
+});
+
+app.delete('/api/boards/:boardId/columns/:colId', async (req, res) => {
+  const { boardId, colId } = req.params;
+  const data = await readData();
+  if (!data.boards[boardId]) return res.status(404).json({ error: 'Board introuvable' });
+  data.boards[boardId].columns = (data.boards[boardId].columns || []).filter(c => c.id !== colId);
+  // Déplace les jeux orphelins vers la première colonne restante
+  const firstCol = data.boards[boardId].columns[0];
+  if (firstCol) {
+    for (const g of Object.values(data.boards[boardId].games || {})) {
+      if (g.column === colId) g.column = firstCol.id;
+    }
+  }
+  await writeData(data);
+  res.json({ ok: true });
+});
+
+// ─── Jeux dans un board ───────────────────────────────────────────────────────
+
 app.get('/api/boards/:boardId/games', async (req, res) => {
   const { boardId } = req.params;
   const data = await readData();
   const board = data.boards[boardId];
   if (!board) return res.status(404).json({ error: 'Board introuvable' });
-
-  const entries = Object.entries(board.games || {});
   const games = await Promise.all(
-    entries.map(async ([appid, meta]) => {
+    Object.entries(board.games || {}).map(async ([appid, meta]) => {
       const info = await getGameInfo(appid).catch(() => ({ appid: parseInt(appid), name: `App ${appid}` }));
       return { ...info, column: meta.column };
     })
@@ -210,18 +212,17 @@ app.get('/api/boards/:boardId/games', async (req, res) => {
   res.json(games);
 });
 
-// POST /api/boards/:boardId/games  { appid, column? }
 app.post('/api/boards/:boardId/games', async (req, res) => {
   const { boardId } = req.params;
-  const { appid, column = 'backlog' } = req.body;
+  const { appid, column } = req.body;
   const data = await readData();
   if (!data.boards[boardId]) return res.status(404).json({ error: 'Board introuvable' });
-  data.boards[boardId].games[appid] = { column };
+  const firstCol = (data.boards[boardId].columns || [])[0];
+  data.boards[boardId].games[appid] = { column: column || firstCol?.id || 'default' };
   await writeData(data);
   res.json({ ok: true });
 });
 
-// DELETE /api/boards/:boardId/games/:appid
 app.delete('/api/boards/:boardId/games/:appid', async (req, res) => {
   const { boardId, appid } = req.params;
   const data = await readData();
@@ -231,7 +232,6 @@ app.delete('/api/boards/:boardId/games/:appid', async (req, res) => {
   res.json({ ok: true });
 });
 
-// POST /api/boards/:boardId/games/:appid/column  { column }
 app.post('/api/boards/:boardId/games/:appid/column', async (req, res) => {
   const { boardId, appid } = req.params;
   const { column } = req.body;
@@ -242,7 +242,7 @@ app.post('/api/boards/:boardId/games/:appid/column', async (req, res) => {
   res.json({ ok: true });
 });
 
-// ─── Achievements ────────────────────────────────────────────────────────────
+// ─── Achievements ─────────────────────────────────────────────────────────────
 
 app.get('/api/games/:appid/achievements', async (req, res) => {
   try {
@@ -251,21 +251,15 @@ app.get('/api/games/:appid/achievements', async (req, res) => {
       steamFetch(`https://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/v1/?key=${STEAM_API_KEY}&steamid=${STEAM_ID}&appid=${appid}&l=french`).catch(() => null),
       steamFetch(`https://api.steampowered.com/ISteamUserStats/GetSchemaForGame/v1/?key=${STEAM_API_KEY}&appid=${appid}&l=french`).catch(() => null),
     ]);
-
     const playerAchievements = achievementsData?.playerstats?.achievements || [];
-    const schemaAchievements = schemaData?.game?.availableGameStats?.achievements || [];
-    const schemaMap = Object.fromEntries(schemaAchievements.map(a => [a.name, a]));
-
+    const schemaMap = Object.fromEntries((schemaData?.game?.availableGameStats?.achievements || []).map(a => [a.name, a]));
     const merged = playerAchievements.map(a => ({
-      apiname: a.apiname,
-      unlocked: a.achieved === 1,
-      unlock_time: a.unlocktime,
+      apiname: a.apiname, unlocked: a.achieved === 1, unlock_time: a.unlocktime,
       name: schemaMap[a.apiname]?.displayName || a.apiname,
       description: schemaMap[a.apiname]?.description || '',
       icon: schemaMap[a.apiname]?.icon || '',
       icon_gray: schemaMap[a.apiname]?.icongray || '',
     }));
-
     const total = merged.length;
     const unlocked = merged.filter(a => a.unlocked).length;
     res.json({ total, unlocked, percent: total > 0 ? Math.round(unlocked / total * 100) : 0, achievements: merged });
