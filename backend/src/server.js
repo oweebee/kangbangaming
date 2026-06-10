@@ -489,11 +489,11 @@ app.get('/api/boards', requireAuth, (req, res) => {
 });
 
 app.post('/api/boards', requireAuth, (req, res) => {
-  const { name, emoji, gameIcon } = req.body;
+  const { name, emoji, gameIcon, gameBoard } = req.body;
   if (!name) return res.status(400).json({ error: 'Missing name' });
   const id = `board_${Date.now()}`;
   const t = Date.now();
-  const defaultColumns = gameIcon ? [
+  const defaultColumns = (gameBoard || gameIcon) ? [
     { id: `col_${t}_1`, label: 'Tâches à accomplir', emoji: '⏳' },
     { id: `col_${t}_2`, label: 'Tâches en cours',    emoji: '⛏️' },
     { id: `col_${t}_3`, label: 'Tâches en pause',    emoji: '⏸️' },

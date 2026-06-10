@@ -241,7 +241,7 @@ export default function App() {
     if (!name) return;
     const res = await fetch(`${API}/boards`, {
       method: 'POST', headers: authHeaders(token),
-      body: JSON.stringify({ name, emoji: '', gameIcon: selectedBoardGame ? (selectedBoardGame.icon_img || selectedBoardGame.header_img) : null }),
+      body: JSON.stringify({ name, emoji: '', gameIcon: selectedBoardGame ? (selectedBoardGame.icon_img || selectedBoardGame.header_img) : null, gameBoard: !!selectedBoardGame }),
     });
     const board = await res.json();
     setBoards(prev => [...prev, board]);
@@ -359,12 +359,12 @@ export default function App() {
       {/* Logo */}
       <div style={{ padding: '14px 14px 12px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
         <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', flexShrink: 0 }}>
-          <svg viewBox="0 0 496 512" xmlns="http://www.w3.org/2000/svg" style={{ width: 28, height: 28, fill: 'var(--accent)', position: 'relative', zIndex: 1 }}>
+          <svg viewBox="0 0 496 512" xmlns="http://www.w3.org/2000/svg" style={{ width: 35, height: 35, fill: 'var(--accent)', position: 'relative', zIndex: 1 }}>
             <path d="M496 256c0 137-111.2 248-248.4 248-113.8 0-209.7-76.3-239-180.4l95.2 39.3c6.4 32.1 34.9 56.4 68.9 56.4 38.2 0 69.1-31.1 68.9-69.3l84.5-60.2c52.1 1.3 95.8-40.9 95.8-93.5 0-51.6-42-93.5-93.7-93.5s-93.7 42-93.7 93.5v1.2L176.6 279c-15.5-.9-30.7 3.4-43.5 12.1L0 236.1C10.2 108.4 117.1 8 247.6 8 384.8 8 496 119 496 256zM155.7 384.3l-30.5-12.6a52.79 52.79 0 0 0 27.2 25.8c26.9 11.2 57.8-1.6 69-28.4 5.4-13 5.5-27.3.1-40.3-5.4-13-15.5-23.2-28.5-28.6-12.7-5.3-26.4-5.5-38.8-1.4l31.5 13c19.8 8.2 29.2 30.9 20.9 50.7-8.3 19.9-31 29.2-50.9 21zm173.8-129.9c-34.4 0-62.4-28-62.4-62.3s28-62.3 62.4-62.3 62.4 28 62.4 62.3-27.9 62.3-62.4 62.3zm.1-15.6c25.9 0 46.9-21 46.9-46.8 0-25.9-21-46.8-46.9-46.8s-46.9 21-46.9 46.8c.1 25.8 21.1 46.8 46.9 46.8z"/>
           </svg>
-          <DiscordServerIcon size={28} borderColor="#111" />
+          <DiscordServerIcon size={35} borderColor="#111" />
         </div>
-        <span style={{ fontWeight: 800, fontSize: 13, letterSpacing: '0.04em', color: 'var(--text)', flex: 1 }}>KangBanGaming</span>
+        <span style={{ fontWeight: 800, fontSize: 16, letterSpacing: '0.04em', color: 'var(--text)', flex: 1 }}>KangBanGaming</span>
         {isMobile && <button onClick={() => setShowDrawer(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 18, cursor: 'pointer', lineHeight: 1 }}>✕</button>}
       </div>
 
@@ -374,7 +374,7 @@ export default function App() {
           onClick={() => { setShowPublicBoards(true); if (isMobile) setShowDrawer(false); }}
           style={{
             width: '100%', background: 'none', border: '1px solid var(--border)',
-            borderRadius: 7, padding: '6px 8px', color: 'var(--text-muted)', fontSize: 11,
+            borderRadius: 7, padding: '6px 8px', color: 'var(--text-muted)', fontSize: 12,
             cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 6,
           }}
         >
@@ -475,7 +475,7 @@ export default function App() {
                 {showBoardSearch ? (
                   <>
                     <input autoFocus value={boardSearchQuery} onChange={e => handleBoardSearchInput(e.target.value)} placeholder="Rechercher un jeu..."
-                      style={{ width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 8px', color: 'var(--text)', fontSize: 11, outline: 'none', boxSizing: 'border-box' }} />
+                      style={{ width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 8px', color: 'var(--text)', fontSize: 12, outline: 'none', boxSizing: 'border-box' }} />
                     {(boardSearchLoading || boardSearchResults.length > 0) && (
                       <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 200, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, marginTop: 2, boxShadow: '0 8px 20px rgba(0,0,0,.5)', maxHeight: 200, overflowY: 'auto' }}>
                         {boardSearchLoading && <div style={{ padding: '8px 10px', fontSize: 11, color: 'var(--text-muted)' }}>Recherche...</div>}
@@ -492,19 +492,19 @@ export default function App() {
                     )}
                   </>
                 ) : (
-                  <button onClick={() => setShowBoardSearch(true)} style={{ width: '100%', background: 'var(--surface2)', border: '1px dashed var(--border)', borderRadius: 6, padding: '5px 8px', color: 'var(--text-muted)', fontSize: 11, cursor: 'pointer', textAlign: 'left' }}>🎮 Associer un jeu Steam...</button>
+                  <button onClick={() => setShowBoardSearch(true)} style={{ width: '100%', background: 'var(--surface2)', border: '1px dashed var(--border)', borderRadius: 6, padding: '5px 8px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', textAlign: 'left' }}>🎮 Associer un jeu Steam...</button>
                 )}
               </div>
             )}
             <input autoFocus={!showBoardSearch} value={newBoardName} onChange={e => setNewBoardName(e.target.value)} onKeyDown={e => e.key === 'Enter' && createBoard()} placeholder="Nom du board"
               style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 8px', color: 'var(--text)', fontSize: 12, outline: 'none' }} />
             <div style={{ display: 'flex', gap: 4 }}>
-              <button onClick={createBoard} style={{ flex: 1, background: 'var(--accent)', border: 'none', borderRadius: 5, padding: '5px', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>Créer</button>
-              <button onClick={resetNewBoard} style={{ flex: 1, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 5, padding: '5px', color: 'var(--text-muted)', fontSize: 11, cursor: 'pointer' }}>Annuler</button>
+              <button onClick={createBoard} style={{ flex: 1, background: 'var(--accent)', border: 'none', borderRadius: 5, padding: '5px', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Créer</button>
+              <button onClick={resetNewBoard} style={{ flex: 1, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 5, padding: '5px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>Annuler</button>
             </div>
           </div>
         ) : (
-          <button onClick={() => setShowNewBoard(true)} style={{ width: '100%', background: 'none', border: '1px dashed var(--border)', borderRadius: 7, padding: '7px', color: 'var(--text-muted)', fontSize: 11, cursor: 'pointer' }}>+ Nouveau board</button>
+          <button onClick={() => setShowNewBoard(true)} style={{ width: '100%', background: 'none', border: '1px dashed var(--border)', borderRadius: 7, padding: '7px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>+ Nouveau board</button>
         )}
       </div>
 
@@ -521,16 +521,16 @@ export default function App() {
           </div>
           {currentUser.role === 'admin' && <div style={{ fontSize: 9, color: '#f5a500', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>admin</div>}
         </div>
-        <button onClick={() => setShowProfile(true)} title="Mon profil" style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 5, padding: '4px 7px', color: 'var(--text-muted)', fontSize: 11, cursor: 'pointer', flexShrink: 0 }}>👤</button>
-        <button onClick={() => setShowSteamSettings(true)} title="Paramètres Steam" style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 5, padding: '4px 7px', color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer', flexShrink: 0 }}>
+        <button onClick={() => setShowProfile(true)} title="Mon profil" style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 5, padding: '4px 7px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>👤</button>
+        <button onClick={() => setShowSteamSettings(true)} title="Paramètres Steam" style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 5, padding: '4px 7px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>
           <svg viewBox="0 0 496 512" xmlns="http://www.w3.org/2000/svg" style={{ width: 12, height: 12, fill: 'currentColor', display: 'block' }}>
             <path d="M496 256c0 137-111.2 248-248.4 248-113.8 0-209.7-76.3-239-180.4l95.2 39.3c6.4 32.1 34.9 56.4 68.9 56.4 38.2 0 69.1-31.1 68.9-69.3l84.5-60.2c52.1 1.3 95.8-40.9 95.8-93.5 0-51.6-42-93.5-93.7-93.5s-93.7 42-93.7 93.5v1.2L176.6 279c-15.5-.9-30.7 3.4-43.5 12.1L0 236.1C10.2 108.4 117.1 8 247.6 8 384.8 8 496 119 496 256z"/>
           </svg>
         </button>
         {currentUser.role === 'admin' && (
-          <button onClick={() => setShowAdmin(true)} title="Panneau admin" style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 5, padding: '4px 7px', color: 'var(--text-muted)', fontSize: 11, cursor: 'pointer', flexShrink: 0 }}>⚙️</button>
+          <button onClick={() => setShowAdmin(true)} title="Panneau admin" style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 5, padding: '4px 7px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>⚙️</button>
         )}
-        <button onClick={handleLogout} title="Déconnexion" style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 5, padding: '4px 7px', color: 'var(--text-muted)', fontSize: 11, cursor: 'pointer', flexShrink: 0 }}>↪</button>
+        <button onClick={handleLogout} title="Déconnexion" style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 5, padding: '4px 7px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>↪</button>
       </div>
     </>
   );
