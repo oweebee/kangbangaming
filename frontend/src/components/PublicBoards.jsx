@@ -87,26 +87,42 @@ export default function PublicBoards({ token, currentUser, favBoardIds = new Set
                     ▶ Afficher
                   </button>
                   {!board.isOwner && (
-                    <button
-                      onClick={e => handleFavorite(e, board)}
-                      onMouseEnter={() => setFavHover(board.id)}
-                      onMouseLeave={() => setFavHover(null)}
-                      disabled={toggling.has(board.id)}
-                      style={{
-                        background: isFav && favHover === board.id ? 'rgba(220,50,50,.15)' : isFav ? 'rgba(232,129,58,.15)' : 'var(--surface2)',
-                        border: isFav && favHover === board.id ? '1px solid rgba(220,50,50,.5)' : isFav ? '1px solid rgba(232,129,58,.5)' : '1px solid var(--border)',
-                        borderRadius: 6, padding: '5px 10px', cursor: 'pointer',
-                        color: isFav && favHover === board.id ? '#e05555' : isFav ? 'var(--accent)' : 'var(--text-muted)',
-                        fontSize: 11, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4,
-                        opacity: toggling.has(board.id) ? 0.5 : 1, flexShrink: 0,
-                        transition: 'background .15s, border-color .15s, color .15s',
-                      }}
-                    >
-                      {isFav && favHover === board.id
-                        ? <><span style={{ fontSize: 13 }}>✕</span> Retirer</>
-                        : <><StarIcon filled={isFav} size={13} />{isFav ? ' Favori' : ' + Favori'}</>
-                      }
-                    </button>
+                    isFav ? (
+                      <button
+                        onClick={e => handleFavorite(e, board)}
+                        disabled={toggling.has(board.id)}
+                        style={{
+                          background: favHover === board.id ? 'rgba(220,50,50,.15)' : 'rgba(232,129,58,.12)',
+                          border: favHover === board.id ? '1px solid rgba(220,50,50,.6)' : '1px solid rgba(232,129,58,.5)',
+                          borderRadius: 6, padding: '5px 10px', cursor: 'pointer',
+                          color: favHover === board.id ? '#e05555' : 'var(--accent)',
+                          fontSize: 11, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4,
+                          opacity: toggling.has(board.id) ? 0.5 : 1, flexShrink: 0,
+                          transition: 'background .15s, border-color .15s, color .15s',
+                        }}
+                        onMouseEnter={() => setFavHover(board.id)}
+                        onMouseLeave={() => setFavHover(null)}
+                      >
+                        {favHover === board.id
+                          ? <><span style={{ fontSize: 12, lineHeight: 1 }}>✕</span> Retirer</>
+                          : <><StarIcon filled size={13} /> Favori</>
+                        }
+                      </button>
+                    ) : (
+                      <button
+                        onClick={e => handleFavorite(e, board)}
+                        disabled={toggling.has(board.id)}
+                        style={{
+                          background: 'var(--surface2)', border: '1px solid var(--border)',
+                          borderRadius: 6, padding: '5px 10px', cursor: 'pointer',
+                          color: 'var(--text-muted)',
+                          fontSize: 11, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4,
+                          opacity: toggling.has(board.id) ? 0.5 : 1, flexShrink: 0,
+                        }}
+                      >
+                        <StarIcon filled={false} size={13} /> + Favori
+                      </button>
+                    )
                   )}
                 </div>
               </div>
