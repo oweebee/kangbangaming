@@ -50,7 +50,7 @@ export default function PublicBoards({ token, currentUser, favBoardIds = new Set
       {/* Header */}
       <div style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+          <circle cx="10" cy="7" r="4"/><path d="M4 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M15 3.13a4 4 0 0 1 0 7.75"/><path d="M20 21v-2a4 4 0 0 0-3-3.85"/>
         </svg>
         <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>Boards Publics</span>
         <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Boards partagés par la communauté</span>
@@ -63,7 +63,7 @@ export default function PublicBoards({ token, currentUser, favBoardIds = new Set
         {!loading && boards.length === 0 && (
           <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-muted)' }}>
             <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="var(--text-muted)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block', margin: '0 auto 12px' }}>
-              <circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+              <circle cx="10" cy="7" r="4"/><path d="M4 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M15 3.13a4 4 0 0 1 0 7.75"/><path d="M20 21v-2a4 4 0 0 0-3-3.85"/>
             </svg>
             <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>Aucun board public</div>
             <div style={{ fontSize: 13 }}>Quand un utilisateur rend son board public, il apparaîtra ici.</div>
@@ -101,26 +101,35 @@ export default function PublicBoards({ token, currentUser, favBoardIds = new Set
                       {' · '}{board.gameCount} jeu{board.gameCount !== 1 ? 'x' : ''}
                     </div>
                   </div>
-                  {/* Favorite button — hidden for own boards */}
+                  <span style={{ color: 'var(--text-muted)', fontSize: 11, flexShrink: 0 }}>{isOpen ? '▲' : '▼'}</span>
+                </div>
+                {/* Action bar — always visible */}
+                <div style={{ display: 'flex', gap: 6, padding: '0 12px 10px', alignItems: 'center' }}>
+                  {onOpenBoard && (
+                    <button
+                      onClick={() => onOpenBoard({ id: board.id, name: board.name, ownerUsername: board.ownerUsername })}
+                      style={{ flex: 1, background: 'var(--accent)', border: 'none', borderRadius: 6, padding: '5px 0', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      ▶ Ouvrir en collab
+                    </button>
+                  )}
                   {!board.isOwner && (
                     <button
                       onClick={e => handleFavorite(e, board)}
-                      title={isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center', opacity: toggling.has(board.id) ? 0.5 : 1, flexShrink: 0 }}
+                      disabled={toggling.has(board.id)}
+                      style={{
+                        background: isFav ? 'rgba(232,129,58,.15)' : 'var(--surface2)',
+                        border: isFav ? '1px solid rgba(232,129,58,.5)' : '1px solid var(--border)',
+                        borderRadius: 6, padding: '5px 10px', cursor: 'pointer',
+                        color: isFav ? 'var(--accent)' : 'var(--text-muted)',
+                        fontSize: 11, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4,
+                        opacity: toggling.has(board.id) ? 0.5 : 1, flexShrink: 0,
+                      }}
                     >
-                      <StarIcon filled={isFav} size={16} />
+                      <StarIcon filled={isFav} size={13} />
+                      {isFav ? 'Favori' : '+ Favori'}
                     </button>
                   )}
-                  {onOpenBoard && (
-                    <button
-                      onClick={e => { e.stopPropagation(); onOpenBoard({ id: board.id, name: board.name, ownerUsername: board.ownerUsername }); }}
-                      title="Ouvrir en mode collaboratif"
-                      style={{ background: 'var(--accent)', border: 'none', borderRadius: 6, padding: '3px 9px', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
-                    >
-                      Ouvrir
-                    </button>
-                  )}
-                  <span style={{ color: 'var(--text-muted)', fontSize: 11, flexShrink: 0 }}>{isOpen ? '▲' : '▼'}</span>
                 </div>
 
                 {isOpen && (
