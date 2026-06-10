@@ -34,7 +34,9 @@ export default function SteamSettings({ token, onSave, onClose }) {
       if (onSave) onSave({ steamAvatar: data.steamAvatar, steamPersonaName: data.steamPersonaName });
       setTimeout(() => setMsg(''), 2500);
     } else {
-      setMsg('Erreur lors de la sauvegarde');
+      let errMsg = 'Erreur lors de la sauvegarde';
+      try { const d = await res.json(); errMsg = d.error || errMsg; } catch {}
+      setMsg(errMsg);
     }
   }
 

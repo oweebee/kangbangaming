@@ -272,11 +272,14 @@ export default function App() {
 
   // Columns CRUD
   const addColumn = async () => {
-    const boardApi = publicBoardMode ? `${API}/public/boards/${publicBoardMode.id}` : `${API}/boards/${activeBoardId}`;
-    const res = await fetch(`${boardApi}/columns`, { method: 'POST', headers: authHeaders(token), body: JSON.stringify({ label: 'Nouvelle colonne' }) });
-    const col = await res.json();
-    setColumns(prev => [...prev, col]);
-    if (!publicBoardMode) setBoards(prev => prev.map(b => b.id === activeBoardId ? { ...b, columns: [...(b.columns || []), col] } : b));
+    try {
+      const boardApi = publicBoardMode ? `${API}/public/boards/${publicBoardMode.id}` : `${API}/boards/${activeBoardId}`;
+      const res = await fetch(`${boardApi}/columns`, { method: 'POST', headers: authHeaders(token), body: JSON.stringify({ label: 'Nouvelle colonne' }) });
+      if (!res.ok) { const e = await res.json().catch(() => ({})); alert('Erreur colonne: ' + (e.error || res.status)); return; }
+      const col = await res.json();
+      setColumns(prev => [...prev, col]);
+      if (!publicBoardMode) setBoards(prev => prev.map(b => b.id === activeBoardId ? { ...b, columns: [...(b.columns || []), col] } : b));
+    } catch (err) { alert('Erreur réseau: ' + err.message); }
   };
   const renameColumn = async (colId, label) => {
     const boardApi = publicBoardMode ? `${API}/public/boards/${publicBoardMode.id}` : `${API}/boards/${activeBoardId}`;
@@ -403,19 +406,19 @@ export default function App() {
             }}
           >
             {b.gameIcon ? (
-              <img src={b.gameIcon} alt="" style={{ width: 22, height: 22, objectFit: 'cover', borderRadius: '50%', flexShrink: 0, border: '1px solid var(--border)' }} />
+              <img src={b.gameIcon} alt="" style={{ width: 28, height: 28, objectFit: 'cover', borderRadius: '50%', flexShrink: 0, border: '1px solid var(--border)' }} />
             ) : (
               <div style={{ position: 'relative' }}>
                 <button
                   onClick={e => { e.stopPropagation(); setEmojiPickerFor(emojiPickerFor === b.id ? null : b.id); }}
-                  style={{ background: b.emoji ? 'transparent' : 'var(--surface3)', border: '1px solid var(--border)', borderRadius: 4, width: 22, height: 22, fontSize: b.emoji ? 13 : 9, cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                  style={{ background: b.emoji ? 'transparent' : 'var(--surface3)', border: '1px solid var(--border)', borderRadius: 4, width: 28, height: 28, fontSize: b.emoji ? 16 : 11, cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
                 >{b.emoji || '+'}</button>
                 {emojiPickerFor === b.id && (
                   <BoardEmojiPicker current={b.emoji || ''} onSelect={emoji => { setBoardEmoji(b.id, emoji); setEmojiPickerFor(null); }} onClose={() => setEmojiPickerFor(null)} />
                 )}
               </div>
             )}
-            <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 12 }}>{b.name}</span>
+            <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 14 }}>{b.name}</span>
             {/* Public toggle */}
             <button
               onClick={e => { e.stopPropagation(); toggleBoardPublic(b.id, !b.public); }}
@@ -451,11 +454,11 @@ export default function App() {
               onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
             >
               {b.gameIcon ? (
-                <img src={b.gameIcon} alt="" style={{ width: 22, height: 22, objectFit: 'cover', borderRadius: '50%', flexShrink: 0, border: '1px solid var(--border)', opacity: 0.8 }} />
+                <img src={b.gameIcon} alt="" style={{ width: 28, height: 28, objectFit: 'cover', borderRadius: '50%', flexShrink: 0, border: '1px solid var(--border)', opacity: 0.8 }} />
               ) : (
-                <span style={{ fontSize: 13, flexShrink: 0 }}>{b.emoji || '🎮'}</span>
+                <span style={{ fontSize: 18, flexShrink: 0 }}>{b.emoji || '🎮'}</span>
               )}
-              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 12 }}>{b.name}</span>
+              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 14 }}>{b.name}</span>
               <svg viewBox="0 0 24 24" width="10" height="10" fill="var(--accent)" stroke="var(--accent)" strokeWidth="1.5" style={{ flexShrink: 0, opacity: 0.7 }}><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
             </div>
           ))}
@@ -516,7 +519,9 @@ export default function App() {
         {currentUser.steamAvatar ? (
           <img src={currentUser.steamAvatar} alt="" style={{ width: 28, height: 28, borderRadius: 4, border: '1px solid var(--border)', flexShrink: 0, cursor: 'pointer' }} onClick={() => setShowSteamSettings(true)} title="Paramètres Steam" />
         ) : (
-          <div style={{ width: 28, height: 28, borderRadius: 4, background: 'var(--surface3)', border: '1px solid var(--border)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, cursor: 'pointer' }} onClick={() => setShowSteamSettings(true)} title="Configurer Steam">👤</div>
+          <div style={{ width: 28, height: 28, borderRadius: 4, background: 'var(--surface3)', border: '1px solid var(--border)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} onClick={() => setShowSteamSettings(true)} title="Configurer Steam">
+            <svg viewBox="0 0 496 512" xmlns="http://www.w3.org/2000/svg" style={{ width: 14, height: 14, fill: 'var(--text-muted)' }}><path d="M496 256c0 137-111.2 248-248.4 248-113.8 0-209.7-76.3-239-180.4l95.2 39.3c6.4 32.1 34.9 56.4 68.9 56.4 38.2 0 69.1-31.1 68.9-69.3l84.5-60.2c52.1 1.3 95.8-40.9 95.8-93.5 0-51.6-42-93.5-93.7-93.5s-93.7 42-93.7 93.5v1.2L176.6 279c-15.5-.9-30.7 3.4-43.5 12.1L0 236.1C10.2 108.4 117.1 8 247.6 8 384.8 8 496 119 496 256z"/></svg>
+          </div>
         )}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -524,7 +529,7 @@ export default function App() {
           </div>
           {currentUser.role === 'admin' && <div style={{ fontSize: 9, color: '#f5a500', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>admin</div>}
         </div>
-        <button onClick={() => setShowProfile(true)} title="Mon profil" style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 5, padding: '4px 7px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>👤</button>
+        <button onClick={() => setShowProfile(true)} title="Mon profil" style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 5, padding: '4px 7px', color: 'var(--text-muted)', fontSize: 11, cursor: 'pointer', flexShrink: 0, fontWeight: 600 }}>Profil</button>
         <button onClick={() => setShowSteamSettings(true)} title="Paramètres Steam" style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 5, padding: '4px 7px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>
           <svg viewBox="0 0 496 512" xmlns="http://www.w3.org/2000/svg" style={{ width: 12, height: 12, fill: 'currentColor', display: 'block' }}>
             <path d="M496 256c0 137-111.2 248-248.4 248-113.8 0-209.7-76.3-239-180.4l95.2 39.3c6.4 32.1 34.9 56.4 68.9 56.4 38.2 0 69.1-31.1 68.9-69.3l84.5-60.2c52.1 1.3 95.8-40.9 95.8-93.5 0-51.6-42-93.5-93.7-93.5s-93.7 42-93.7 93.5v1.2L176.6 279c-15.5-.9-30.7 3.4-43.5 12.1L0 236.1C10.2 108.4 117.1 8 247.6 8 384.8 8 496 119 496 256z"/>
@@ -597,12 +602,6 @@ export default function App() {
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Crée un board pour commencer</div>
         ) : loading ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Chargement...</div>
-        ) : games.length === 0 && columns.length > 0 ? (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14 }}>
-            <div style={{ fontSize: 36 }}>🎮</div>
-            <div style={{ fontWeight: 700, color: 'var(--text)' }}>Board vide</div>
-            <button onClick={() => setShowSearch(true)} style={{ background: 'var(--accent)', border: 'none', borderRadius: 8, padding: '10px 24px', color: '#fff', fontWeight: 700, fontSize: 13 }}>+ Ajouter une carte</button>
-          </div>
         ) : (
           <MobileBoard columns={columns} byColumn={byColumn} onCardClick={setSelectedGame} onRemoveGame={removeGame} />
         )}
@@ -678,6 +677,7 @@ export default function App() {
                 <>
                   <button onClick={addColumn} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>+ Colonne</button>
                   <button onClick={() => setShowSearch(true)} style={{ background: 'var(--accent)', border: 'none', borderRadius: 7, padding: '7px 16px', color: '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>+ Ajouter une carte</button>
+                  <button onClick={() => { if (activeBoardId) fetchGames(activeBoardId); }} title="Rafraîchir" style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 9px', color: 'var(--text-muted)', fontSize: 15, cursor: 'pointer', lineHeight: 1, flexShrink: 0 }}>↻</button>
                 </>
               )}
             </>
@@ -695,13 +695,6 @@ export default function App() {
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Crée un board pour commencer</div>
         ) : loading ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Chargement...</div>
-        ) : games.length === 0 && columns.length > 0 ? (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14 }}>
-            <div style={{ fontSize: 36 }}>🎮</div>
-            <div style={{ fontWeight: 700, color: 'var(--text)' }}>Board vide</div>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Ajoute un jeu Steam ou crée une carte personnalisée</div>
-            <button onClick={() => setShowSearch(true)} style={{ background: 'var(--accent)', border: 'none', borderRadius: 8, padding: '10px 24px', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>+ Ajouter une carte</button>
-          </div>
         ) : (
           <KanbanBoard columns={columns} byColumn={byColumn} dragging={dragging} setDragging={setDragging} moveGame={moveGame} onCardClick={setSelectedGame} onRemoveGame={removeGame} onRenameColumn={renameColumn} onDeleteColumn={deleteColumn} onSetEmoji={setColumnEmoji} onReorderColumns={reorderColumns} />
         )}

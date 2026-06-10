@@ -193,23 +193,28 @@ app.get('/api/user/settings', requireAuth, (req, res) => {
 });
 
 app.patch('/api/user/settings', requireAuth, async (req, res) => {
-  const users = readUsers();
-  const idx = users.findIndex(u => u.id === req.user.id);
-  if (idx === -1) return res.status(404).json({ error: 'Not found' });
-  if (req.body.steamId !== undefined) {
-    const newSteamId = req.body.steamId.trim();
-    users[idx].steamId = newSteamId;
-    if (newSteamId && GLOBAL_STEAM_API_KEY) {
-      try {
-        const data = await steamFetch(`https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=${GLOBAL_STEAM_API_KEY}&steamids=${newSteamId}`);
-        const player = data.response?.players?.[0];
-        if (player) { users[idx].steamAvatar = player.avatarmedium || player.avatar || null; users[idx].steamPersonaName = player.personaname || null; }
-      } catch { /* not critical */ }
-    } else { users[idx].steamAvatar = null; users[idx].steamPersonaName = null; }
+  try {
+    const users = readUsers();
+    const idx = users.findIndex(u => u.id === req.user.id);
+    if (idx === -1) return res.status(404).json({ error: 'Not found' });
+    if (req.body.steamId !== undefined) {
+      const newSteamId = req.body.steamId.trim();
+      users[idx].steamId = newSteamId;
+      if (newSteamId && GLOBAL_STEAM_API_KEY) {
+        try {
+          const data = await steamFetch(`https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=${GLOBAL_STEAM_API_KEY}&steamids=${newSteamId}`);
+          const player = data.response?.players?.[0];
+          if (player) { users[idx].steamAvatar = player.avatarmedium || player.avatar || null; users[idx].steamPersonaName = player.personaname || null; }
+        } catch { /* not critical */ }
+      } else { users[idx].steamAvatar = null; users[idx].steamPersonaName = null; }
+    }
+    writeUsers(users);
+    libraryCaches.delete(req.user.id);
+    res.json({ ok: true, steamAvatar: users[idx].steamAvatar || null, steamPersonaName: users[idx].steamPersonaName || null });
+  } catch (err) {
+    console.error('[PATCH /user/settings]', err);
+    res.status(500).json({ error: err.message || 'Server error' });
   }
-  writeUsers(users);
-  libraryCaches.delete(req.user.id);
-  res.json({ ok: true, steamAvatar: users[idx].steamAvatar || null, steamPersonaName: users[idx].steamPersonaName || null });
 });
 
 
