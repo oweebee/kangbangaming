@@ -14,10 +14,7 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onRemo
   return (
     <div
       draggable
-      onDragStart={e => {
-        e.dataTransfer.effectAllowed = 'move';
-        onDragStart();
-      }}
+      onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; onDragStart(); }}
       onDragEnd={onDragEnd}
       onClick={onClick}
       style={{
@@ -41,47 +38,40 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onRemo
         e.currentTarget.style.borderColor = 'var(--border)';
       }}
     >
-      {/* Header image */}
       {!imgError ? (
         <img
           src={game.header_img}
           alt={game.name}
           onError={() => setImgError(true)}
-          style={{ width: '100%', height: 70, objectFit: 'cover', display: 'block' }}
+          style={{ width: '100%', height: 88, objectFit: 'cover', display: 'block' }}
           draggable={false}
         />
       ) : (
         <div style={{
-          width: '100%',
-          height: 70,
+          width: '100%', height: 88,
           background: 'var(--steam)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: 24,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24,
         }}>🎮</div>
       )}
 
-      {/* Info */}
       <div style={{ padding: '8px 10px' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 4 }}>
           <div style={{
             fontWeight: 600, fontSize: 12, lineHeight: '1.3', marginBottom: 6,
             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1,
-          }} title={game.name}>
-            {game.name}
-          </div>
+          }} title={game.name}>{game.name}</div>
           <button
             onClick={e => { e.stopPropagation(); onRemove(); }}
             style={{
               background: 'none', border: 'none', color: 'var(--text-muted)',
-              fontSize: 11, cursor: 'pointer', padding: '0 2px', flexShrink: 0, opacity: 0.5,
+              fontSize: 14, cursor: 'pointer', opacity: 0.5, padding: '0 0 0 4px',
+              lineHeight: 1, flexShrink: 0,
             }}
             title="Retirer du board"
           >✕</button>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-muted)', fontSize: 11 }}>
-          <span>⏱ {formatPlaytime(game.playtime_minutes)}</span>
+        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+          {formatPlaytime(game.playtime_minutes)}
         </div>
       </div>
     </div>

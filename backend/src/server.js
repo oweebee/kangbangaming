@@ -106,6 +106,7 @@ app.get('/api/search/store', async (req, res) => {
       playtime_minutes: 0, playtime_hours: 0,
       header_img: `https://cdn.akamai.steamstatic.com/steam/apps/${g.id}/header.jpg`,
       library_img: `https://cdn.akamai.steamstatic.com/steam/apps/${g.id}/library_600x900.jpg`,
+      icon_img: g.tiny_image || `https://cdn.akamai.steamstatic.com/steam/apps/${g.id}/capsule_sm_120.jpg`,
       price: g.price?.final_formatted || null,
       owned: library.has(g.id),
     }));
@@ -121,28 +122,30 @@ app.get('/api/boards', async (_req, res) => {
   const data = await readData();
   res.json(Object.entries(data.boards).map(([id, b]) => ({
     id, name: b.name, emoji: b.emoji || '',
+    gameIcon: b.gameIcon || null,
     columns: b.columns || defaultColumns(),
     gameCount: Object.keys(b.games || {}).length,
   })));
 });
 
 app.post('/api/boards', async (req, res) => {
-  const { name, emoji = '' } = req.body;
+  const { name, emoji = '', gameIcon = null } = req.body;
   if (!name) return res.status(400).json({ error: 'name requis' });
   const data = await readData();
   const id = `board_${Date.now()}`;
-  data.boards[id] = { name, emoji, columns: defaultColumns(), games: {} };
+  data.boards[id] = { name, emoji, gameIcon, columns: defaultColumns(), games: {} };
   await writeData(data);
-  res.json({ id, name, emoji, columns: data.boards[id].columns, gameCount: 0 });
+  res.json({ id, name, emoji, gameIcon, columns: data.boards[id].columns, gameCount: 0 });
 });
 
 app.patch('/api/boards/:boardId', async (req, res) => {
   const { boardId } = req.params;
-  const { name, emoji } = req.body;
+  const { name, emoji, gameIcon } = req.body;
   const data = await readData();
   if (!data.boards[boardId]) return res.status(404).json({ error: 'Board introuvable' });
   if (name !== undefined) data.boards[boardId].name = name;
   if (emoji !== undefined) data.boards[boardId].emoji = emoji;
+  if (gameIcon !== undefined) data.boards[boardId].gameIcon = gameIcon;
   await writeData(data);
   res.json({ ok: true });
 });
@@ -187,7 +190,6 @@ app.delete('/api/boards/:boardId/columns/:colId', async (req, res) => {
   const data = await readData();
   if (!data.boards[boardId]) return res.status(404).json({ error: 'Board introuvable' });
   data.boards[boardId].columns = (data.boards[boardId].columns || []).filter(c => c.id !== colId);
-  // Déplace les jeux orphelins vers la première colonne restante
   const firstCol = data.boards[boardId].columns[0];
   if (firstCol) {
     for (const g of Object.values(data.boards[boardId].games || {})) {

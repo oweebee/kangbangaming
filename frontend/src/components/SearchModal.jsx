@@ -8,15 +8,13 @@ function LibraryBadge() {
       fontSize: 10, fontWeight: 600,
       padding: '2px 7px', borderRadius: 4, flexShrink: 0,
     }}>
-      <svg width="9" height="9" viewBox="0 0 256 256" fill="#c7d5e0">
-        <circle cx="128" cy="128" r="128"/>
-      </svg>
+      <svg width="9" height="9" viewBox="0 0 256 256" fill="#c7d5e0"><circle cx="128" cy="128" r="128"/></svg>
       Dans ta bibliothèque
     </span>
   );
 }
 
-export default function SearchModal({ api, boardGames, onAdd, onClose }) {
+export default function SearchModal({ api, boardGames, onAdd, onRemove, onClose }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -29,11 +27,8 @@ export default function SearchModal({ api, boardGames, onAdd, onClose }) {
     try {
       const res = await fetch(`${api}/search/store?q=${encodeURIComponent(q)}`);
       setResults(await res.json());
-    } catch {
-      setResults([]);
-    } finally {
-      setLoading(false);
-    }
+    } catch { setResults([]); }
+    finally { setLoading(false); }
   }, [api]);
 
   const handleInput = (e) => {
@@ -46,14 +41,19 @@ export default function SearchModal({ api, boardGames, onAdd, onClose }) {
   const handleAdd = (game) => {
     onAdd(game);
     setAdded(prev => new Set([...prev, game.appid]));
+    onClose();
+  };
+
+  const handleRemove = (game) => {
+    if (onRemove) onRemove(game.appid);
+    setAdded(prev => { const s = new Set(prev); s.delete(game.appid); return s; });
   };
 
   return (
     <div
       onClick={e => e.target === e.currentTarget && onClose()}
       style={{
-        position: 'fixed', inset: 0,
-        background: 'rgba(0,0,0,.75)',
+        position: 'fixed', inset: 0, background: 'rgba(0,0,0,.75)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         zIndex: 100, padding: 20, backdropFilter: 'blur(4px)',
       }}
@@ -63,20 +63,16 @@ export default function SearchModal({ api, boardGames, onAdd, onClose }) {
         borderRadius: 14, width: '100%', maxWidth: 540,
         maxHeight: '82vh', display: 'flex', flexDirection: 'column', overflow: 'hidden',
       }}>
-        {/* Header */}
         <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ fontWeight: 700, fontSize: 14 }}>Ajouter un jeu</span>
           <button onClick={onClose} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 18, cursor: 'pointer', lineHeight: 1 }}>✕</button>
         </div>
 
-        {/* Search */}
         <div style={{ padding: '12px 16px 8px' }}>
           <input
-            autoFocus
-            type="search"
+            autoFocus type="search"
             placeholder="Rechercher un jeu Steam..."
-            value={query}
-            onChange={handleInput}
+            value={query} onChange={handleInput}
             style={{
               width: '100%', background: 'var(--surface2)',
               border: '1px solid var(--border)', borderRadius: 7,
@@ -85,7 +81,6 @@ export default function SearchModal({ api, boardGames, onAdd, onClose }) {
           />
         </div>
 
-        {/* Results */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px 16px' }}>
           {loading && <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 32 }}>Recherche...</div>}
           {!loading && query && results.length === 0 && (
@@ -102,20 +97,13 @@ export default function SearchModal({ api, boardGames, onAdd, onClose }) {
             return (
               <div
                 key={game.appid}
-                onClick={() => { if (!isAdded) { handleAdd(game); onClose(); } }}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 10,
                   padding: '9px 0', borderBottom: '1px solid var(--border)',
-                  cursor: isAdded ? 'default' : 'pointer',
-                  opacity: isAdded ? 0.45 : 1,
-                  transition: 'opacity .15s',
                 }}
-                onMouseEnter={e => { if (!isAdded) e.currentTarget.style.background = 'var(--surface2)'; }}
-                onMouseLeave={e => { e.currentTarget.style.background = ''; }}
               >
                 <img
-                  src={game.header_img}
-                  alt={game.name}
+                  src={game.header_img} alt={game.name}
                   style={{ width: 92, height: 43, objectFit: 'cover', borderRadius: 5, flexShrink: 0 }}
                   onError={e => { e.target.style.display = 'none'; }}
                 />
@@ -125,7 +113,6 @@ export default function SearchModal({ api, boardGames, onAdd, onClose }) {
                       {game.name}
                     </span>
                     {game.owned && <LibraryBadge />}
-                    {isAdded && <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>✓ déjà ajouté</span>}
                   </div>
                   <div style={{ color: 'var(--text-muted)', fontSize: 11 }}>
                     {game.owned
@@ -134,6 +121,28 @@ export default function SearchModal({ api, boardGames, onAdd, onClose }) {
                     }
                   </div>
                 </div>
+
+                {isAdded ? (
+                  <button
+                    onClick={() => handleRemove(game)}
+                    title="Retirer du board"
+                    style={{
+                      background: 'var(--surface3)', border: '1px solid var(--border)',
+                      borderRadius: 6, padding: '5px 10px', color: 'var(--text-muted)',
+                      fontSize: 11, cursor: 'pointer', flexShrink: 0,
+                    }}
+                  >✓ Retirer</button>
+                ) : (
+                  <button
+                    onClick={() => handleAdd(game)}
+                    title="Ajouter au board"
+                    style={{
+                      background: 'var(--accent)', border: 'none',
+                      borderRadius: 6, padding: '5px 10px', color: '#fff',
+                      fontSize: 11, fontWeight: 700, cursor: 'pointer', flexShrink: 0,
+                    }}
+                  >+ Ajouter</button>
+                )}
               </div>
             );
           })}
