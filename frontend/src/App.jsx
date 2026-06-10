@@ -251,6 +251,19 @@ export default function App() {
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
             Chargement...
           </div>
+        ) : games.length === 0 ? (
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, color: 'var(--text-muted)' }}>
+            <div style={{ fontSize: 40 }}>🎮</div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>Ce board est vide</div>
+            <div style={{ fontSize: 12 }}>Recherche un jeu pour l'ajouter</div>
+            <button
+              onClick={() => setShowSearch(true)}
+              style={{
+                background: 'var(--accent)', border: 'none', borderRadius: 8,
+                padding: '10px 24px', color: '#000', fontWeight: 700, fontSize: 13, cursor: 'pointer',
+              }}
+            >+ Ajouter un jeu</button>
+          </div>
         ) : (
           <KanbanBoard
             columns={COLUMNS}

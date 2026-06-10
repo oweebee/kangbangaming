@@ -15,6 +15,26 @@ const DATA_FILE = path.join(__dirname, '..', 'data', 'boards.json');
 app.use(cors());
 app.use(express.json());
 
+// ─── Cache bibliothèque Steam (en mémoire, TTL 10 min) ──────────────────────
+
+let libraryCache = null;
+let libraryCacheAt = 0;
+const LIBRARY_TTL = 10 * 60 * 1000;
+
+async function getLibrarySet() {
+  if (libraryCache && Date.now() - libraryCacheAt < LIBRARY_TTL) return libraryCache;
+  try {
+    const url = `https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key=${STEAM_API_KEY}&steamid=${STEAM_ID}&include_appinfo=1&include_played_free_games=1&format=json`;
+    const data = await steamFetch(url);
+    const games = data.response?.games || [];
+    libraryCache = new Set(games.map(g => g.appid));
+    libraryCacheAt = Date.now();
+  } catch {
+    libraryCache = new Set();
+  }
+  return libraryCache;
+}
+
 // ─── Persistence ────────────────────────────────────────────────────────────
 
 async function readData() {
@@ -105,10 +125,12 @@ app.get('/api/search/store', async (req, res) => {
     const q = (req.query.q || '').trim();
     if (!q) return res.json([]);
 
-    const url = `https://store.steampowered.com/api/storesearch/?term=${encodeURIComponent(q)}&l=french&cc=FR`;
-    const data = await steamFetch(url);
+    const [storeData, library] = await Promise.all([
+      steamFetch(`https://store.steampowered.com/api/storesearch/?term=${encodeURIComponent(q)}&l=french&cc=FR`),
+      getLibrarySet(),
+    ]);
 
-    const results = (data.items || []).slice(0, 20).map(g => ({
+    const results = (storeData.items || []).slice(0, 20).map(g => ({
       appid: g.id,
       name: g.name,
       playtime_minutes: 0,
@@ -116,7 +138,7 @@ app.get('/api/search/store', async (req, res) => {
       header_img: `https://cdn.akamai.steamstatic.com/steam/apps/${g.id}/header.jpg`,
       library_img: `https://cdn.akamai.steamstatic.com/steam/apps/${g.id}/library_600x900.jpg`,
       price: g.price?.final_formatted || null,
-      owned: false,
+      owned: library.has(g.id),
     }));
 
     res.json(results);
