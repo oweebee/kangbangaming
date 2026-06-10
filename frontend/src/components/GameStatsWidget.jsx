@@ -10,7 +10,6 @@ export default function GameStatsWidget({ api, token, board }) {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [slideIn, setSlideIn] = useState(false);
-  const [hidden, setHidden] = useState(false);
 
   const appid = extractAppId(board?.headerImg) || extractAppId(board?.gameIcon);
 
@@ -19,7 +18,6 @@ export default function GameStatsWidget({ api, token, board }) {
     if (!appid || !token) { setLoading(false); return; }
     setLoading(true);
     setStats(null);
-    setHidden(false);
     fetch(`${api}/steam/gamestats/${appid}`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.ok ? r.json() : null)
       .then(data => { setStats(data); setLoading(false); })
@@ -30,19 +28,14 @@ export default function GameStatsWidget({ api, token, board }) {
   useEffect(() => {
     if (!appid) return;
     setSlideIn(false);
-    setHidden(false);
     const t = setTimeout(() => setSlideIn(true), 60);
     return () => clearTimeout(t);
   }, [appid]);
 
-  const handleClose = () => {
-    setSlideIn(false);
-    setTimeout(() => setHidden(true), 300);
-  };
+  const handleClose = () => setSlideIn(false);
 
   if (!appid) return null;
   if (!loading && !stats) return null;
-  if (hidden) return null;
 
   const bannerUrl = board?.headerImg || stats?.header_img;
   const gameName = stats?.name || board?.name || '';
@@ -54,17 +47,47 @@ export default function GameStatsWidget({ api, token, board }) {
     <div style={{
       position: 'fixed',
       bottom: '25vh',
-      right: 18,
+      right: 0,
       zIndex: 40,
-      width: 230,
-      background: 'var(--surface)',
-      border: '1px solid var(--border)',
-      borderRadius: 12,
-      overflow: 'hidden',
-      boxShadow: '0 8px 28px rgba(0,0,0,.6)',
-      transform: slideIn ? 'translateX(0)' : 'translateX(calc(100% + 22px))',
+      width: 248,  /* 230 widget + 18px right margin */
+      display: 'flex',
+      alignItems: 'stretch',
+      transform: slideIn ? 'translateX(-18px)' : 'translateX(calc(100% - 28px))',
       transition: 'transform 0.3s cubic-bezier(0.34, 1.2, 0.64, 1)',
     }}>
+      {/* Pull tab — always sticks out on the left when widget is slid away */}
+      <div
+        onClick={() => !slideIn && setSlideIn(true)}
+        style={{
+          width: 28, flexShrink: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'var(--surface)', border: '1px solid var(--border)',
+          borderRight: slideIn ? 'none' : '1px solid var(--border)',
+          borderRadius: slideIn ? '12px 0 0 12px' : 12,
+          cursor: slideIn ? 'default' : 'pointer',
+          boxShadow: slideIn ? 'none' : '0 4px 16px rgba(0,0,0,.5)',
+          transition: 'border-radius .3s, box-shadow .3s',
+        }}
+      >
+        <span style={{
+          fontSize: 14,
+          transform: slideIn ? 'rotate(0deg)' : 'rotate(180deg)',
+          transition: 'transform .3s',
+          display: 'block', lineHeight: 1,
+          userSelect: 'none',
+        }}>›</span>
+      </div>
+
+      {/* Main card */}
+      <div style={{
+        flex: 1,
+        background: 'var(--surface)',
+        border: '1px solid var(--border)',
+        borderLeft: 'none',
+        borderRadius: '0 12px 12px 0',
+        overflow: 'hidden',
+        boxShadow: '0 8px 28px rgba(0,0,0,.6)',
+      }}>
 
       {/* Banner */}
       <div style={{ position: 'relative', height: 108, background: 'var(--surface2)', overflow: 'hidden' }}>
@@ -141,6 +164,7 @@ export default function GameStatsWidget({ api, token, board }) {
           </>
         )}
       </div>
+      </div> {/* end main card */}
     </div>
   );
 }
