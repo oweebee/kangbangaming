@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import GameCard from './GameCard.jsx';
 
-export default function MobileBoard({ columns, byColumn, onCardClick, onRemoveGame }) {
+export default function MobileBoard({ columns, byColumn, onCardClick, onArchiveGame, onUnarchiveGame, onDeleteGame, onEditGame, isTaskBoard }) {
   const [activeColId, setActiveColId] = useState(columns[0]?.id || null);
 
   // Si la colonne active a disparu (ex: supprimée), prendre la première
@@ -73,7 +73,11 @@ export default function MobileBoard({ columns, byColumn, onCardClick, onRemoveGa
             key={game.appid}
             game={game}
             onClick={() => onCardClick(game)}
-            onRemove={() => onRemoveGame(game.appid)}
+            onArchive={() => onArchiveGame(game.appid)}
+            onUnarchive={() => onUnarchiveGame(game.appid)}
+            onDelete={() => onDeleteGame(game.appid)}
+            onEdit={onEditGame}
+            isTaskBoard={isTaskBoard}
             isDragging={false}
             onDragStart={() => {}}
             onDragEnd={() => {}}

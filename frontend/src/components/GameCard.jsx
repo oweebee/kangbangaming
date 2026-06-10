@@ -10,35 +10,37 @@ function formatPlaytime(minutes) {
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 
-export default function GameCard({ game, onDragStart, onDragEnd, onClick, onRemove, onEdit, isDragging, readOnly }) {
+export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArchive, onUnarchive, onDelete, onEdit, isDragging, readOnly, isTaskBoard }) {
   const [imgError, setImgError] = useState(false);
-  const isCustom = game.type === 'custom';
-  const tt       = game.taskType ? getTaskType(game.taskType) : null;
-  const TtIcon   = tt?.Icon;
-  const dateInfo = getDateInfo(game);
+  const isCustom  = game.type === 'custom';
+  const isArchived = !!game.archived;
+  const tt        = game.taskType ? getTaskType(game.taskType) : null;
+  const TtIcon    = tt?.Icon;
+  const dateInfo  = getDateInfo(game);
 
   return (
     <div
-      draggable={!readOnly}
-      onDragStart={readOnly ? undefined : e => { e.dataTransfer.effectAllowed = 'move'; onDragStart(); }}
-      onDragEnd={readOnly ? undefined : onDragEnd}
-      onClick={readOnly ? undefined : onClick}
+      draggable={!readOnly && !isArchived}
+      onDragStart={readOnly || isArchived ? undefined : e => { e.dataTransfer.effectAllowed = 'move'; onDragStart(); }}
+      onDragEnd={readOnly || isArchived ? undefined : onDragEnd}
+      onClick={readOnly || isArchived ? undefined : onClick}
       style={{
-        background: tt ? tt.bg : 'var(--surface2)',
-        border: tt ? `1.5px solid ${tt.border}` : '1px solid var(--border)',
+        background: isArchived ? 'var(--surface2)' : tt ? tt.bg : 'var(--surface2)',
+        border: isArchived ? '1px solid rgba(120,120,120,0.3)' : tt ? `1.5px solid ${tt.border}` : '1px solid var(--border)',
         borderRadius: 8,
         overflow: 'hidden',
-        cursor: readOnly ? 'default' : 'grab',
-        opacity: isDragging ? 0.4 : 1,
+        cursor: readOnly || isArchived ? 'default' : 'grab',
+        opacity: isDragging ? 0.4 : isArchived ? 0.6 : 1,
         transition: 'opacity 0.15s, transform 0.15s, box-shadow 0.15s',
         userSelect: 'none',
+        filter: isArchived ? 'saturate(0.3)' : 'none',
       }}
-      onMouseEnter={readOnly ? undefined : e => {
+      onMouseEnter={readOnly || isArchived ? undefined : e => {
         e.currentTarget.style.transform = 'translateY(-1px)';
         e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.4)';
         e.currentTarget.style.borderColor = tt ? tt.border : '#444';
       }}
-      onMouseLeave={readOnly ? undefined : e => {
+      onMouseLeave={readOnly || isArchived ? undefined : e => {
         e.currentTarget.style.transform = '';
         e.currentTarget.style.boxShadow = '';
         e.currentTarget.style.borderColor = tt ? tt.border : 'var(--border)';
@@ -58,25 +60,63 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onRemo
             fontSize: 8, fontWeight: 700, padding: '2px 6px',
             borderRadius: 4, letterSpacing: '0.04em',
           }}>{tt.label.toUpperCase()}</div>
+          {isArchived && (
+            <div style={{
+              position: 'absolute', top: 5, right: 5,
+              background: 'rgba(60,60,60,0.9)', color: '#aaa',
+              fontSize: 8, fontWeight: 700, padding: '2px 6px',
+              borderRadius: 4, letterSpacing: '0.06em',
+            }}>ARCHIVÉ</div>
+          )}
         </div>
       ) : isCustom ? (
         <div style={{
-          width: '100%', height: 88,
+          width: '100%', height: 88, position: 'relative',
           background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 42,
-        }}>{game.emoji || '🎮'}</div>
+        }}>
+          {game.emoji || '🎮'}
+          {isArchived && (
+            <div style={{
+              position: 'absolute', top: 5, right: 5,
+              background: 'rgba(60,60,60,0.9)', color: '#aaa',
+              fontSize: 8, fontWeight: 700, padding: '2px 6px',
+              borderRadius: 4, letterSpacing: '0.06em',
+            }}>ARCHIVÉ</div>
+          )}
+        </div>
       ) : !imgError && game.header_img ? (
-        <img
-          src={game.header_img} alt={game.name}
-          onError={() => setImgError(true)}
-          style={{ width: '100%', height: 88, objectFit: 'cover', display: 'block' }}
-          draggable={false}
-        />
+        <div style={{ position: 'relative' }}>
+          <img
+            src={game.header_img} alt={game.name}
+            onError={() => setImgError(true)}
+            style={{ width: '100%', height: 88, objectFit: 'cover', display: 'block' }}
+            draggable={false}
+          />
+          {isArchived && (
+            <div style={{
+              position: 'absolute', top: 5, right: 5,
+              background: 'rgba(60,60,60,0.9)', color: '#aaa',
+              fontSize: 8, fontWeight: 700, padding: '2px 6px',
+              borderRadius: 4, letterSpacing: '0.06em',
+            }}>ARCHIVÉ</div>
+          )}
+        </div>
       ) : (
         <div style={{
-          width: '100%', height: 88, background: 'var(--steam)',
+          width: '100%', height: 88, position: 'relative', background: 'var(--steam)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24,
-        }}>🎮</div>
+        }}>
+          🎮
+          {isArchived && (
+            <div style={{
+              position: 'absolute', top: 5, right: 5,
+              background: 'rgba(60,60,60,0.9)', color: '#aaa',
+              fontSize: 8, fontWeight: 700, padding: '2px 6px',
+              borderRadius: 4, letterSpacing: '0.06em',
+            }}>ARCHIVÉ</div>
+          )}
+        </div>
       )}
 
       {/* ── Info area ── */}
@@ -90,7 +130,7 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onRemo
           {/* Action buttons */}
           {!readOnly && (
             <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
-              {onEdit && isCustom && (
+              {!isArchived && onEdit && isCustom && (
                 <button
                   onClick={e => { e.stopPropagation(); onEdit(game); }}
                   style={{
@@ -101,15 +141,38 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onRemo
                   title="Éditer"
                 >✏</button>
               )}
-              <button
-                onClick={e => { e.stopPropagation(); onRemove(); }}
-                style={{
-                  background: 'none', border: 'none', color: 'var(--text-muted)',
-                  fontSize: 14, cursor: 'pointer', opacity: 0.5, padding: '0 0 0 2px',
-                  lineHeight: 1, flexShrink: 0,
-                }}
-                title="Retirer du board"
-              >✕</button>
+              {isArchived ? (
+                <>
+                  <button
+                    onClick={e => { e.stopPropagation(); onUnarchive && onUnarchive(); }}
+                    style={{
+                      background: 'none', border: 'none', color: '#6090c0',
+                      fontSize: 13, cursor: 'pointer', opacity: 0.8, padding: '0 2px',
+                      lineHeight: 1, flexShrink: 0,
+                    }}
+                    title="Restaurer"
+                  >↩</button>
+                  <button
+                    onClick={e => { e.stopPropagation(); onDelete && onDelete(); }}
+                    style={{
+                      background: 'none', border: 'none', color: '#c04040',
+                      fontSize: 13, cursor: 'pointer', opacity: 0.8, padding: '0 0 0 2px',
+                      lineHeight: 1, flexShrink: 0,
+                    }}
+                    title="Supprimer définitivement"
+                  >🗑</button>
+                </>
+              ) : (
+                <button
+                  onClick={e => { e.stopPropagation(); onArchive && onArchive(); }}
+                  style={{
+                    background: 'none', border: 'none', color: 'var(--text-muted)',
+                    fontSize: 14, cursor: 'pointer', opacity: 0.5, padding: '0 0 0 2px',
+                    lineHeight: 1, flexShrink: 0,
+                  }}
+                  title="Archiver"
+                >✕</button>
+              )}
             </div>
           )}
         </div>
@@ -119,7 +182,7 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onRemo
           <div style={{ fontSize: 11, color: 'var(--text-muted)', minWidth: 0 }}>
             {isCustom
               ? <span style={{ color: tt ? tt.textColor : 'var(--accent)', opacity: 0.8 }}>
-                  {tt ? `${tt.emoji} ${tt.label}` : 'Carte perso'}
+                  {tt ? `${tt.emoji} ${tt.label}` : (isTaskBoard ? 'Tâche' : 'Carte perso')}
                 </span>
               : formatPlaytime(game.playtime_minutes)
             }

@@ -164,17 +164,14 @@ export default function TaskModal({ game, onClose, onEdit }) {
             Aucune note — clique sur ✏ pour ajouter des détails.
           </div>
 
-          {/* Meta row */}
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {!game.taskType && game.emoji && (
+          {/* Meta row — emoji only for untyped cards */}
+          {!game.taskType && game.emoji && (
+            <div style={{ display: 'flex', gap: 8 }}>
               <div style={{ background: 'var(--surface2)', borderRadius: 7, padding: '5px 10px', fontSize: 20 }}>
                 {game.emoji}
               </div>
-            )}
-            <div style={{ background: 'var(--surface2)', borderRadius: 7, padding: '5px 10px', fontSize: 11, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 5 }}>
-              <span>🃏</span> Carte personnalisée
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

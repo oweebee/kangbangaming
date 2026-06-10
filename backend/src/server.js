@@ -489,7 +489,7 @@ app.post('/api/public/boards/:boardId/games', requireAuth, (req, res) => {
   const { appid, name, header_img, icon_img, column, type, emoji, taskType } = req.body;
   if (!appid || !column) return res.status(400).json({ error: 'Missing fields' });
   if (!f.board.games) f.board.games = {};
-  f.board.games[appid] = { appid, name, header_img: header_img || null, icon_img: icon_img || null, column, type: type || 'steam', emoji: emoji || null, taskType: taskType || null, addedAt: new Date().toISOString() };
+  f.board.games[appid] = { appid, name, header_img: header_img || null, icon_img: icon_img || null, column, type: type || 'steam', emoji: emoji || null, taskType: taskType || null, archived: false, addedAt: new Date().toISOString() };
   f.userBoards[req.params.boardId] = f.board;
   f.all[f.userId] = f.userBoards;
   writeBoards(f.all);
@@ -509,6 +509,7 @@ app.patch('/api/public/boards/:boardId/games/:appid', requireAuth, (req, res) =>
   if (req.body.dueDate !== undefined) game.dueDate = req.body.dueDate;
   if (req.body.startDate !== undefined) game.startDate = req.body.startDate;
   if (req.body.endDate !== undefined) game.endDate = req.body.endDate;
+  if (req.body.archived !== undefined) game.archived = req.body.archived;
   f.userBoards[req.params.boardId] = f.board;
   f.all[f.userId] = f.userBoards;
   writeBoards(f.all);
@@ -653,7 +654,7 @@ app.post('/api/boards/:boardId/games', requireAuth, (req, res) => {
   const board = userBoards[req.params.boardId];
   if (!board) return res.status(404).json({ error: 'Board not found' });
   if (!board.games) board.games = {};
-  board.games[appid] = { appid, name, header_img: header_img || null, icon_img: icon_img || null, column, type: type || 'steam', emoji: emoji || null, taskType: taskType || null, addedAt: new Date().toISOString() };
+  board.games[appid] = { appid, name, header_img: header_img || null, icon_img: icon_img || null, column, type: type || 'steam', emoji: emoji || null, taskType: taskType || null, archived: false, addedAt: new Date().toISOString() };
   setUserBoards(req.user.id, userBoards);
   res.status(201).json(board.games[appid]);
 });
@@ -672,6 +673,7 @@ app.patch('/api/boards/:boardId/games/:appid', requireAuth, (req, res) => {
   if (req.body.dueDate !== undefined) game.dueDate = req.body.dueDate;
   if (req.body.startDate !== undefined) game.startDate = req.body.startDate;
   if (req.body.endDate !== undefined) game.endDate = req.body.endDate;
+  if (req.body.archived !== undefined) game.archived = req.body.archived;
   setUserBoards(req.user.id, userBoards);
   res.json(game);
 });

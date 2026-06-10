@@ -162,6 +162,43 @@ function ItemIcon() {
   );
 }
 
+function BossIcon() {
+  return (
+    <svg width="90" height="68" viewBox="0 0 90 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* Crown base */}
+      <rect x="24" y="27" width="42" height="10" rx="3" fill="#f0c030" stroke="#8a6000" strokeWidth="2"/>
+      {/* Crown spikes */}
+      <polygon points="24,27 30,12 37,25" fill="#f0c030" stroke="#8a6000" strokeWidth="1.5" strokeLinejoin="round"/>
+      <polygon points="39,27 45,8 51,27" fill="#f0c030" stroke="#8a6000" strokeWidth="1.5" strokeLinejoin="round"/>
+      <polygon points="53,27 60,12 66,27" fill="#f0c030" stroke="#8a6000" strokeWidth="1.5" strokeLinejoin="round"/>
+      {/* Crown gems */}
+      <circle cx="30" cy="20" r="3.5" fill="#e040c0" stroke="#8a0060" strokeWidth="1"/>
+      <circle cx="45" cy="14" r="4" fill="#e040c0" stroke="#8a0060" strokeWidth="1"/>
+      <circle cx="60" cy="20" r="3.5" fill="#e040c0" stroke="#8a0060" strokeWidth="1"/>
+      {/* Left ear */}
+      <ellipse cx="22" cy="44" rx="7" ry="9" fill="#f090b8" stroke="#c05080" strokeWidth="2"/>
+      <ellipse cx="22" cy="44" rx="4" ry="6" fill="#e060a0"/>
+      {/* Right ear */}
+      <ellipse cx="68" cy="44" rx="7" ry="9" fill="#f090b8" stroke="#c05080" strokeWidth="2"/>
+      <ellipse cx="68" cy="44" rx="4" ry="6" fill="#e060a0"/>
+      {/* Head */}
+      <ellipse cx="45" cy="54" rx="23" ry="18" fill="#f090b8" stroke="#c05080" strokeWidth="2.5"/>
+      {/* Eyes */}
+      <ellipse cx="37" cy="50" rx="3.5" ry="4" fill="#1a0810"/>
+      <ellipse cx="53" cy="50" rx="3.5" ry="4" fill="#1a0810"/>
+      <circle cx="38" cy="49" r="1.2" fill="#fff" opacity="0.7"/>
+      <circle cx="54" cy="49" r="1.2" fill="#fff" opacity="0.7"/>
+      {/* Snout */}
+      <ellipse cx="45" cy="60" rx="10" ry="6.5" fill="#e060a0" stroke="#c05080" strokeWidth="1.5"/>
+      <ellipse cx="41" cy="60" rx="2.5" ry="2" fill="#1a0810" opacity="0.5"/>
+      <ellipse cx="49" cy="60" rx="2.5" ry="2" fill="#1a0810" opacity="0.5"/>
+      {/* Cheek blush */}
+      <ellipse cx="29" cy="56" rx="5" ry="3" fill="#e04090" opacity="0.3"/>
+      <ellipse cx="61" cy="56" rx="5" ry="3" fill="#e04090" opacity="0.3"/>
+    </svg>
+  );
+}
+
 // ── Type registry ─────────────────────────────────────────────────────────────
 
 export const TASK_TYPES = [
@@ -206,6 +243,12 @@ export const TASK_TYPES = [
     bg: 'rgba(25,110,45,0.16)', border: 'rgba(60,180,90,0.55)',
     badgeBg: 'rgba(12,70,25,0.88)', badgeText: '#80e898', textColor: '#80e898',
     imgBg: 'linear-gradient(135deg, #001a08 0%, #002010 60%, #001408 100%)',
+  },
+  {
+    id: 'boss', label: 'Boss', emoji: '👑', Icon: BossIcon,
+    bg: 'rgba(220,60,150,0.15)', border: 'rgba(255,100,190,0.5)',
+    badgeBg: 'rgba(130,20,80,0.88)', badgeText: '#ffb0e0', textColor: '#ffb0e0',
+    imgBg: 'linear-gradient(135deg, #1a0015 0%, #2a0528 60%, #1a0018 100%)',
   },
 ];
 

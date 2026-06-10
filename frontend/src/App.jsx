@@ -150,6 +150,7 @@ export default function App() {
   const [search, setSearch] = useState('');
   const [selectedGame, setSelectedGame] = useState(null);
   const [editingGame,  setEditingGame]  = useState(null);
+  const [showArchived, setShowArchived] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [dragging, setDragging] = useState(null);
   const [newBoardName, setNewBoardName] = useState('');
@@ -390,6 +391,18 @@ export default function App() {
     setGames(prev => prev.filter(g => g.appid !== appid));
   };
 
+  const archiveGame = async (appid) => {
+    const boardApi = publicBoardMode ? `${API}/public/boards/${publicBoardMode.id}` : `${API}/boards/${activeBoardId}`;
+    await fetch(`${boardApi}/games/${appid}`, { method: 'PATCH', headers: authHeaders(token), body: JSON.stringify({ archived: true }) });
+    setGames(prev => prev.map(g => g.appid === appid ? { ...g, archived: true } : g));
+  };
+
+  const unarchiveGame = async (appid) => {
+    const boardApi = publicBoardMode ? `${API}/public/boards/${publicBoardMode.id}` : `${API}/boards/${activeBoardId}`;
+    await fetch(`${boardApi}/games/${appid}`, { method: 'PATCH', headers: authHeaders(token), body: JSON.stringify({ archived: false }) });
+    setGames(prev => prev.map(g => g.appid === appid ? { ...g, archived: false } : g));
+  };
+
   const updateGame = async (updatedGame) => {
     const boardApi = publicBoardMode ? `${API}/public/boards/${publicBoardMode.id}` : `${API}/boards/${activeBoardId}`;
     const { appid, name, emoji, taskType, dueDate, startDate, endDate } = updatedGame;
@@ -421,13 +434,15 @@ export default function App() {
   }
 
   const filtered = games.filter(g => g.name?.toLowerCase().includes(search.toLowerCase()));
-  const byColumn = columns.reduce((acc, col) => { acc[col.id] = filtered.filter(g => g.column === col.id); return acc; }, {});
+  const filteredForBoard = filtered.filter(g => showArchived ? true : !g.archived);
+  const byColumn = columns.reduce((acc, col) => { acc[col.id] = filteredForBoard.filter(g => g.column === col.id); return acc; }, {});
   const knownColIds = new Set(columns.map(c => c.id));
   const activeBoard = boards.find(b => b.id === activeBoardId);
   // true when the active board was created from a Steam game (task board)
   const isTaskBoard = !!(publicBoardMode ? publicBoardMode.gameIcon : activeBoard?.gameIcon);
-  const orphans = filtered.filter(g => !knownColIds.has(g.column));
+  const orphans = filteredForBoard.filter(g => !knownColIds.has(g.column));
   if (orphans.length > 0 && columns[0]) byColumn[columns[0].id] = [...(byColumn[columns[0].id] || []), ...orphans];
+  const archiveCount = games.filter(g => g.archived).length;
 
   // Sorted boards (respects drag order)
   const sortedBoards = boardOrder.length > 0
@@ -793,18 +808,31 @@ export default function App() {
           loading ? (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Chargement...</div>
           ) : (
-            <MobileBoard columns={columns} byColumn={byColumn} onCardClick={setSelectedGame} onRemoveGame={removeGame} />
+            <MobileBoard columns={columns} byColumn={byColumn} onCardClick={setSelectedGame} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} isTaskBoard={isTaskBoard} />
           )
         ) : !activeBoardId ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Crée un board pour commencer</div>
         ) : loading ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Chargement...</div>
         ) : (
-          <MobileBoard columns={columns} byColumn={byColumn} onCardClick={setSelectedGame} onRemoveGame={removeGame} />
+          <MobileBoard columns={columns} byColumn={byColumn} onCardClick={setSelectedGame} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} isTaskBoard={isTaskBoard} />
         )}
         {(activeBoardId || publicBoardMode) && (
           <div style={{ background: 'var(--surface)', borderTop: '1px solid var(--border)', padding: '8px 12px', display: 'flex', gap: 8, flexShrink: 0 }}>
             <button onClick={addColumn} style={{ flex: 1, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '8px', color: 'var(--text-muted)', fontSize: 12 }}>+ Colonne</button>
+            {archiveCount > 0 && (
+              <button
+                onClick={() => setShowArchived(v => !v)}
+                style={{
+                  background: showArchived ? 'rgba(120,80,160,0.25)' : 'var(--surface2)',
+                  border: showArchived ? '1px solid rgba(160,100,220,0.6)' : '1px solid var(--border)',
+                  borderRadius: 6, padding: '8px 12px', color: showArchived ? '#c090f0' : 'var(--text-muted)',
+                  fontSize: 11, cursor: 'pointer', fontWeight: showArchived ? 700 : 400, flexShrink: 0,
+                }}
+              >
+                📦 {archiveCount}
+              </button>
+            )}
           </div>
         )}
         <footer style={{ position: 'fixed', bottom: 0, right: 0, padding: '4px 10px', display: 'flex', alignItems: 'center', gap: 8, fontSize: 9, color: 'var(--text-muted)' }}><span>by Oweebee</span><a href="https://discord.gg/9mXpM9wv" target="_blank" rel="noreferrer" style={{ color: '#7289da', textDecoration: 'none', fontSize: 9 }}>Discord</a><a href="https://github.com/oweebee/kangbangaming" target="_blank" rel="noreferrer" style={{ color: 'var(--text-muted)', textDecoration: 'none', fontSize: 9 }}>GitHub</a></footer>
@@ -901,6 +929,20 @@ export default function App() {
                 </>
               )}
               <div style={{ flex: 1 }} />
+              {(activeBoardId || publicBoardMode) && archiveCount > 0 && (
+                <button
+                  onClick={() => setShowArchived(v => !v)}
+                  style={{
+                    background: showArchived ? 'rgba(120,80,160,0.25)' : 'var(--surface2)',
+                    border: showArchived ? '1px solid rgba(160,100,220,0.6)' : '1px solid var(--border)',
+                    borderRadius: 6, padding: '5px 10px', color: showArchived ? '#c090f0' : 'var(--text-muted)',
+                    fontSize: 11, cursor: 'pointer', flexShrink: 0, fontWeight: showArchived ? 700 : 400,
+                  }}
+                  title={showArchived ? 'Masquer les archives' : 'Afficher les archives'}
+                >
+                  📦 Archives{archiveCount > 0 ? ` (${archiveCount})` : ''}
+                </button>
+              )}
               <input type="search" placeholder="Filtrer..." value={search} onChange={e => setSearch(e.target.value)}
                 style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 10px', color: 'var(--text)', fontSize: 12, outline: 'none', maxWidth: 200 }} />
               {activeBoardId && (
@@ -917,14 +959,14 @@ export default function App() {
           loading ? (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Chargement...</div>
           ) : (
-            <KanbanBoard columns={columns} byColumn={byColumn} dragging={dragging} setDragging={setDragging} moveGame={moveGame} onCardClick={setSelectedGame} onRemoveGame={removeGame} onEditGame={setEditingGame} onRenameColumn={renameColumn} onDeleteColumn={deleteColumn} onSetEmoji={setColumnEmoji} onReorderColumns={reorderColumns} isTaskBoard={isTaskBoard} />
+            <KanbanBoard columns={columns} byColumn={byColumn} dragging={dragging} setDragging={setDragging} moveGame={moveGame} onCardClick={setSelectedGame} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} onRenameColumn={renameColumn} onDeleteColumn={deleteColumn} onSetEmoji={setColumnEmoji} onReorderColumns={reorderColumns} isTaskBoard={isTaskBoard} />
           )
         ) : !activeBoardId ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Crée un board pour commencer</div>
         ) : loading ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Chargement...</div>
         ) : (
-          <KanbanBoard columns={columns} byColumn={byColumn} dragging={dragging} setDragging={setDragging} moveGame={moveGame} onCardClick={setSelectedGame} onRemoveGame={removeGame} onRenameColumn={renameColumn} onDeleteColumn={deleteColumn} onSetEmoji={setColumnEmoji} onReorderColumns={reorderColumns} isTaskBoard={isTaskBoard} />
+          <KanbanBoard columns={columns} byColumn={byColumn} dragging={dragging} setDragging={setDragging} moveGame={moveGame} onCardClick={setSelectedGame} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onRenameColumn={renameColumn} onDeleteColumn={deleteColumn} onSetEmoji={setColumnEmoji} onReorderColumns={reorderColumns} isTaskBoard={isTaskBoard} />
         )}
       </div>
       <footer style={{ position: 'fixed', bottom: 0, right: 0, padding: '5px 12px', display: 'flex', alignItems: 'center', gap: 8, fontSize: 10, color: 'var(--text-muted)' }}>
