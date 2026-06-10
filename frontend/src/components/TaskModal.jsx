@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { getTaskType } from '../taskTypes.jsx';
 import NotesSection from './NotesSection.jsx';
 import ProgressSlider, { progressColor } from './ProgressSlider.jsx';
@@ -51,7 +52,8 @@ const STATUS_LABEL = { future: 'À venir', active: 'En cours', past: 'Passée' }
 // ── Assignee row ──────────────────────────────────────────────────────────────
 
 function AssigneeRow({ assignees = [], appUsers = [], borderColor = 'var(--border)' }) {
-  const [hoveredId, setHoveredId] = useState(null);
+  const [popup, setPopup] = useState(null); // { user, rect }
+  const timerRef = useRef(null);
 
   const users = assignees
     .map(id => appUsers.find(u => u.id === id))
@@ -59,19 +61,27 @@ function AssigneeRow({ assignees = [], appUsers = [], borderColor = 'var(--borde
 
   if (users.length === 0) return null;
 
+  const popupWidth = 160;
+  const popupHeight = 80;
+  const gap = 8;
+
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
       <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0 }}>👥 Assignés</span>
-      <div style={{ display: 'flex', alignItems: 'center', gap: -4, flexWrap: 'wrap', gap: 6 }}>
+      <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
         {users.map(user => {
           const initials = user.username?.[0]?.toUpperCase() || '?';
-          const isHovered = hoveredId === user.id;
+          const isHovered = popup?.user?.id === user.id;
           return (
             <div
               key={user.id}
               style={{ position: 'relative' }}
-              onMouseEnter={() => setHoveredId(user.id)}
-              onMouseLeave={() => setHoveredId(null)}
+              onMouseEnter={e => {
+                clearTimeout(timerRef.current);
+                const rect = e.currentTarget.getBoundingClientRect();
+                setPopup({ user, rect });
+              }}
+              onMouseLeave={() => { timerRef.current = setTimeout(() => setPopup(null), 80); }}
               onClick={() => user.steamId && window.open(`https://steamcommunity.com/profiles/${user.steamId}`, '_blank')}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 20, padding: '4px 10px 4px 5px', cursor: user.steamId ? 'pointer' : 'default' }}>
@@ -87,30 +97,45 @@ function AssigneeRow({ assignees = [], appUsers = [], borderColor = 'var(--borde
                   </svg>
                 )}
               </div>
-              {/* Hover popup */}
-              {isHovered && user.steamAvatar && (
-                <div style={{
-                  position: 'absolute', bottom: '110%', left: '50%', transform: 'translateX(-50%)',
-                  background: 'var(--surface2)', border: '1px solid var(--border)',
-                  borderRadius: 9, padding: '10px 12px', width: 160,
-                  zIndex: 50, boxShadow: '0 6px 20px rgba(0,0,0,0.5)',
-                  pointerEvents: 'none',
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <img src={user.steamAvatar} alt="" style={{ width: 36, height: 36, borderRadius: '50%', border: '1px solid var(--border)' }} />
-                    <div>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>{user.username}</div>
-                      {user.steamPersonaName && user.steamPersonaName !== user.username && (
-                        <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>{user.steamPersonaName}</div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           );
         })}
       </div>
+      {/* Portal popup — renders in body to bypass overflow clipping */}
+      {popup && createPortal(
+        <div style={{
+          position: 'fixed',
+          left: Math.min(
+            Math.max(8, popup.rect.left + popup.rect.width / 2 - popupWidth / 2),
+            window.innerWidth - popupWidth - 8
+          ),
+          top: popup.rect.top - popupHeight - gap < 8
+            ? popup.rect.bottom + gap
+            : popup.rect.top - popupHeight - gap,
+          width: popupWidth,
+          background: 'var(--surface2)', border: '1px solid var(--border)',
+          borderRadius: 9, padding: '10px 12px',
+          zIndex: 9999, boxShadow: '0 4px 20px rgba(0,0,0,0.55)',
+          pointerEvents: 'none',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {popup.user.steamAvatar ? (
+              <img src={popup.user.steamAvatar} alt="" style={{ width: 36, height: 36, borderRadius: '50%', border: '1px solid var(--border)', flexShrink: 0 }} />
+            ) : (
+              <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 14, color: '#fff', flexShrink: 0 }}>
+                {popup.user.username?.[0]?.toUpperCase()}
+              </div>
+            )}
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>{popup.user.username}</div>
+              {popup.user.steamPersonaName && popup.user.steamPersonaName !== popup.user.username && (
+                <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>{popup.user.steamPersonaName}</div>
+              )}
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

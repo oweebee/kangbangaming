@@ -1,14 +1,27 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 
-function AvatarPopup({ user }) {
+function AvatarPopup({ user, anchorRect }) {
+  if (!anchorRect) return null;
   const initials = user?.username?.[0]?.toUpperCase() || '?';
-  return (
+  const popupWidth = 170;
+  const popupHeight = 110; // approximate
+  const gap = 8;
+
+  let left = anchorRect.left + anchorRect.width / 2 - popupWidth / 2;
+  let top = anchorRect.top - popupHeight - gap;
+
+  // Clamp to viewport
+  if (left < 8) left = 8;
+  if (left + popupWidth > window.innerWidth - 8) left = window.innerWidth - popupWidth - 8;
+  if (top < 8) top = anchorRect.bottom + gap; // flip below if not enough room above
+
+  return createPortal(
     <div style={{
-      position: 'absolute', bottom: '110%', top: 'auto', left: '50%',
-      transform: 'translateX(-50%)',
+      position: 'fixed', top, left, width: popupWidth,
       background: 'var(--surface2)', border: '1px solid var(--border)',
-      borderRadius: 10, padding: '10px 12px', width: 170,
-      zIndex: 200, boxShadow: '0 -4px 24px rgba(0,0,0,0.6)',
+      borderRadius: 10, padding: '10px 12px',
+      zIndex: 9999, boxShadow: '0 4px 24px rgba(0,0,0,0.6)',
       pointerEvents: 'none',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
@@ -38,12 +51,14 @@ function AvatarPopup({ user }) {
           Voir profil Steam
         </div>
       )}
-    </div>
+    </div>,
+    document.body
   );
 }
 
 export default function AssigneeAvatars({ assignees = [], appUsers = [], size = 24, borderColor = 'var(--surface)' }) {
-  const [hoveredId, setHoveredId] = useState(null);
+  const [popup, setPopup] = useState(null); // { user, rect }
+  const timerRef = useRef(null);
 
   const users = assignees
     .map(id => appUsers.find(u => u.id === id))
@@ -55,13 +70,19 @@ export default function AssigneeAvatars({ assignees = [], appUsers = [], size = 
     <div style={{ display: 'flex', alignItems: 'center', position: 'absolute', top: 4, left: 8, zIndex: 10 }}>
       {users.map((user, idx) => {
         const initials = user.username?.[0]?.toUpperCase() || '?';
-        const isHovered = hoveredId === user.id;
+        const isHovered = popup?.user?.id === user.id;
         return (
           <div
             key={user.id}
             style={{ position: 'relative', marginLeft: idx > 0 ? -(size * 0.25) : 0, zIndex: isHovered ? 20 : idx + 1 }}
-            onMouseEnter={() => setHoveredId(user.id)}
-            onMouseLeave={() => setHoveredId(null)}
+            onMouseEnter={e => {
+              clearTimeout(timerRef.current);
+              const rect = e.currentTarget.getBoundingClientRect();
+              setPopup({ user, rect });
+            }}
+            onMouseLeave={() => {
+              timerRef.current = setTimeout(() => setPopup(null), 80);
+            }}
             onClick={e => {
               e.stopPropagation();
               if (user.steamId) window.open(`https://steamcommunity.com/profiles/${user.steamId}`, '_blank');
@@ -93,10 +114,10 @@ export default function AssigneeAvatars({ assignees = [], appUsers = [], size = 
                 transition: 'box-shadow .15s',
               }}>{initials}</div>
             )}
-            {isHovered && <AvatarPopup user={user} />}
           </div>
         );
       })}
+      {popup && <AvatarPopup user={popup.user} anchorRect={popup.rect} />}
     </div>
   );
 }

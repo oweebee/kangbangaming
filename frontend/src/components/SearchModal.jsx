@@ -509,7 +509,7 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
                     boxShadow: '0 6px 20px rgba(0,0,0,0.4)',
                   }}>
                     {appUsers
-                      .filter(u => !assignees.includes(u.id))
+                      .filter(u => u.role !== 'admin' && !assignees.includes(u.id))
                       .map(u => (
                         <div key={u.id}
                           onClick={() => { setAssignees(a => [...a, u.id]); setShowAssigneeMenu(false); }}
@@ -533,7 +533,7 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
                         </div>
                       ))
                     }
-                    {appUsers.filter(u => !assignees.includes(u.id)).length === 0 && (
+                    {appUsers.filter(u => u.role !== 'admin' && !assignees.includes(u.id)).length === 0 && (
                       <div style={{ padding: '12px', fontSize: 13, color: 'var(--text-muted)', textAlign: 'center' }}>Tous les utilisateurs sont assignés</div>
                     )}
                   </div>

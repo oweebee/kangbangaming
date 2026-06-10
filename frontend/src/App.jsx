@@ -67,7 +67,7 @@ function BoardEmojiPicker({ current, onSelect, onClose }) {
 
 const API = import.meta.env.VITE_API_URL || '/api';
 
-function HomeBoardCard({ board, onClick }) {
+function HomeBoardCard({ board, isPublic, onClick }) {
   const [hover, setHover] = React.useState(false);
   return (
     <div
@@ -92,8 +92,8 @@ function HomeBoardCard({ board, onClick }) {
       {/* Info */}
       <div style={{ padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 6 }}>
         <span style={{ flex: 1, fontWeight: 700, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text)' }}>{board.name}</span>
-        <span style={{ fontSize: 10, fontWeight: 700, color: board.public ? '#3db86a' : '#f5a500', border: `1px solid ${board.public ? '#3db86a' : '#f5a500'}`, borderRadius: 4, padding: '1px 5px', flexShrink: 0 }}>
-          {board.public ? 'Public' : 'Privé'}
+        <span style={{ fontSize: 10, fontWeight: 700, color: (isPublic || board.public) ? '#3db86a' : '#f5a500', border: `1px solid ${(isPublic || board.public) ? '#3db86a' : '#f5a500'}`, borderRadius: 4, padding: '1px 5px', flexShrink: 0 }}>
+          {(isPublic || board.public) ? 'Public' : 'Privé'}
         </span>
       </div>
     </div>
@@ -478,6 +478,8 @@ export default function App() {
   }, {});
   const knownColIds = new Set(columns.map(c => c.id));
   const activeBoard = boards.find(b => b.id === activeBoardId);
+  // Banner image: prefer board's stored headerImg, fallback to first Steam game header_img
+  const activeBoardHeaderImg = activeBoard?.headerImg || games.find(g => g.header_img)?.header_img || null;
   // true when the active board was created from a Steam game (task board)
   const isTaskBoard = !!(publicBoardMode ? publicBoardMode.gameIcon : activeBoard?.gameIcon);
   const orphans = filteredForBoard.filter(g => !knownColIds.has(g.column));
@@ -907,9 +909,9 @@ export default function App() {
           {publicBoardMode ? (
             <>
               {/* Board icon */}
-              {(publicBoardMode.headerImg || publicBoardMode.gameIcon) ? (
-                <img src={publicBoardMode.headerImg || publicBoardMode.gameIcon} alt=""
-                  style={{ height: 53, width: 'auto', maxWidth: 200, objectFit: 'contain', borderRadius: 6, flexShrink: 0, border: '1px solid var(--border)' }}
+              {publicBoardMode.headerImg ? (
+                <img src={publicBoardMode.headerImg} alt=""
+                  style={{ height: 53, width: 'auto', maxWidth: 220, objectFit: 'contain', borderRadius: 6, flexShrink: 0, border: '1px solid var(--border)' }}
                 />
               ) : (
                 <span style={{ fontSize: 18, flexShrink: 0 }}>{publicBoardMode.emoji || '🎮'}</span>
@@ -948,10 +950,10 @@ export default function App() {
           ) : (
             <>
               {/* Board icon */}
-              {(activeBoard?.headerImg || activeBoard?.gameIcon) ? (
+              {activeBoardHeaderImg ? (
                 <img
-                  src={activeBoard.headerImg || activeBoard.gameIcon} alt=""
-                  style={{ height: 53, width: 'auto', maxWidth: 200, objectFit: 'contain', borderRadius: 6, flexShrink: 0, border: '1px solid var(--border)' }}
+                  src={activeBoardHeaderImg} alt=""
+                  style={{ height: 53, width: 'auto', maxWidth: 220, objectFit: 'contain', borderRadius: 6, flexShrink: 0, border: '1px solid var(--border)' }}
                 />
               ) : activeBoard ? (
                 <span style={{ fontSize: 36, flexShrink: 0 }}>{activeBoard.emoji || '🎮'}</span>

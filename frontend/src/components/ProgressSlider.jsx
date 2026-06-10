@@ -31,7 +31,7 @@ export default function ProgressSlider({ value, onChange, compact = false }) {
           fontSize: compact ? 14 : 12, fontWeight: 600,
           color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em',
         }}>
-          📊 Avancement
+          📊 Progression
           <span style={{ opacity: 0.55, textTransform: 'none', fontWeight: 400, fontSize: compact ? 12 : 10, marginLeft: 5 }}>
             (facultatif)
           </span>
