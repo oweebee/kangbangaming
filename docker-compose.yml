@@ -8,13 +8,10 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - STEAM_API_KEY=${STEAM_API_KEY}
     volumes:
-      - kanban_data:/app/data
+      - /opt/kanbangaming/data:/app/data
 
   frontend:
     build: ./frontend
     restart: unless-stopped
     depends_on:
       - backend
-
-volumes:
-  kanban_data:
