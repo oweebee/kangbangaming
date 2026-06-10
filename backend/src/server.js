@@ -13,7 +13,7 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 3001;
 const GLOBAL_STEAM_API_KEY = process.env.STEAM_API_KEY;
-// STEAM_ID is per-user only — no global fallback
+// STEAM_ID is per-user only
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
 const JWT_SECRET = process.env.JWT_SECRET || 'change-me-in-production';
 const LIBRARY_TTL = 5 * 60 * 1000;
@@ -45,46 +45,44 @@ function writeBoards(boards) {
   ensureDataDir();
   fs.writeFileSync(BOARDS_FILE, JSON.stringify(boards, null, 2));
 }
-function getUserBoards(userId) {
-  return readBoards()[userId] || {};
-}
+function getUserBoards(userId) { return readBoards()[userId] || {}; }
 function setUserBoards(userId, userBoards) {
-  const all = readBoards();
-  all[userId] = userBoards;
-  writeBoards(all);
+  const all = readBoards(); all[userId] = userBoards; writeBoards(all);
 }
 function getUserSteamCreds(userId) {
-  const users = readUsers();
-  const user = users.find(u => u.id === userId);
+  const user = readUsers().find(u => u.id === userId);
   return {
-    apiKey: GLOBAL_STEAM_API_KEY || user?.steamApiKey,  // API key: global env var, fallback to user's own
-    steamId: user?.steamId || null,                      // Steam ID: always per-user
+    apiKey: GLOBAL_STEAM_API_KEY || user?.steamApiKey,
+    steamId: user?.steamId || null,
   };
 }
+function userPublicInfo(u) {
+  return { id: u.id, username: u.username, role: u.role, status: u.status || 'active', createdAt: u.createdAt };
+}
 
-// ── Startup: ensure admin exists, migrate legacy boards ───────────────────────
+// ── Startup ───────────────────────────────────────────────────────────────────
 
 async function ensureAdmin() {
   const users = readUsers();
   const existing = users.find(u => u.username === 'admin');
   const hash = await bcrypt.hash(ADMIN_PASSWORD, 10);
   if (!existing) {
-    users.push({ id: 'admin', username: 'admin', passwordHash: hash, role: 'admin', createdAt: new Date().toISOString() });
+    users.push({ id: 'admin', username: 'admin', passwordHash: hash, role: 'admin', status: 'active', createdAt: new Date().toISOString() });
     writeUsers(users);
     console.log('[auth] Admin user created');
   } else {
     existing.passwordHash = hash;
+    if (!existing.status) existing.status = 'active';
     writeUsers(users);
   }
+  // Migrate legacy flat boards
   const all = readBoards();
   const isLegacy = Object.values(all).some(v => v && typeof v === 'object' && !Array.isArray(v) && ('name' in v || 'columns' in v || 'games' in v));
   if (isLegacy) {
     console.log('[auth] Migrating legacy boards to admin user');
     const adminBoards = {};
     for (const [k, v] of Object.entries(all)) {
-      if (v && typeof v === 'object' && !Array.isArray(v) && ('name' in v || 'columns' in v || 'games' in v)) {
-        adminBoards[k] = v;
-      }
+      if (v && typeof v === 'object' && !Array.isArray(v) && ('name' in v || 'columns' in v || 'games' in v)) adminBoards[k] = v;
     }
     writeBoards({ admin: adminBoards });
   }
@@ -115,6 +113,8 @@ app.post('/api/auth/login', async (req, res) => {
   const user = users.find(u => u.username === username);
   if (!user) return res.status(401).json({ error: 'Invalid credentials' });
   if (!await bcrypt.compare(password, user.passwordHash)) return res.status(401).json({ error: 'Invalid credentials' });
+  if ((user.status || 'active') === 'pending') return res.status(403).json({ error: 'pending', message: 'Ton compte est en attente de validation par un admin.' });
+  if ((user.status || 'active') === 'suspended') return res.status(403).json({ error: 'suspended', message: 'Ton compte a été suspendu.' });
   const token = jwt.sign({ id: user.id, username: user.username, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
   res.json({ token, user: { id: user.id, username: user.username, role: user.role, steamAvatar: user.steamAvatar || null, steamPersonaName: user.steamPersonaName || null } });
 });
@@ -128,29 +128,53 @@ app.post('/api/auth/register', async (req, res) => {
   if (users.find(u => u.username === username)) return res.status(409).json({ error: 'Username taken' });
   const hash = await bcrypt.hash(password, 10);
   const id = `user_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-  users.push({ id, username, passwordHash: hash, role: 'user', createdAt: new Date().toISOString() });
+  users.push({ id, username, passwordHash: hash, role: 'user', status: 'pending', createdAt: new Date().toISOString() });
   writeUsers(users);
-  const token = jwt.sign({ id, username, role: 'user' }, JWT_SECRET, { expiresIn: '7d' });
-  res.status(201).json({ token, user: { id, username, role: 'user' } });
+  // Don't issue a token — user must wait for approval
+  res.status(201).json({ pending: true, message: 'Compte créé ! Un admin doit valider ton inscription avant que tu puisses te connecter.' });
 });
 
 app.get('/api/auth/me', requireAuth, (req, res) => {
   const user = readUsers().find(u => u.id === req.user.id);
   if (!user) return res.status(404).json({ error: 'User not found' });
-  res.json({ id: user.id, username: user.username, role: user.role, steamAvatar: user.steamAvatar || null });
+  res.json({ id: user.id, username: user.username, role: user.role, steamAvatar: user.steamAvatar || null, steamPersonaName: user.steamPersonaName || null });
 });
 
-// ── User settings (Steam credentials) ────────────────────────────────────────
+// ── User profile + settings ───────────────────────────────────────────────────
+
+app.get('/api/user/profile', requireAuth, (req, res) => {
+  const users = readUsers();
+  const user = users.find(u => u.id === req.user.id);
+  if (!user) return res.status(404).json({ error: 'Not found' });
+
+  const userBoards = getUserBoards(req.user.id);
+  const boardList = Object.entries(userBoards);
+  const boardCount = boardList.length;
+  const publicBoardCount = boardList.filter(([, b]) => b.public).length;
+  let totalGames = 0, customCards = 0, totalColumns = 0;
+  for (const [, board] of boardList) {
+    const games = Object.values(board.games || {});
+    totalGames += games.length;
+    customCards += games.filter(g => g.type === 'custom').length;
+    totalColumns += (board.columns || []).length;
+  }
+
+  res.json({
+    id: user.id,
+    username: user.username,
+    role: user.role,
+    createdAt: user.createdAt,
+    steamId: user.steamId || null,
+    steamAvatar: user.steamAvatar || null,
+    steamPersonaName: user.steamPersonaName || null,
+    stats: { boardCount, publicBoardCount, totalGames, customCards, totalColumns },
+  });
+});
 
 app.get('/api/user/settings', requireAuth, (req, res) => {
   const user = readUsers().find(u => u.id === req.user.id);
   if (!user) return res.status(404).json({ error: 'Not found' });
-  res.json({
-    steamId: user.steamId || '',
-    hasSteamId: !!user.steamId,
-    steamAvatar: user.steamAvatar || null,
-    steamPersonaName: user.steamPersonaName || null,
-  });
+  res.json({ steamId: user.steamId || '', hasSteamId: !!user.steamId, steamAvatar: user.steamAvatar || null, steamPersonaName: user.steamPersonaName || null });
 });
 
 app.patch('/api/user/settings', requireAuth, async (req, res) => {
@@ -160,34 +184,23 @@ app.patch('/api/user/settings', requireAuth, async (req, res) => {
   if (req.body.steamId !== undefined) {
     const newSteamId = req.body.steamId.trim();
     users[idx].steamId = newSteamId;
-    // Fetch Steam avatar when Steam ID is set
     if (newSteamId && GLOBAL_STEAM_API_KEY) {
       try {
         const data = await steamFetch(`https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=${GLOBAL_STEAM_API_KEY}&steamids=${newSteamId}`);
         const player = data.response?.players?.[0];
-        if (player) {
-          users[idx].steamAvatar = player.avatarmedium || player.avatar || null;
-          users[idx].steamPersonaName = player.personaname || null;
-        }
-      } catch { /* avatar fetch failed, not critical */ }
-    } else {
-      users[idx].steamAvatar = null;
-      users[idx].steamPersonaName = null;
-    }
+        if (player) { users[idx].steamAvatar = player.avatarmedium || player.avatar || null; users[idx].steamPersonaName = player.personaname || null; }
+      } catch { /* not critical */ }
+    } else { users[idx].steamAvatar = null; users[idx].steamPersonaName = null; }
   }
   writeUsers(users);
   libraryCaches.delete(req.user.id);
-  res.json({
-    ok: true,
-    steamAvatar: users[idx].steamAvatar || null,
-    steamPersonaName: users[idx].steamPersonaName || null,
-  });
+  res.json({ ok: true, steamAvatar: users[idx].steamAvatar || null, steamPersonaName: users[idx].steamPersonaName || null });
 });
 
 // ── Admin routes ──────────────────────────────────────────────────────────────
 
 app.get('/api/admin/users', requireAdmin, (req, res) => {
-  res.json(readUsers().map(u => ({ id: u.id, username: u.username, role: u.role, createdAt: u.createdAt })));
+  res.json(readUsers().map(userPublicInfo));
 });
 
 app.patch('/api/admin/users/:id', requireAdmin, async (req, res) => {
@@ -196,12 +209,16 @@ app.patch('/api/admin/users/:id', requireAdmin, async (req, res) => {
   if (idx === -1) return res.status(404).json({ error: 'User not found' });
   if (req.params.id === 'admin' && req.body.role) return res.status(400).json({ error: 'Cannot change admin role' });
   if (req.body.role) users[idx].role = req.body.role;
+  if (req.body.status) {
+    if (req.params.id === 'admin') return res.status(400).json({ error: 'Cannot change admin status' });
+    users[idx].status = req.body.status;
+  }
   if (req.body.password) {
     if (req.body.password.length < 6) return res.status(400).json({ error: 'Password too short' });
     users[idx].passwordHash = await bcrypt.hash(req.body.password, 10);
   }
   writeUsers(users);
-  res.json({ id: users[idx].id, username: users[idx].username, role: users[idx].role });
+  res.json(userPublicInfo(users[idx]));
 });
 
 app.delete('/api/admin/users/:id', requireAdmin, (req, res) => {
@@ -211,15 +228,13 @@ app.delete('/api/admin/users/:id', requireAdmin, (req, res) => {
   if (idx === -1) return res.status(404).json({ error: 'User not found' });
   users.splice(idx, 1);
   writeUsers(users);
-  const all = readBoards();
-  delete all[req.params.id];
-  writeBoards(all);
+  const all = readBoards(); delete all[req.params.id]; writeBoards(all);
   res.json({ ok: true });
 });
 
 // ── Steam library cache (per user) ───────────────────────────────────────────
 
-const libraryCaches = new Map(); // userId -> { cache: Map, cacheAt: number }
+const libraryCaches = new Map();
 
 async function steamFetch(url) {
   const r = await fetch(url);
@@ -230,22 +245,14 @@ async function steamFetch(url) {
 async function getLibraryMap(userId) {
   const creds = getUserSteamCreds(userId);
   if (!creds.apiKey || !creds.steamId) return new Map();
-
   const entry = libraryCaches.get(userId) || { cache: null, cacheAt: 0 };
   if (entry.cache && Date.now() - entry.cacheAt < LIBRARY_TTL) return entry.cache;
-
   try {
-    const url = `https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key=${creds.apiKey}&steamid=${creds.steamId}&include_appinfo=1&include_played_free_games=1&format=json`;
-    const data = await steamFetch(url);
-    const cache = new Map((data.response?.games || []).map(g => [
-      g.appid,
-      {
-        icon_url: g.img_icon_url
-          ? `https://media.steampowered.com/steamcommunity/public/images/apps/${g.appid}/${g.img_icon_url}.jpg`
-          : null,
-        playtime_forever: g.playtime_forever || 0,
-      }
-    ]));
+    const data = await steamFetch(`https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key=${creds.apiKey}&steamid=${creds.steamId}&include_appinfo=1&include_played_free_games=1&format=json`);
+    const cache = new Map((data.response?.games || []).map(g => [g.appid, {
+      icon_url: g.img_icon_url ? `https://media.steampowered.com/steamcommunity/public/images/apps/${g.appid}/${g.img_icon_url}.jpg` : null,
+      playtime_forever: g.playtime_forever || 0,
+    }]));
     libraryCaches.set(userId, { cache, cacheAt: Date.now() });
     return cache;
   } catch {
@@ -260,48 +267,26 @@ app.get('/api/steam/search', requireAuth, async (req, res) => {
   const { q } = req.query;
   if (!q) return res.status(400).json({ error: 'Missing query' });
   try {
-    const url = `https://store.steampowered.com/api/storesearch/?term=${encodeURIComponent(q)}&l=english&cc=US`;
-    const data = await steamFetch(url);
+    const data = await steamFetch(`https://store.steampowered.com/api/storesearch/?term=${encodeURIComponent(q)}&l=english&cc=US`);
     const lib = await getLibraryMap(req.user.id);
-    const results = (data.items || []).map(g => {
+    res.json((data.items || []).map(g => {
       const libEntry = lib.get(g.id);
-      return {
-        appid: g.id,
-        name: g.name,
-        header_img: `https://cdn.cloudflare.steamstatic.com/steam/apps/${g.id}/header.jpg`,
-        icon_img: libEntry?.icon_url || null,
-        in_library: lib.has(g.id),
-        playtime_hours: libEntry ? Math.round(libEntry.playtime_forever / 60) : 0,
-      };
-    });
-    res.json(results);
+      return { appid: g.id, name: g.name, header_img: `https://cdn.cloudflare.steamstatic.com/steam/apps/${g.id}/header.jpg`, icon_img: libEntry?.icon_url || null, in_library: lib.has(g.id), playtime_hours: libEntry ? Math.round(libEntry.playtime_forever / 60) : 0 };
+    }));
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/steam/achievements/:appid', requireAuth, async (req, res) => {
-  const { appid } = req.params;
   const creds = getUserSteamCreds(req.user.id);
   if (!creds.apiKey || !creds.steamId) return res.status(400).json({ error: 'No Steam credentials configured' });
   try {
     const [statsData, schemaData] = await Promise.all([
-      steamFetch(`https://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/v1/?key=${creds.apiKey}&steamid=${creds.steamId}&appid=${appid}&l=english`),
-      steamFetch(`https://api.steampowered.com/ISteamUserStats/GetSchemaForGame/v2/?key=${creds.apiKey}&appid=${appid}&l=english`),
+      steamFetch(`https://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/v1/?key=${creds.apiKey}&steamid=${creds.steamId}&appid=${req.params.appid}&l=english`),
+      steamFetch(`https://api.steampowered.com/ISteamUserStats/GetSchemaForGame/v2/?key=${creds.apiKey}&appid=${req.params.appid}&l=english`),
     ]);
     const playerAchs = statsData.playerstats?.achievements || [];
-    const schemaAchs = schemaData.game?.availableGameStats?.achievements || [];
-    const schemaMap = new Map(schemaAchs.map(a => [a.name, a]));
-    const achievements = playerAchs.map(a => {
-      const s = schemaMap.get(a.apiname) || {};
-      return {
-        apiname: a.apiname,
-        achieved: a.achieved === 1,
-        unlocktime: a.unlocktime,
-        name: s.displayName || a.apiname,
-        description: s.description || '',
-        icon: a.achieved ? s.icon : s.icongray,
-      };
-    });
-    res.json({ achievements, gameName: statsData.playerstats?.gameName || '' });
+    const schemaMap = new Map((schemaData.game?.availableGameStats?.achievements || []).map(a => [a.name, a]));
+    res.json({ achievements: playerAchs.map(a => { const s = schemaMap.get(a.apiname) || {}; return { apiname: a.apiname, achieved: a.achieved === 1, unlocktime: a.unlocktime, name: s.displayName || a.apiname, description: s.description || '', icon: a.achieved ? s.icon : s.icongray }; }), gameName: statsData.playerstats?.gameName || '' });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -309,55 +294,30 @@ app.get('/api/steam/achievements/:appid', requireAuth, async (req, res) => {
 
 app.get('/api/public/boards', requireAuth, (req, res) => {
   const all = readBoards();
-  const users = readUsers();
-  const userMap = new Map(users.map(u => [u.id, u.username]));
+  const userMap = new Map(readUsers().map(u => [u.id, u.username]));
   const result = [];
   for (const [userId, userBoards] of Object.entries(all)) {
     for (const [boardId, board] of Object.entries(userBoards || {})) {
       if (board.public) {
-        const gameCount = Object.keys(board.games || {}).length;
-        result.push({
-          id: boardId,
-          name: board.name,
-          emoji: board.emoji || '',
-          gameIcon: board.gameIcon || null,
-          columns: board.columns || [],
-          games: Object.values(board.games || {}),
-          gameCount,
-          ownerUsername: userMap.get(userId) || 'unknown',
-          ownerId: userId,
-          isOwner: userId === req.user.id,
-        });
+        result.push({ id: boardId, name: board.name, emoji: board.emoji || '', gameIcon: board.gameIcon || null, columns: board.columns || [], games: Object.values(board.games || {}), gameCount: Object.keys(board.games || {}).length, ownerUsername: userMap.get(userId) || 'unknown', ownerId: userId, isOwner: userId === req.user.id });
       }
     }
   }
   res.json(result);
 });
 
-// ── Board routes (per user) ───────────────────────────────────────────────────
+// ── Board routes ──────────────────────────────────────────────────────────────
 
 app.get('/api/boards', requireAuth, (req, res) => {
   const userBoards = getUserBoards(req.user.id);
-  const list = Object.entries(userBoards).map(([id, b]) => ({
-    id, name: b.name, emoji: b.emoji || '🎮', gameIcon: b.gameIcon || null,
-    columns: b.columns || [], public: b.public || false,
-  }));
-  res.json(list);
+  res.json(Object.entries(userBoards).map(([id, b]) => ({ id, name: b.name, emoji: b.emoji || '🎮', gameIcon: b.gameIcon || null, columns: b.columns || [], public: b.public || false })));
 });
 
 app.post('/api/boards', requireAuth, (req, res) => {
   const { name, emoji, gameIcon } = req.body;
   if (!name) return res.status(400).json({ error: 'Missing name' });
   const id = `board_${Date.now()}`;
-  const board = {
-    name, emoji: emoji || '🎮', gameIcon: gameIcon || null, public: false,
-    columns: [
-      { id: `col_${Date.now()}_1`, label: 'À jouer', emoji: '📋' },
-      { id: `col_${Date.now()}_2`, label: 'En cours', emoji: '🎮' },
-      { id: `col_${Date.now()}_3`, label: 'Terminé', emoji: '✅' },
-    ],
-    games: {},
-  };
+  const board = { name, emoji: emoji || '🎮', gameIcon: gameIcon || null, public: false, columns: [{ id: `col_${Date.now()}_1`, label: 'À jouer', emoji: '📋' }, { id: `col_${Date.now()}_2`, label: 'En cours', emoji: '🎮' }, { id: `col_${Date.now()}_3`, label: 'Terminé', emoji: '✅' }], games: {} };
   const userBoards = getUserBoards(req.user.id);
   userBoards[id] = board;
   setUserBoards(req.user.id, userBoards);
@@ -440,11 +400,7 @@ app.post('/api/boards/:boardId/games', requireAuth, (req, res) => {
   const board = userBoards[req.params.boardId];
   if (!board) return res.status(404).json({ error: 'Board not found' });
   if (!board.games) board.games = {};
-  board.games[appid] = {
-    appid, name, header_img: header_img || null, icon_img: icon_img || null,
-    column, type: type || 'steam', emoji: emoji || null,
-    addedAt: new Date().toISOString(),
-  };
+  board.games[appid] = { appid, name, header_img: header_img || null, icon_img: icon_img || null, column, type: type || 'steam', emoji: emoji || null, addedAt: new Date().toISOString() };
   setUserBoards(req.user.id, userBoards);
   res.status(201).json(board.games[appid]);
 });
