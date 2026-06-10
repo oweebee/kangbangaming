@@ -32,7 +32,6 @@ export default function GameStatsWidget({ api, token, board }) {
     return () => clearTimeout(t);
   }, [appid]);
 
-  const handleClose = () => setSlideIn(false);
 
   if (!appid) return null;
   if (!loading && !stats) return null;
@@ -57,14 +56,14 @@ export default function GameStatsWidget({ api, token, board }) {
     }}>
       {/* Pull tab — always sticks out on the left when widget is slid away */}
       <div
-        onClick={() => !slideIn && setSlideIn(true)}
+        onClick={() => setSlideIn(v => !v)}
         style={{
           width: 28, flexShrink: 0,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           background: 'var(--surface)', border: '1px solid var(--border)',
           borderRight: slideIn ? 'none' : '1px solid var(--border)',
           borderRadius: slideIn ? '12px 0 0 12px' : 12,
-          cursor: slideIn ? 'default' : 'pointer',
+          cursor: 'pointer',
           boxShadow: slideIn ? 'none' : '0 4px 16px rgba(0,0,0,.5)',
           transition: 'border-radius .3s, box-shadow .3s',
         }}
@@ -97,16 +96,6 @@ export default function GameStatsWidget({ api, token, board }) {
             style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
           />
         )}
-        {/* Close button — top-left */}
-        <button
-          onClick={handleClose}
-          style={{
-            position: 'absolute', top: 6, left: 7,
-            background: 'rgba(0,0,0,.62)', border: 'none', borderRadius: 5,
-            color: '#fff', fontSize: 11, cursor: 'pointer', lineHeight: 1,
-            padding: '3px 6px', fontWeight: 700,
-          }}
-        >✕</button>
       </div>
 
       {/* Info */}
@@ -136,18 +125,26 @@ export default function GameStatsWidget({ api, token, board }) {
 
               {/* Achievements */}
               {stats?.achievements_total > 0 && (
-                <div style={{
-                  flex: 1, background: 'var(--surface2)', borderRadius: 7,
-                  padding: '5px 7px', display: 'flex', flexDirection: 'column', gap: 1,
-                }}>
-                  <div style={{ fontSize: 9, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>🏆 Succès</div>
+                <a
+                  href={stats.achievements_url || '#'}
+                  target="_blank" rel="noreferrer"
+                  style={{
+                    flex: 1, background: 'var(--surface2)', borderRadius: 7,
+                    padding: '5px 7px', display: 'flex', flexDirection: 'column', gap: 1,
+                    textDecoration: 'none', border: '1px solid transparent',
+                    transition: 'border-color .15s, background .15s',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.background = 'var(--accent-dim, rgba(232,129,58,.12))'; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.background = 'var(--surface2)'; }}
+                >
+                  <div style={{ fontSize: 9, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>🏆 Succès ↗</div>
                   <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)' }}>
                     {stats.achievements_unlocked}
                     <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: 10 }}>
                       /{stats.achievements_total}
                     </span>
                   </div>
-                </div>
+                </a>
               )}
             </div>
 

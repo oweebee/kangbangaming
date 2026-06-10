@@ -350,6 +350,7 @@ app.get('/api/steam/gamestats/:appid', requireAuth, async (req, res) => {
         : `${playtime_minutes} min`,
       achievements_unlocked: unlockedAchs,
       achievements_total: totalAchs,
+      achievements_url: creds.steamId ? `https://steamcommunity.com/profiles/${creds.steamId}/stats/${appid}/achievements/` : null,
       header_img: `https://cdn.cloudflare.steamstatic.com/steam/apps/${appid}/header.jpg`,
     });
   } catch (e) { res.status(500).json({ error: e.message }); }
