@@ -120,15 +120,25 @@ app.post('/api/auth/login', async (req, res) => {
 });
 
 app.post('/api/auth/register', async (req, res) => {
-  const { username, password } = req.body;
+  const { username, password, steamId } = req.body;
   if (!username || !password) return res.status(400).json({ error: 'Missing fields' });
   if (username.length < 3) return res.status(400).json({ error: 'Username too short (min 3)' });
   if (password.length < 6) return res.status(400).json({ error: 'Password too short (min 6)' });
+  if (!steamId || !/^\d{17}$/.test(steamId.trim())) return res.status(400).json({ error: 'Steam ID invalide (17 chiffres requis)' });
   const users = readUsers();
   if (users.find(u => u.username === username)) return res.status(409).json({ error: 'Username taken' });
   const hash = await bcrypt.hash(password, 10);
   const id = `user_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-  users.push({ id, username, passwordHash: hash, role: 'user', status: 'pending', createdAt: new Date().toISOString() });
+  const newUser = { id, username, passwordHash: hash, role: 'user', status: 'pending', steamId: steamId.trim(), createdAt: new Date().toISOString() };
+  // Try to fetch Steam avatar immediately
+  if (GLOBAL_STEAM_API_KEY) {
+    try {
+      const data = await steamFetch(`https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=${GLOBAL_STEAM_API_KEY}&steamids=${steamId.trim()}`);
+      const player = data.response?.players?.[0];
+      if (player) { newUser.steamAvatar = player.avatarmedium || player.avatar || null; newUser.steamPersonaName = player.personaname || null; }
+    } catch { /* not critical */ }
+  }
+  users.push(newUser);
   writeUsers(users);
   // Don't issue a token — user must wait for approval
   res.status(201).json({ pending: true, message: 'Compte créé ! Un admin doit valider ton inscription avant que tu puisses te connecter.' });
