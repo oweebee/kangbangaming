@@ -15,7 +15,6 @@ function EmojiPicker({ current, onSelect, onClose }) {
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [onClose]);
-
   return (
     <div ref={ref} style={{
       position: 'absolute', top: '100%', left: 0, zIndex: 50,
@@ -27,8 +26,7 @@ function EmojiPicker({ current, onSelect, onClose }) {
       <button onClick={() => onSelect('')} title="Aucun" style={{
         background: current === '' ? 'var(--accent-dim)' : 'none',
         border: current === '' ? '1px solid var(--accent)' : '1px solid transparent',
-        borderRadius: 5, width: 30, height: 30, fontSize: 12,
-        color: 'var(--text-muted)', cursor: 'pointer',
+        borderRadius: 5, width: 30, height: 30, fontSize: 12, color: 'var(--text-muted)', cursor: 'pointer',
       }}>✕</button>
       {EMOJIS.map(e => (
         <button key={e} onClick={() => onSelect(e)} style={{
@@ -59,17 +57,15 @@ function ColumnHeader({ col, onRename, onDelete, onSetEmoji, onColDragStart, onC
       padding: '10px 10px 10px 8px',
       borderBottom: isDragOver ? '2px solid #3db86a' : '2px solid var(--accent)',
       display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0,
-      position: 'relative',
-      transition: 'border-color .15s',
+      position: 'relative', transition: 'border-color .15s',
     }}>
-      {/* Drag handle */}
       <div
         draggable
         onDragStart={e => { e.stopPropagation(); e.dataTransfer.effectAllowed = 'move'; onColDragStart(col.id); }}
         onDragEnd={onColDragEnd}
-        title="Déplacer la colonne"
+        title="Deplacer la colonne"
         style={{ cursor: 'grab', color: 'var(--text-muted)', opacity: 0.35, fontSize: 14, lineHeight: 1, flexShrink: 0, padding: '0 2px', userSelect: 'none' }}
-      >⠿</div>
+      >⠇</div>
 
       <div style={{ position: 'relative' }}>
         <button onClick={() => setShowEmoji(v => !v)} title="Choisir un emoji" style={{
@@ -85,37 +81,21 @@ function ColumnHeader({ col, onRename, onDelete, onSetEmoji, onColDragStart, onC
       </div>
 
       {editing ? (
-        <input
-          autoFocus value={label}
-          onChange={e => setLabel(e.target.value)}
-          onBlur={commit}
+        <input autoFocus value={label}
+          onChange={e => setLabel(e.target.value)} onBlur={commit}
           onKeyDown={e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') { setLabel(col.label); setEditing(false); } }}
-          style={{
-            flex: 1, background: 'var(--surface3)', border: '1px solid var(--accent)',
-            borderRadius: 5, padding: '3px 7px', color: 'var(--text)',
-            fontSize: 12, fontWeight: 600, outline: 'none',
-          }}
+          style={{ flex: 1, background: 'var(--surface3)', border: '1px solid var(--accent)', borderRadius: 5, padding: '3px 7px', color: 'var(--text)', fontSize: 12, fontWeight: 600, outline: 'none' }}
         />
       ) : (
-        <span
-          onDoubleClick={() => setEditing(true)}
-          title="Double-clic pour renommer"
-          style={{
-            flex: 1, fontWeight: 600, fontSize: 12, cursor: 'text', userSelect: 'none',
-            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-            color: col.color || 'var(--text)',
-          }}
+        <span onDoubleClick={() => setEditing(true)} title="Double-clic pour renommer"
+          style={{ flex: 1, fontWeight: 600, fontSize: 12, cursor: 'text', userSelect: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: col.color || 'var(--text)' }}
         >{col.label}</span>
       )}
 
-      <span style={{
-        background: 'var(--surface3)', borderRadius: 99, padding: '1px 7px',
-        fontSize: 11, color: 'var(--text-muted)', flexShrink: 0,
-      }}>{col._count || 0}</span>
+      <span style={{ background: 'var(--surface3)', borderRadius: 99, padding: '1px 7px', fontSize: 11, color: 'var(--text-muted)', flexShrink: 0 }}>{col._count || 0}</span>
 
       <button onClick={() => onDelete(col.id)} title="Supprimer la colonne" style={{
-        background: 'none', border: 'none', color: 'var(--text-muted)',
-        fontSize: 13, cursor: 'pointer', opacity: 0.45, padding: '0 2px', flexShrink: 0,
+        background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer', opacity: 0.45, padding: '0 2px', flexShrink: 0,
       }}>✕</button>
     </div>
   );
@@ -139,21 +119,6 @@ export default function KanbanBoard({ columns, byColumn, dragging, setDragging, 
     handleColDragEnd();
   };
 
-  // Game drag handlers (only active when NOT dragging a column)
-  const handleGameDragOver = (e, colId) => {
-    if (draggingColId) return; // column drag in progress
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-  };
-
-  const handleGameDrop = (e, colId) => {
-    if (draggingColId) return;
-    e.preventDefault();
-    e.currentTarget.style.background = '';
-    if (dragging && dragging.column !== colId) moveGame(dragging.appid, colId);
-    setDragging(null);
-  };
-
   return (
     <div style={{ display: 'flex', flex: 1, gap: '10px', padding: '14px', overflowX: 'auto', overflowY: 'hidden' }}>
       {columns.length === 0 && (
@@ -165,15 +130,20 @@ export default function KanbanBoard({ columns, byColumn, dragging, setDragging, 
         const games = byColumn[col.id] || [];
         const isColDragOver = dragOverColId === col.id && draggingColId && draggingColId !== col.id;
         return (
-          <div
-            key={col.id}
+          <div key={col.id}
             onDragOver={e => {
-              if (draggingColId) { e.preventDefault(); setDragOverColId(col.id); }
-              else handleGameDragOver(e, col.id);
+              e.preventDefault();
+              if (draggingColId) setDragOverColId(col.id);
+              else e.dataTransfer.dropEffect = 'move';
             }}
             onDrop={e => {
-              if (draggingColId) { e.preventDefault(); handleColDrop(col.id); }
-              else handleGameDrop(e, col.id);
+              e.preventDefault();
+              if (draggingColId) { handleColDrop(col.id); }
+              else {
+                e.currentTarget.style.background = '';
+                if (dragging && dragging.column !== col.id) moveGame(dragging.appid, col.id);
+                setDragging(null);
+              }
             }}
             onDragEnter={e => { if (!draggingColId) e.currentTarget.style.background = 'rgba(192,87,10,.07)'; }}
             onDragLeave={e => { if (!draggingColId) e.currentTarget.style.background = ''; }}
@@ -182,18 +152,14 @@ export default function KanbanBoard({ columns, byColumn, dragging, setDragging, 
               display: 'flex', flexDirection: 'column',
               background: 'var(--surface)', borderRadius: 'var(--radius)',
               border: isColDragOver ? '1px solid #3db86a' : '1px solid var(--border)',
-              overflow: 'hidden',
-              transition: 'background .15s, border-color .15s',
+              overflow: 'hidden', transition: 'background .15s, border-color .15s',
               opacity: draggingColId === col.id ? 0.45 : 1,
             }}
           >
             <ColumnHeader
               col={{ ...col, _count: games.length }}
-              onRename={onRenameColumn}
-              onDelete={onDeleteColumn}
-              onSetEmoji={onSetEmoji}
-              onColDragStart={handleColDragStart}
-              onColDragEnd={handleColDragEnd}
+              onRename={onRenameColumn} onDelete={onDeleteColumn} onSetEmoji={onSetEmoji}
+              onColDragStart={handleColDragStart} onColDragEnd={handleColDragEnd}
               isDragOver={isColDragOver}
             />
             <div style={{ flex: 1, overflowY: 'auto', padding: '8px', display: 'flex', flexDirection: 'column', gap: '7px' }}>
@@ -203,12 +169,9 @@ export default function KanbanBoard({ columns, byColumn, dragging, setDragging, 
                 </div>
               )}
               {games.map(game => (
-                <GameCard
-                  key={game.appid} game={game}
-                  onDragStart={() => setDragging(game)}
-                  onDragEnd={() => setDragging(null)}
-                  onClick={() => onCardClick(game)}
-                  onRemove={() => onRemoveGame(game.appid)}
+                <GameCard key={game.appid} game={game}
+                  onDragStart={() => setDragging(game)} onDragEnd={() => setDragging(null)}
+                  onClick={() => onCardClick(game)} onRemove={() => onRemoveGame(game.appid)}
                   isDragging={dragging?.appid === game.appid}
                 />
               ))}
