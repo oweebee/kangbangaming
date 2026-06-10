@@ -13,7 +13,7 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 3001;
 const GLOBAL_STEAM_API_KEY = process.env.STEAM_API_KEY;
-const GLOBAL_STEAM_ID = process.env.STEAM_ID;
+// STEAM_ID is per-user only — no global fallback
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
 const JWT_SECRET = process.env.JWT_SECRET || 'change-me-in-production';
 const LIBRARY_TTL = 5 * 60 * 1000;
@@ -57,8 +57,8 @@ function getUserSteamCreds(userId) {
   const users = readUsers();
   const user = users.find(u => u.id === userId);
   return {
-    apiKey: user?.steamApiKey || GLOBAL_STEAM_API_KEY,
-    steamId: user?.steamId || GLOBAL_STEAM_ID,
+    apiKey: GLOBAL_STEAM_API_KEY || user?.steamApiKey,  // API key: global env var, fallback to user's own
+    steamId: user?.steamId || null,                      // Steam ID: always per-user
   };
 }
 
@@ -116,7 +116,7 @@ app.post('/api/auth/login', async (req, res) => {
   if (!user) return res.status(401).json({ error: 'Invalid credentials' });
   if (!await bcrypt.compare(password, user.passwordHash)) return res.status(401).json({ error: 'Invalid credentials' });
   const token = jwt.sign({ id: user.id, username: user.username, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
-  res.json({ token, user: { id: user.id, username: user.username, role: user.role } });
+  res.json({ token, user: { id: user.id, username: user.username, role: user.role, steamAvatar: user.steamAvatar || null, steamPersonaName: user.steamPersonaName || null } });
 });
 
 app.post('/api/auth/register', async (req, res) => {
@@ -137,7 +137,7 @@ app.post('/api/auth/register', async (req, res) => {
 app.get('/api/auth/me', requireAuth, (req, res) => {
   const user = readUsers().find(u => u.id === req.user.id);
   if (!user) return res.status(404).json({ error: 'User not found' });
-  res.json({ id: user.id, username: user.username, role: user.role });
+  res.json({ id: user.id, username: user.username, role: user.role, steamAvatar: user.steamAvatar || null });
 });
 
 // ── User settings (Steam credentials) ────────────────────────────────────────
@@ -146,22 +146,42 @@ app.get('/api/user/settings', requireAuth, (req, res) => {
   const user = readUsers().find(u => u.id === req.user.id);
   if (!user) return res.status(404).json({ error: 'Not found' });
   res.json({
-    steamApiKey: user.steamApiKey || '',
     steamId: user.steamId || '',
-    hasSteamCreds: !!(user.steamApiKey && user.steamId),
+    hasSteamId: !!user.steamId,
+    steamAvatar: user.steamAvatar || null,
+    steamPersonaName: user.steamPersonaName || null,
   });
 });
 
-app.patch('/api/user/settings', requireAuth, (req, res) => {
+app.patch('/api/user/settings', requireAuth, async (req, res) => {
   const users = readUsers();
   const idx = users.findIndex(u => u.id === req.user.id);
   if (idx === -1) return res.status(404).json({ error: 'Not found' });
-  if (req.body.steamApiKey !== undefined) users[idx].steamApiKey = req.body.steamApiKey.trim();
-  if (req.body.steamId !== undefined) users[idx].steamId = req.body.steamId.trim();
+  if (req.body.steamId !== undefined) {
+    const newSteamId = req.body.steamId.trim();
+    users[idx].steamId = newSteamId;
+    // Fetch Steam avatar when Steam ID is set
+    if (newSteamId && GLOBAL_STEAM_API_KEY) {
+      try {
+        const data = await steamFetch(`https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=${GLOBAL_STEAM_API_KEY}&steamids=${newSteamId}`);
+        const player = data.response?.players?.[0];
+        if (player) {
+          users[idx].steamAvatar = player.avatarmedium || player.avatar || null;
+          users[idx].steamPersonaName = player.personaname || null;
+        }
+      } catch { /* avatar fetch failed, not critical */ }
+    } else {
+      users[idx].steamAvatar = null;
+      users[idx].steamPersonaName = null;
+    }
+  }
   writeUsers(users);
-  // Invalidate this user's library cache
   libraryCaches.delete(req.user.id);
-  res.json({ ok: true });
+  res.json({
+    ok: true,
+    steamAvatar: users[idx].steamAvatar || null,
+    steamPersonaName: users[idx].steamPersonaName || null,
+  });
 });
 
 // ── Admin routes ──────────────────────────────────────────────────────────────

@@ -6,6 +6,7 @@ services:
       - PORT=3001
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}
       - JWT_SECRET=${JWT_SECRET}
+      - STEAM_API_KEY=${STEAM_API_KEY}
     volumes:
       - kanban_data:/app/data
 

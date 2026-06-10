@@ -105,6 +105,12 @@ export default function App() {
   }, []);
 
   const handleLogin = (user, tok) => { setCurrentUser(user); setToken(tok); };
+  const handleSteamSave = ({ steamAvatar, steamPersonaName }) => {
+    setCurrentUser(prev => ({ ...prev, steamAvatar: steamAvatar || null, steamPersonaName: steamPersonaName || null }));
+    // Persist to localStorage
+    const saved = JSON.parse(localStorage.getItem('user') || '{}');
+    localStorage.setItem('user', JSON.stringify({ ...saved, steamAvatar: steamAvatar || null, steamPersonaName: steamPersonaName || null }));
+  };
   const handleLogout = () => {
     localStorage.removeItem('token'); localStorage.removeItem('user');
     setCurrentUser(null); setToken(null); setBoards([]); setActiveBoardId(null); setColumns([]); setGames([]);
@@ -359,8 +365,15 @@ export default function App() {
 
       {/* User footer */}
       <div style={{ padding: '8px 10px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 5 }}>
+        {currentUser.steamAvatar ? (
+          <img src={currentUser.steamAvatar} alt="" style={{ width: 28, height: 28, borderRadius: 4, border: '1px solid var(--border)', flexShrink: 0, cursor: 'pointer' }} onClick={() => setShowSteamSettings(true)} title="Paramètres Steam" />
+        ) : (
+          <div style={{ width: 28, height: 28, borderRadius: 4, background: 'var(--surface3)', border: '1px solid var(--border)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, cursor: 'pointer' }} onClick={() => setShowSteamSettings(true)} title="Configurer Steam">👤</div>
+        )}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{currentUser.username}</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {currentUser.steamPersonaName || currentUser.username}
+          </div>
           {currentUser.role === 'admin' && <div style={{ fontSize: 9, color: '#f5a500', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>admin</div>}
         </div>
         <button onClick={() => setShowSteamSettings(true)} title="Paramètres Steam" style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 5, padding: '4px 7px', color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer', flexShrink: 0 }}>
@@ -416,7 +429,7 @@ export default function App() {
         {showSearch && <SearchModal api={API} token={token} boardGames={games} onAdd={addGame} onRemove={removeGame} onClose={() => setShowSearch(false)} />}
         {selectedGame && <GameModal game={selectedGame} onClose={() => setSelectedGame(null)} api={API} token={token} />}
         {showAdmin && <AdminPanel token={token} currentUser={currentUser} onClose={() => setShowAdmin(false)} />}
-        {showSteamSettings && <SteamSettings token={token} onClose={() => setShowSteamSettings(false)} />}
+        {showSteamSettings && <SteamSettings token={token} onSave={handleSteamSave} onClose={() => setShowSteamSettings(false)} />}
         {showPublicBoards && <PublicBoards token={token} currentUser={currentUser} onClose={() => setShowPublicBoards(false)} />}
       </div>
     );
@@ -469,7 +482,7 @@ export default function App() {
       {showSearch && <SearchModal api={API} token={token} boardGames={games} onAdd={addGame} onRemove={removeGame} onClose={() => setShowSearch(false)} />}
       {selectedGame && <GameModal game={selectedGame} onClose={() => setSelectedGame(null)} api={API} token={token} />}
       {showAdmin && <AdminPanel token={token} currentUser={currentUser} onClose={() => setShowAdmin(false)} />}
-      {showSteamSettings && <SteamSettings token={token} onClose={() => setShowSteamSettings(false)} />}
+      {showSteamSettings && <SteamSettings token={token} onSave={handleSteamSave} onClose={() => setShowSteamSettings(false)} />}
       {showPublicBoards && <PublicBoards token={token} currentUser={currentUser} onClose={() => setShowPublicBoards(false)} />}
     </div>
   );
