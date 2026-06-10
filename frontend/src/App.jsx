@@ -80,11 +80,11 @@ function HomeBoardCard({ board, onClick }) {
       }}
     >
       {/* Banner */}
-      <div style={{ width: '100%', height: 90, background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
-        {board.gameIcon ? (
-          <img src={board.gameIcon} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+      <div style={{ width: '100%', height: 110, background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
+        {(board.headerImg || board.gameIcon) ? (
+          <img src={board.headerImg || board.gameIcon} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         ) : (
-          <span style={{ fontSize: 38 }}>{board.emoji || '🎮'}</span>
+          <span style={{ fontSize: 44 }}>{board.emoji || '🎮'}</span>
         )}
       </div>
       {/* Info */}
@@ -130,6 +130,7 @@ export default function App() {
 
   // Home view
   const [showHome, setShowHome] = useState(true);
+  const [homePublicBoards, setHomePublicBoards] = useState([]);
 
   // Board state
   const [boards, setBoards] = useState([]);
@@ -247,6 +248,11 @@ export default function App() {
 
   useEffect(() => { if (token) { fetchBoards(); fetchFavorites(); } }, [token]);
   useEffect(() => {
+    if (!showHome || !token) return;
+    fetch(`${API}/public/boards`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : []).then(setHomePublicBoards).catch(() => {});
+  }, [showHome, token]);
+  useEffect(() => {
     if (!activeBoardId) return;
     const board = boards.find(b => b.id === activeBoardId);
     if (board) setColumns(board.columns || []);
@@ -279,7 +285,7 @@ export default function App() {
     try {
       const res = await fetch(`${API}/boards`, {
         method: 'POST', headers: authHeaders(token),
-        body: JSON.stringify({ name, emoji: '', gameIcon: selectedBoardGame ? (selectedBoardGame.icon_img || selectedBoardGame.header_img) : null, gameBoard: !!selectedBoardGame }),
+        body: JSON.stringify({ name, emoji: '', gameIcon: selectedBoardGame ? (selectedBoardGame.icon_img || selectedBoardGame.header_img) : null, headerImg: selectedBoardGame ? selectedBoardGame.header_img : null, gameBoard: !!selectedBoardGame }),
       });
       if (!res.ok) { const e = await res.json().catch(() => ({})); alert('Erreur création board: ' + (e.error || res.status)); return; }
       const board = await res.json();
@@ -405,38 +411,24 @@ export default function App() {
     fetchGames(b.id);
   };
 
-  const publicBoards  = boards.filter(b => b.public);
-  const privateBoards = boards.filter(b => !b.public);
-
-  const boardCardStyle = (hover) => ({
-    background: hover ? 'var(--surface2)' : 'var(--surface)',
-    border: '1px solid var(--border)',
-    borderRadius: 12,
-    cursor: 'pointer',
-    overflow: 'hidden',
-    transition: 'background .12s, transform .12s',
-    display: 'flex',
-    flexDirection: 'column',
-  });
-
   const homeView = (
     <div style={{ flex: 1, overflowY: 'auto', padding: '28px 32px' }}>
-      <div style={{ maxWidth: 900, margin: '0 auto' }}>
-        {/* Public */}
+      <div style={{ maxWidth: 960, margin: '0 auto' }}>
+        {/* Boards publics de la communauté */}
         <div style={{ marginBottom: 36 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
             <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#3db86a" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="10" cy="7" r="4"/><path d="M4 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M15 3.13a4 4 0 0 1 0 7.75"/><path d="M20 21v-2a4 4 0 0 0-3-3.85"/>
             </svg>
             <span style={{ fontSize: 12, fontWeight: 700, color: '#3db86a', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Boards Publics</span>
-            <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--surface2)', borderRadius: 99, padding: '1px 7px' }}>{publicBoards.length}</span>
+            <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--surface2)', borderRadius: 99, padding: '1px 7px' }}>{homePublicBoards.length}</span>
           </div>
-          {publicBoards.length === 0 ? (
-            <div style={{ color: 'var(--text-muted)', fontSize: 12, padding: '16px 0' }}>Aucun board public — active la visibilité publique sur un board pour le partager.</div>
+          {homePublicBoards.length === 0 ? (
+            <div style={{ color: 'var(--text-muted)', fontSize: 12, padding: '16px 0' }}>Aucun board public disponible pour l'instant.</div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 }}>
-              {publicBoards.map(b => (
-                <HomeBoardCard key={b.id} board={b} onClick={() => openBoard(b)} />
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
+              {homePublicBoards.map(b => (
+                <HomeBoardCard key={b.id} board={b} isPublic onClick={() => openPublicBoard(b)} />
               ))}
             </div>
           )}
@@ -445,18 +437,18 @@ export default function App() {
         {/* Séparateur */}
         <div style={{ borderTop: '1px solid var(--border)', marginBottom: 32 }} />
 
-        {/* Privé */}
+        {/* Mes boards */}
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
             <span style={{ fontSize: 14 }}>🔒</span>
-            <span style={{ fontSize: 12, fontWeight: 700, color: '#f5a500', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Boards Privés</span>
-            <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--surface2)', borderRadius: 99, padding: '1px 7px' }}>{privateBoards.length}</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#f5a500', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Mes Boards</span>
+            <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--surface2)', borderRadius: 99, padding: '1px 7px' }}>{boards.length}</span>
           </div>
-          {privateBoards.length === 0 ? (
-            <div style={{ color: 'var(--text-muted)', fontSize: 12, padding: '16px 0' }}>Aucun board privé.</div>
+          {boards.length === 0 ? (
+            <div style={{ color: 'var(--text-muted)', fontSize: 12, padding: '16px 0' }}>Crée un board pour commencer.</div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 }}>
-              {privateBoards.map(b => (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
+              {boards.map(b => (
                 <HomeBoardCard key={b.id} board={b} onClick={() => openBoard(b)} />
               ))}
             </div>
@@ -503,7 +495,7 @@ export default function App() {
       <div style={{ flex: 1, overflowY: 'auto', padding: '6px 6px' }}>
         {boards.map(b => (
           <div key={b.id}
-            onClick={() => { setActiveBoardId(b.id); setColumns(b.columns || []); setEmojiPickerFor(null); setShowHome(false); setPublicBoardMode(null); if (isMobile) setShowDrawer(false); }}
+            onClick={() => { setActiveBoardId(b.id); setColumns(b.columns || []); setEmojiPickerFor(null); setShowHome(false); setPublicBoardMode(null); setShowPublicBoards(false); if (isMobile) setShowDrawer(false); }}
             style={{
               padding: '6px 8px', borderRadius: 7, cursor: 'pointer', marginBottom: 2,
               background: activeBoardId === b.id ? 'var(--accent-dim)' : 'transparent',
@@ -751,11 +743,11 @@ export default function App() {
               <span style={{ fontWeight: 700, fontSize: 14, color: '#3db86a', flexShrink: 0 }}>Board Public</span>
               <span style={{ fontSize: 12, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 180 }}>{publicBoardMode.name}</span>
               <button onClick={refreshPublicBoard} title="Rafraîchir" style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 9px', color: 'var(--text-muted)', fontSize: 15, cursor: 'pointer', lineHeight: 1, flexShrink: 0 }}>↻</button>
+              <button onClick={addColumn} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>+ Colonne</button>
+              <button onClick={() => setShowSearch(true)} style={{ background: 'var(--accent)', border: 'none', borderRadius: 7, padding: '7px 16px', color: '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>+ Carte</button>
               <div style={{ flex: 1 }} />
               <input type="search" placeholder="Filtrer..." value={search} onChange={e => setSearch(e.target.value)}
                 style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 10px', color: 'var(--text)', fontSize: 12, outline: 'none', maxWidth: 180 }} />
-              <button onClick={addColumn} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>+ Colonne</button>
-              <button onClick={() => setShowSearch(true)} style={{ background: 'var(--accent)', border: 'none', borderRadius: 7, padding: '7px 16px', color: '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>+ Ajouter une carte</button>
               <button onClick={closePublicBoard} style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>✕ Quitter</button>
             </>
           ) : showHome ? (
@@ -787,15 +779,17 @@ export default function App() {
                   ) : '🔒 Privé'}
                 </span>
               )}
+              {activeBoardId && (
+                <>
+                  <button onClick={addColumn} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>+ Colonne</button>
+                  <button onClick={() => setShowSearch(true)} style={{ background: 'var(--accent)', border: 'none', borderRadius: 7, padding: '7px 16px', color: '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>+ Carte</button>
+                </>
+              )}
               <div style={{ flex: 1 }} />
               <input type="search" placeholder="Filtrer..." value={search} onChange={e => setSearch(e.target.value)}
                 style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 10px', color: 'var(--text)', fontSize: 12, outline: 'none', maxWidth: 200 }} />
               {activeBoardId && (
-                <>
-                  <button onClick={addColumn} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>+ Colonne</button>
-                  <button onClick={() => setShowSearch(true)} style={{ background: 'var(--accent)', border: 'none', borderRadius: 7, padding: '7px 16px', color: '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>+ Ajouter une carte</button>
-                  <button onClick={() => { if (activeBoardId) fetchGames(activeBoardId); }} title="Rafraîchir" style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 9px', color: 'var(--text-muted)', fontSize: 15, cursor: 'pointer', lineHeight: 1, flexShrink: 0 }}>↻</button>
-                </>
+                <button onClick={() => { if (activeBoardId) fetchGames(activeBoardId); }} title="Rafraîchir" style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 9px', color: 'var(--text-muted)', fontSize: 15, cursor: 'pointer', lineHeight: 1, flexShrink: 0 }}>↻</button>
               )}
             </>
           )}

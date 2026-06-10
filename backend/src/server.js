@@ -334,7 +334,7 @@ app.get('/api/public/boards', requireAuth, (req, res) => {
   for (const [userId, userBoards] of Object.entries(all)) {
     for (const [boardId, board] of Object.entries(userBoards || {})) {
       if (board.public) {
-        const user = readUsers().find(u => u.id === req.user.id); const favIds = new Set(user?.favorites || []); result.push({ id: boardId, name: board.name, emoji: board.emoji || '', gameIcon: board.gameIcon || null, columns: board.columns || [], games: Object.values(board.games || {}), gameCount: Object.keys(board.games || {}).length, ownerUsername: userMap.get(userId) || 'unknown', ownerId: userId, isOwner: userId === req.user.id, isFavorite: favIds.has(boardId) });
+        const user = readUsers().find(u => u.id === req.user.id); const favIds = new Set(user?.favorites || []); result.push({ id: boardId, name: board.name, emoji: board.emoji || '', gameIcon: board.gameIcon || null, headerImg: board.headerImg || null, columns: board.columns || [], games: Object.values(board.games || {}), gameCount: Object.keys(board.games || {}).length, ownerUsername: userMap.get(userId) || 'unknown', ownerId: userId, isOwner: userId === req.user.id, isFavorite: favIds.has(boardId) });
       }
     }
   }
@@ -354,7 +354,7 @@ app.get('/api/user/favorites', requireAuth, (req, res) => {
   for (const [userId, userBoards] of Object.entries(all)) {
     for (const [boardId, board] of Object.entries(userBoards || {})) {
       if (favIds.has(boardId) && board.public) {
-        result.push({ id: boardId, name: board.name, emoji: board.emoji || '', gameIcon: board.gameIcon || null, ownerUsername: userMap.get(userId) || 'unknown', ownerId: userId, isFavorite: true });
+        result.push({ id: boardId, name: board.name, emoji: board.emoji || '', gameIcon: board.gameIcon || null, headerImg: board.headerImg || null, ownerUsername: userMap.get(userId) || 'unknown', ownerId: userId, isFavorite: true });
       }
     }
   }
@@ -495,12 +495,12 @@ app.delete('/api/public/boards/:boardId/games/:appid', requireAuth, (req, res) =
 
 app.get('/api/boards', requireAuth, (req, res) => {
   const userBoards = getUserBoards(req.user.id);
-  res.json(Object.entries(userBoards).map(([id, b]) => ({ id, name: b.name, emoji: b.emoji || '🎮', gameIcon: b.gameIcon || null, columns: b.columns || [], public: b.public || false })));
+  res.json(Object.entries(userBoards).map(([id, b]) => ({ id, name: b.name, emoji: b.emoji || '🎮', gameIcon: b.gameIcon || null, headerImg: b.headerImg || null, columns: b.columns || [], public: b.public || false })));
 });
 
 app.post('/api/boards', requireAuth, (req, res) => {
   try {
-    const { name, emoji, gameIcon, gameBoard } = req.body;
+    const { name, emoji, gameIcon, headerImg, gameBoard } = req.body;
     if (!name) return res.status(400).json({ error: 'Missing name' });
     const id = `board_${Date.now()}`;
     const t = Date.now();
@@ -515,11 +515,11 @@ app.post('/api/boards', requireAuth, (req, res) => {
       { id: `col_${t}_2`, label: 'En cours', emoji: '🎮' },
       { id: `col_${t}_3`, label: 'Terminé',  emoji: '✅' },
     ];
-    const board = { name, emoji: emoji || '🎮', gameIcon: gameIcon || null, public: false, columns: defaultColumns, games: {} };
+    const board = { name, emoji: emoji || '🎮', gameIcon: gameIcon || null, headerImg: headerImg || null, public: false, columns: defaultColumns, games: {} };
     const userBoards = getUserBoards(req.user.id);
     userBoards[id] = board;
     setUserBoards(req.user.id, userBoards);
-    res.status(201).json({ id, name: board.name, emoji: board.emoji, gameIcon: board.gameIcon, columns: board.columns, public: false });
+    res.status(201).json({ id, name: board.name, emoji: board.emoji, gameIcon: board.gameIcon, headerImg: board.headerImg, columns: board.columns, public: false });
   } catch (err) {
     console.error('[POST /boards]', err);
     res.status(500).json({ error: err.message || 'Server error' });
