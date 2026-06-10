@@ -100,6 +100,16 @@ export default function App() {
     setBoards(prev => prev.map(b => b.id === activeBoardId ? { ...b, columns: updated } : b));
   };
 
+  const setColumnEmoji = async (colId, emoji) => {
+    await fetch(`${API}/boards/${activeBoardId}/columns/${colId}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ emoji }),
+    });
+    const updated = columns.map(c => c.id === colId ? { ...c, emoji } : c);
+    setColumns(updated);
+    setBoards(prev => prev.map(b => b.id === activeBoardId ? { ...b, columns: updated } : b));
+  };
+
   const deleteColumn = async (colId) => {
     if (!confirm('Supprimer cette colonne ? Les jeux seront déplacés dans la première colonne.')) return;
     await fetch(`${API}/boards/${activeBoardId}/columns/${colId}`, { method: 'DELETE' });
@@ -278,6 +288,7 @@ export default function App() {
             onRemoveGame={removeGame}
             onRenameColumn={renameColumn}
             onDeleteColumn={deleteColumn}
+            onSetEmoji={setColumnEmoji}
           />
         )}
       </div>

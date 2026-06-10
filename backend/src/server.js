@@ -50,7 +50,7 @@ async function writeData(data) {
 }
 
 function defaultColumns() {
-  return [{ id: `col_${Date.now()}`, label: 'Renomme moi', color: '#c0570a' }];
+  return [{ id: `col_${Date.now()}`, label: 'Renomme moi', color: '#c0570a', emoji: '' }];
 }
 
 // ─── Steam helpers ────────────────────────────────────────────────────────────
@@ -169,13 +169,14 @@ app.post('/api/boards/:boardId/columns', async (req, res) => {
 
 app.patch('/api/boards/:boardId/columns/:colId', async (req, res) => {
   const { boardId, colId } = req.params;
-  const { label, color } = req.body;
+  const { label, color, emoji } = req.body;
   const data = await readData();
   if (!data.boards[boardId]) return res.status(404).json({ error: 'Board introuvable' });
   const col = (data.boards[boardId].columns || []).find(c => c.id === colId);
   if (!col) return res.status(404).json({ error: 'Colonne introuvable' });
   if (label !== undefined) col.label = label;
   if (color !== undefined) col.color = color;
+  if (emoji !== undefined) col.emoji = emoji;
   await writeData(data);
   res.json({ ok: true });
 });
