@@ -101,7 +101,7 @@ function ColumnHeader({ col, onRename, onDelete, onSetEmoji, onColDragStart, onC
   );
 }
 
-export default function KanbanBoard({ columns, byColumn, dragging, setDragging, moveGame, onCardClick, onRemoveGame, onRenameColumn, onDeleteColumn, onSetEmoji, onReorderColumns, isTaskBoard }) {
+export default function KanbanBoard({ columns, byColumn, dragging, setDragging, moveGame, onCardClick, onRemoveGame, onEditGame, onRenameColumn, onDeleteColumn, onSetEmoji, onReorderColumns, isTaskBoard }) {
   const [draggingColId, setDraggingColId] = useState(null);
   const [dragOverColId, setDragOverColId] = useState(null);
 
@@ -172,6 +172,7 @@ export default function KanbanBoard({ columns, byColumn, dragging, setDragging, 
                 <GameCard key={game.appid} game={game}
                   onDragStart={() => setDragging(game)} onDragEnd={() => setDragging(null)}
                   onClick={() => onCardClick(game)} onRemove={() => onRemoveGame(game.appid)}
+                  onEdit={onEditGame}
                   isDragging={dragging?.appid === game.appid}
                 />
               ))}

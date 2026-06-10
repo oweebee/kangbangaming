@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import KanbanBoard from './components/KanbanBoard.jsx';
 import MobileBoard from './components/MobileBoard.jsx';
 import GameModal from './components/GameModal.jsx';
+import TaskModal from './components/TaskModal.jsx';
 import SearchModal from './components/SearchModal.jsx';
 import LoginPage from './components/LoginPage.jsx';
 import RegisterPage from './components/RegisterPage.jsx';
@@ -148,6 +149,7 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [selectedGame, setSelectedGame] = useState(null);
+  const [editingGame,  setEditingGame]  = useState(null);
   const [showSearch, setShowSearch] = useState(false);
   const [dragging, setDragging] = useState(null);
   const [newBoardName, setNewBoardName] = useState('');
@@ -386,6 +388,16 @@ export default function App() {
     const boardApi = publicBoardMode ? `${API}/public/boards/${publicBoardMode.id}` : `${API}/boards/${activeBoardId}`;
     await fetch(`${boardApi}/games/${appid}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
     setGames(prev => prev.filter(g => g.appid !== appid));
+  };
+
+  const updateGame = async (updatedGame) => {
+    const boardApi = publicBoardMode ? `${API}/public/boards/${publicBoardMode.id}` : `${API}/boards/${activeBoardId}`;
+    const { appid, name, emoji, taskType, dueDate, startDate, endDate } = updatedGame;
+    await fetch(`${boardApi}/games/${appid}`, {
+      method: 'PATCH', headers: authHeaders(token),
+      body: JSON.stringify({ name, emoji, taskType: taskType ?? null, dueDate: dueDate ?? null, startDate: startDate ?? null, endDate: endDate ?? null }),
+    });
+    setGames(prev => prev.map(g => g.appid === appid ? { ...g, ...updatedGame } : g));
   };
   const moveGame = useCallback(async (appid, column) => {
     setGames(prev => prev.map(g => g.appid === appid ? { ...g, column } : g));
@@ -797,7 +809,11 @@ export default function App() {
         )}
         <footer style={{ position: 'fixed', bottom: 0, right: 0, padding: '4px 10px', display: 'flex', alignItems: 'center', gap: 8, fontSize: 9, color: 'var(--text-muted)' }}><span>by Oweebee</span><a href="https://discord.gg/9mXpM9wv" target="_blank" rel="noreferrer" style={{ color: '#7289da', textDecoration: 'none', fontSize: 9 }}>Discord</a><a href="https://github.com/oweebee/kangbangaming" target="_blank" rel="noreferrer" style={{ color: 'var(--text-muted)', textDecoration: 'none', fontSize: 9 }}>GitHub</a></footer>
         {showSearch && <SearchModal api={API} token={token} boardGames={games} onAdd={addGame} onRemove={removeGame} onClose={() => setShowSearch(false)} customOnly={isTaskBoard} />}
-        {selectedGame && <GameModal game={selectedGame} onClose={() => setSelectedGame(null)} api={API} token={token} />}
+        {editingGame && <SearchModal api={API} token={token} boardGames={games} onAdd={addGame} onRemove={removeGame} onClose={() => setEditingGame(null)} customOnly={isTaskBoard} initialGame={editingGame} onSave={async g => { await updateGame(g); setEditingGame(null); }} />}
+        {selectedGame && selectedGame.type === 'custom'
+          ? <TaskModal game={selectedGame} onClose={() => setSelectedGame(null)} onEdit={() => { setEditingGame(selectedGame); setSelectedGame(null); }} />
+          : selectedGame && <GameModal game={selectedGame} onClose={() => setSelectedGame(null)} api={API} token={token} />
+        }
         {showAdmin && <AdminPanel token={token} currentUser={currentUser} onClose={() => setShowAdmin(false)} />}
         {showSteamSettings && <SteamSettings token={token} onSave={handleSteamSave} onClose={() => setShowSteamSettings(false)} />}
 
@@ -901,7 +917,7 @@ export default function App() {
           loading ? (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Chargement...</div>
           ) : (
-            <KanbanBoard columns={columns} byColumn={byColumn} dragging={dragging} setDragging={setDragging} moveGame={moveGame} onCardClick={setSelectedGame} onRemoveGame={removeGame} onRenameColumn={renameColumn} onDeleteColumn={deleteColumn} onSetEmoji={setColumnEmoji} onReorderColumns={reorderColumns} isTaskBoard={isTaskBoard} />
+            <KanbanBoard columns={columns} byColumn={byColumn} dragging={dragging} setDragging={setDragging} moveGame={moveGame} onCardClick={setSelectedGame} onRemoveGame={removeGame} onEditGame={setEditingGame} onRenameColumn={renameColumn} onDeleteColumn={deleteColumn} onSetEmoji={setColumnEmoji} onReorderColumns={reorderColumns} isTaskBoard={isTaskBoard} />
           )
         ) : !activeBoardId ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Crée un board pour commencer</div>
@@ -917,7 +933,11 @@ export default function App() {
         <a href="https://github.com/oweebee/kangbangaming" target="_blank" rel="noreferrer" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>GitHub</a>
       </footer>
       {showSearch && <SearchModal api={API} token={token} boardGames={games} onAdd={addGame} onRemove={removeGame} onClose={() => setShowSearch(false)} customOnly={isTaskBoard} />}
-      {selectedGame && <GameModal game={selectedGame} onClose={() => setSelectedGame(null)} api={API} token={token} />}
+      {editingGame && <SearchModal api={API} token={token} boardGames={games} onAdd={addGame} onRemove={removeGame} onClose={() => setEditingGame(null)} customOnly={isTaskBoard} initialGame={editingGame} onSave={async g => { await updateGame(g); setEditingGame(null); }} />}
+      {selectedGame && selectedGame.type === 'custom'
+        ? <TaskModal game={selectedGame} onClose={() => setSelectedGame(null)} onEdit={() => { setEditingGame(selectedGame); setSelectedGame(null); }} />
+        : selectedGame && <GameModal game={selectedGame} onClose={() => setSelectedGame(null)} api={API} token={token} />
+      }
       {showAdmin && <AdminPanel token={token} currentUser={currentUser} onClose={() => setShowAdmin(false)} />}
       {showSteamSettings && <SteamSettings token={token} onSave={handleSteamSave} onClose={() => setShowSteamSettings(false)} />}
       {showProfile && <ProfilePage token={token} currentUser={currentUser} onClose={() => setShowProfile(false)} />}

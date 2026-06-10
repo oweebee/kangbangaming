@@ -506,6 +506,9 @@ app.patch('/api/public/boards/:boardId/games/:appid', requireAuth, (req, res) =>
   if (req.body.name !== undefined) game.name = req.body.name;
   if (req.body.emoji !== undefined) game.emoji = req.body.emoji;
   if (req.body.taskType !== undefined) game.taskType = req.body.taskType;
+  if (req.body.dueDate !== undefined) game.dueDate = req.body.dueDate;
+  if (req.body.startDate !== undefined) game.startDate = req.body.startDate;
+  if (req.body.endDate !== undefined) game.endDate = req.body.endDate;
   f.userBoards[req.params.boardId] = f.board;
   f.all[f.userId] = f.userBoards;
   writeBoards(f.all);
@@ -666,6 +669,9 @@ app.patch('/api/boards/:boardId/games/:appid', requireAuth, (req, res) => {
   if (req.body.name !== undefined) game.name = req.body.name;
   if (req.body.emoji !== undefined) game.emoji = req.body.emoji;
   if (req.body.taskType !== undefined) game.taskType = req.body.taskType;
+  if (req.body.dueDate !== undefined) game.dueDate = req.body.dueDate;
+  if (req.body.startDate !== undefined) game.startDate = req.body.startDate;
+  if (req.body.endDate !== undefined) game.endDate = req.body.endDate;
   setUserBoards(req.user.id, userBoards);
   res.json(game);
 });

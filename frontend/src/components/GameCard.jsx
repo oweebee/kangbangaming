@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { getTaskType } from '../taskTypes.jsx';
+import { getDateInfo } from './TaskModal.jsx';
 
 function formatPlaytime(minutes) {
   if (!minutes || minutes === 0) return null;
@@ -9,11 +10,12 @@ function formatPlaytime(minutes) {
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 
-export default function GameCard({ game, onDragStart, onDragEnd, onClick, onRemove, isDragging, readOnly }) {
+export default function GameCard({ game, onDragStart, onDragEnd, onClick, onRemove, onEdit, isDragging, readOnly }) {
   const [imgError, setImgError] = useState(false);
   const isCustom = game.type === 'custom';
-  const tt = game.taskType ? getTaskType(game.taskType) : null;
-  const TtIcon = tt?.Icon;
+  const tt       = game.taskType ? getTaskType(game.taskType) : null;
+  const TtIcon   = tt?.Icon;
+  const dateInfo = getDateInfo(game);
 
   return (
     <div
@@ -33,7 +35,7 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onRemo
       }}
       onMouseEnter={readOnly ? undefined : e => {
         e.currentTarget.style.transform = 'translateY(-1px)';
-        e.currentTarget.style.boxShadow = `0 4px 12px rgba(0,0,0,0.4)`;
+        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.4)';
         e.currentTarget.style.borderColor = tt ? tt.border : '#444';
       }}
       onMouseLeave={readOnly ? undefined : e => {
@@ -42,9 +44,8 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onRemo
         e.currentTarget.style.borderColor = tt ? tt.border : 'var(--border)';
       }}
     >
-      {/* Image area */}
+      {/* ── Image area ── */}
       {isCustom && tt ? (
-        /* Task-typed card — illustration + badge */
         <div style={{
           width: '100%', height: 88, position: 'relative',
           background: tt.imgBg,
@@ -66,45 +67,77 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onRemo
         }}>{game.emoji || '🎮'}</div>
       ) : !imgError && game.header_img ? (
         <img
-          src={game.header_img}
-          alt={game.name}
+          src={game.header_img} alt={game.name}
           onError={() => setImgError(true)}
           style={{ width: '100%', height: 88, objectFit: 'cover', display: 'block' }}
           draggable={false}
         />
       ) : (
         <div style={{
-          width: '100%', height: 88,
-          background: 'var(--steam)',
+          width: '100%', height: 88, background: 'var(--steam)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24,
         }}>🎮</div>
       )}
 
-      <div style={{ padding: '8px 10px' }}>
+      {/* ── Info area ── */}
+      <div style={{ padding: '7px 9px' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 4 }}>
           <div style={{
-            fontWeight: 600, fontSize: 12, lineHeight: '1.3', marginBottom: 4,
+            fontWeight: 600, fontSize: 12, lineHeight: '1.3', marginBottom: 3,
             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1,
           }} title={game.name}>{game.name}</div>
+
+          {/* Action buttons */}
           {!readOnly && (
-            <button
-              onClick={e => { e.stopPropagation(); onRemove(); }}
-              style={{
-                background: 'none', border: 'none', color: 'var(--text-muted)',
-                fontSize: 14, cursor: 'pointer', opacity: 0.5, padding: '0 0 0 4px',
-                lineHeight: 1, flexShrink: 0,
-              }}
-              title="Retirer du board"
-            >✕</button>
+            <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
+              {onEdit && isCustom && (
+                <button
+                  onClick={e => { e.stopPropagation(); onEdit(game); }}
+                  style={{
+                    background: 'none', border: 'none', color: 'var(--text-muted)',
+                    fontSize: 11, cursor: 'pointer', opacity: 0.45, padding: '1px 3px',
+                    lineHeight: 1, flexShrink: 0,
+                  }}
+                  title="Éditer"
+                >✏</button>
+              )}
+              <button
+                onClick={e => { e.stopPropagation(); onRemove(); }}
+                style={{
+                  background: 'none', border: 'none', color: 'var(--text-muted)',
+                  fontSize: 14, cursor: 'pointer', opacity: 0.5, padding: '0 0 0 2px',
+                  lineHeight: 1, flexShrink: 0,
+                }}
+                title="Retirer du board"
+              >✕</button>
+            </div>
           )}
         </div>
-        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-          {isCustom
-            ? <span style={{ color: tt ? tt.textColor : 'var(--accent)', opacity: 0.8 }}>
-                {tt ? `${tt.emoji} ${tt.label}` : 'Carte perso'}
-              </span>
-            : formatPlaytime(game.playtime_minutes)
-          }
+
+        {/* Sub-info row */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, minHeight: 18 }}>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', minWidth: 0 }}>
+            {isCustom
+              ? <span style={{ color: tt ? tt.textColor : 'var(--accent)', opacity: 0.8 }}>
+                  {tt ? `${tt.emoji} ${tt.label}` : 'Carte perso'}
+                </span>
+              : formatPlaytime(game.playtime_minutes)
+            }
+          </div>
+
+          {/* Date badge */}
+          {dateInfo && (
+            <div style={{
+              background: dateInfo.bg,
+              color: dateInfo.color,
+              border: `1px solid ${dateInfo.border}`,
+              borderRadius: 4, padding: '1px 6px',
+              fontSize: 9, fontWeight: 700,
+              whiteSpace: 'nowrap', flexShrink: 0,
+            }}>
+              📅 {dateInfo.label}
+            </div>
+          )}
         </div>
       </div>
     </div>
