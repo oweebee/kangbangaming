@@ -1005,13 +1005,13 @@ export default function App() {
                   onChange={e => setBoardNameInput(e.target.value)}
                   onBlur={saveBoardName}
                   onKeyDown={e => { if (e.key === 'Enter') saveBoardName(); if (e.key === 'Escape') setEditingBoardName(false); }}
-                  style={{ fontWeight: 700, fontSize: 28, color: 'var(--text)', background: 'transparent', border: 'none', borderBottom: '2px solid var(--accent)', outline: 'none', maxWidth: 280, padding: '0 2px' }}
+                  style={{ fontWeight: 700, fontSize: 24, color: 'var(--text)', background: 'transparent', border: 'none', borderBottom: '2px solid var(--accent)', outline: 'none', minWidth: 0, flexShrink: 1, padding: '0 2px' }}
                 />
               ) : (
                 <span
                   onDoubleClick={() => { setBoardNameInput(activeBoard?.name || ''); setEditingBoardName(true); }}
                   title="Double-cliquer pour renommer"
-                  style={{ fontWeight: 700, fontSize: 28, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 280, cursor: 'text', userSelect: 'none' }}
+                  style={{ fontWeight: 700, fontSize: 24, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flexShrink: 1, cursor: 'text', userSelect: 'none' }}
                 >{activeBoard?.name || '—'}</span>
               )}
               {activeBoard && (

@@ -155,7 +155,7 @@ app.get('/api/auth/me', requireAuth, (req, res) => {
 app.get('/api/users/list', requireAuth, (req, res) => {
   const users = readUsers();
   const list = users
-    .filter(u => (u.status || 'active') === 'active')
+    .filter(u => (u.status || 'active') === 'active' && u.role !== 'admin')
     .map(u => ({
       id: u.id,
       username: u.username,
