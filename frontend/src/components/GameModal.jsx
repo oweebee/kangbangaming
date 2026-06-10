@@ -1,25 +1,34 @@
 import { useState, useEffect } from 'react';
 
 function formatPlaytime(minutes) {
-  if (minutes === 0) return 'Jamais joué';
+  if (!minutes || minutes === 0) return 'Jamais joué';
   if (minutes < 60) return `${minutes} min`;
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 
-export default function GameModal({ game, onClose, api }) {
+export default function GameModal({ game, onClose, api, token }) {
   const [achievements, setAchievements] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState('achievements'); // 'achievements' | 'info'
-  const [filter, setFilter] = useState('all'); // 'all' | 'unlocked' | 'locked'
+  const [tab, setTab] = useState('achievements');
+  const [filter, setFilter] = useState('all');
 
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch(`${api}/games/${game.appid}/achievements`);
+        const res = await fetch(`${api}/steam/achievements/${game.appid}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
         const data = await res.json();
-        setAchievements(data);
+        const achs = data.achievements || [];
+        const unlocked = achs.filter(a => a.achieved).length;
+        setAchievements({
+          achievements: achs.map(a => ({ ...a, unlocked: a.achieved })),
+          total: achs.length,
+          unlocked,
+          percent: achs.length > 0 ? Math.round(unlocked / achs.length * 100) : 0,
+        });
       } catch {
         setAchievements(null);
       } finally {
@@ -27,11 +36,9 @@ export default function GameModal({ game, onClose, api }) {
       }
     }
     load();
-  }, [game.appid, api]);
+  }, [game.appid, api, token]);
 
-  const handleBackdrop = (e) => {
-    if (e.target === e.currentTarget) onClose();
-  };
+  const handleBackdrop = (e) => { if (e.target === e.currentTarget) onClose(); };
 
   const filteredAchievements = achievements?.achievements?.filter(a => {
     if (filter === 'unlocked') return a.unlocked;
@@ -40,53 +47,30 @@ export default function GameModal({ game, onClose, api }) {
   }) || [];
 
   return (
-    <div
-      onClick={handleBackdrop}
-      style={{
-        position: 'fixed', inset: 0,
-        background: 'rgba(0,0,0,0.75)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        zIndex: 100,
-        padding: 20,
-        backdropFilter: 'blur(4px)',
-      }}
-    >
+    <div onClick={handleBackdrop} style={{
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      zIndex: 100, padding: 20, backdropFilter: 'blur(4px)',
+    }}>
       <div style={{
-        background: 'var(--surface)',
-        border: '1px solid var(--border)',
-        borderRadius: 14,
-        width: '100%',
-        maxWidth: 620,
-        maxHeight: '85vh',
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden',
+        background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14,
+        width: '100%', maxWidth: 620, maxHeight: '85vh',
+        display: 'flex', flexDirection: 'column', overflow: 'hidden',
       }}>
-        {/* Modal header with game art */}
+        {/* Header with game art */}
         <div style={{ position: 'relative', flexShrink: 0 }}>
           <img
-            src={game.header_img}
-            alt={game.name}
+            src={game.header_img} alt={game.name}
             style={{ width: '100%', height: 160, objectFit: 'cover', display: 'block' }}
             onError={e => { e.target.style.display = 'none'; }}
           />
-          <div style={{
-            position: 'absolute', inset: 0,
-            background: 'linear-gradient(to top, var(--surface) 0%, transparent 60%)',
-          }} />
-          <button
-            onClick={onClose}
-            style={{
-              position: 'absolute', top: 10, right: 10,
-              background: 'rgba(0,0,0,0.6)',
-              border: '1px solid rgba(255,255,255,0.2)',
-              borderRadius: '50%',
-              width: 32, height: 32,
-              color: '#fff',
-              fontSize: 16,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}
-          >✕</button>
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, var(--surface) 0%, transparent 60%)' }} />
+          <button onClick={onClose} style={{
+            position: 'absolute', top: 10, right: 10,
+            background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.2)',
+            borderRadius: '50%', width: 32, height: 32, color: '#fff', fontSize: 16, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>✕</button>
           <div style={{ position: 'absolute', bottom: 12, left: 16, right: 16 }}>
             <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 4 }}>{game.name}</div>
             <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>
@@ -103,46 +87,25 @@ export default function GameModal({ game, onClose, api }) {
         {/* Progress bar */}
         {achievements && achievements.total > 0 && (
           <div style={{ padding: '0 16px', flexShrink: 0 }}>
-            <div style={{
-              height: 4,
-              background: 'var(--border)',
-              borderRadius: 2,
-              overflow: 'hidden',
-            }}>
+            <div style={{ height: 4, background: 'var(--border)', borderRadius: 2, overflow: 'hidden' }}>
               <div style={{
-                height: '100%',
-                width: `${achievements.percent}%`,
+                height: '100%', width: `${achievements.percent}%`,
                 background: achievements.percent === 100 ? 'var(--gold)' : 'var(--accent)',
-                borderRadius: 2,
-                transition: 'width 0.5s ease',
+                borderRadius: 2, transition: 'width 0.5s ease',
               }} />
             </div>
           </div>
         )}
 
         {/* Tabs */}
-        <div style={{
-          display: 'flex',
-          gap: 0,
-          borderBottom: '1px solid var(--border)',
-          padding: '8px 16px 0',
-          flexShrink: 0,
-        }}>
+        <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', padding: '8px 16px 0', flexShrink: 0 }}>
           {[['achievements', '🏆 Succès'], ['info', 'ℹ️ Infos']].map(([id, label]) => (
-            <button
-              key={id}
-              onClick={() => setTab(id)}
-              style={{
-                background: 'none',
-                border: 'none',
-                borderBottom: tab === id ? '2px solid var(--accent)' : '2px solid transparent',
-                padding: '6px 12px',
-                color: tab === id ? 'var(--text)' : 'var(--text-muted)',
-                fontWeight: tab === id ? 600 : 400,
-                fontSize: 13,
-                marginBottom: -1,
-              }}
-            >{label}</button>
+            <button key={id} onClick={() => setTab(id)} style={{
+              background: 'none', border: 'none',
+              borderBottom: tab === id ? '2px solid var(--accent)' : '2px solid transparent',
+              padding: '6px 12px', color: tab === id ? 'var(--text)' : 'var(--text-muted)',
+              fontWeight: tab === id ? 600 : 400, fontSize: 13, marginBottom: -1, cursor: 'pointer',
+            }}>{label}</button>
           ))}
         </div>
 
@@ -150,75 +113,38 @@ export default function GameModal({ game, onClose, api }) {
         <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
           {tab === 'achievements' && (
             <>
-              {/* Filter row */}
               {achievements && achievements.total > 0 && (
                 <div style={{ padding: '10px 16px', flexShrink: 0, display: 'flex', gap: 6 }}>
-                  {[['all', 'Tous'], ['unlocked', '✅ Débloqués'], ['locked', '🔒 Verrouillés']].map(([id, label]) => (
-                    <button
-                      key={id}
-                      onClick={() => setFilter(id)}
-                      style={{
-                        background: filter === id ? 'var(--accent)' : 'var(--surface2)',
-                        border: '1px solid var(--border)',
-                        borderRadius: 6,
-                        padding: '4px 10px',
-                        color: filter === id ? '#000' : 'var(--text-muted)',
-                        fontSize: 12,
-                        fontWeight: filter === id ? 600 : 400,
-                      }}
-                    >{label} {id === 'unlocked' ? achievements.unlocked : id === 'locked' ? achievements.total - achievements.unlocked : achievements.total}</button>
+                  {[['all', 'Tous', achievements.total], ['unlocked', '✅ Débloqués', achievements.unlocked], ['locked', '🔒 Verrouillés', achievements.total - achievements.unlocked]].map(([id, label, count]) => (
+                    <button key={id} onClick={() => setFilter(id)} style={{
+                      background: filter === id ? 'var(--accent)' : 'var(--surface2)',
+                      border: '1px solid var(--border)', borderRadius: 6, padding: '4px 10px',
+                      color: filter === id ? '#000' : 'var(--text-muted)',
+                      fontSize: 12, fontWeight: filter === id ? 600 : 400, cursor: 'pointer',
+                    }}>{label} {count}</button>
                   ))}
                 </div>
               )}
-
               <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px 16px' }}>
-                {loading && (
-                  <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 32 }}>Chargement des succès...</div>
-                )}
-                {!loading && !achievements && (
-                  <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 32 }}>
-                    Aucun succès disponible pour ce jeu.
-                  </div>
-                )}
-                {!loading && achievements?.total === 0 && (
-                  <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 32 }}>
-                    Ce jeu n'a pas de succès.
-                  </div>
-                )}
+                {loading && <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 32 }}>Chargement des succès...</div>}
+                {!loading && !achievements && <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 32 }}>Aucun succès disponible pour ce jeu.</div>}
+                {!loading && achievements?.total === 0 && <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 32 }}>Ce jeu n'a pas de succès.</div>}
                 {!loading && filteredAchievements.map((a, i) => (
                   <div key={a.apiname || i} style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 10,
-                    padding: '8px 0',
-                    borderBottom: '1px solid var(--border)',
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    padding: '8px 0', borderBottom: '1px solid var(--border)',
                     opacity: a.unlocked ? 1 : 0.5,
                   }}>
                     {a.icon ? (
-                      <img
-                        src={a.unlocked ? a.icon : a.icon_gray}
-                        alt=""
-                        style={{ width: 40, height: 40, borderRadius: 6, flexShrink: 0 }}
-                        onError={e => { e.target.style.display = 'none'; }}
-                      />
+                      <img src={a.icon} alt="" style={{ width: 40, height: 40, borderRadius: 6, flexShrink: 0 }} onError={e => { e.target.style.display = 'none'; }} />
                     ) : (
-                      <div style={{
-                        width: 40, height: 40,
-                        background: 'var(--border)',
-                        borderRadius: 6,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: 20, flexShrink: 0,
-                      }}>{a.unlocked ? '✅' : '🔒'}</div>
+                      <div style={{ width: 40, height: 40, background: 'var(--border)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>{a.unlocked ? '✅' : '🔒'}</div>
                     )}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontWeight: 600, fontSize: 12, marginBottom: 2 }}>{a.name}</div>
-                      {a.description && (
-                        <div style={{ color: 'var(--text-muted)', fontSize: 11, lineHeight: 1.4 }}>{a.description}</div>
-                      )}
+                      {a.description && <div style={{ color: 'var(--text-muted)', fontSize: 11, lineHeight: 1.4 }}>{a.description}</div>}
                     </div>
-                    {a.unlocked && (
-                      <div style={{ color: 'var(--accent)', fontSize: 11, flexShrink: 0 }}>✓</div>
-                    )}
+                    {a.unlocked && <div style={{ color: 'var(--accent)', fontSize: 11, flexShrink: 0 }}>✓</div>}
                   </div>
                 ))}
               </div>

@@ -1,33 +1,223 @@
 import express from 'express';
 import cors from 'cors';
-import fs from 'fs/promises';
+import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
-const PORT = process.env.PORT || 3001;
-
-const STEAM_API_KEY = process.env.STEAM_API_KEY;
-const STEAM_ID = process.env.STEAM_ID;
-const DATA_FILE = path.join(__dirname, '..', 'data', 'boards.json');
-
 app.use(cors());
 app.use(express.json());
 
-// ─── Cache bibliothèque Steam ────────────────────────────────────────────────
+const PORT = process.env.PORT || 3001;
+const GLOBAL_STEAM_API_KEY = process.env.STEAM_API_KEY;
+const GLOBAL_STEAM_ID = process.env.STEAM_ID;
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
+const JWT_SECRET = process.env.JWT_SECRET || 'change-me-in-production';
+const LIBRARY_TTL = 5 * 60 * 1000;
 
-let libraryCache = null;
-let libraryCacheAt = 0;
-const LIBRARY_TTL = 10 * 60 * 1000;
+const DATA_DIR = path.join(__dirname, '../data');
+const USERS_FILE = path.join(DATA_DIR, 'users.json');
+const BOARDS_FILE = path.join(DATA_DIR, 'boards.json');
 
-// Map<appid, { icon_url: string|null }>
-async function getLibraryMap() {
-  if (libraryCache && Date.now() - libraryCacheAt < LIBRARY_TTL) return libraryCache;
+// ── Data helpers ─────────────────────────────────────────────────────────────
+
+function ensureDataDir() {
+  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+}
+function readUsers() {
+  ensureDataDir();
+  if (!fs.existsSync(USERS_FILE)) fs.writeFileSync(USERS_FILE, '[]');
+  try { return JSON.parse(fs.readFileSync(USERS_FILE, 'utf8')); } catch { return []; }
+}
+function writeUsers(users) {
+  ensureDataDir();
+  fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
+}
+function readBoards() {
+  ensureDataDir();
+  if (!fs.existsSync(BOARDS_FILE)) fs.writeFileSync(BOARDS_FILE, '{}');
+  try { return JSON.parse(fs.readFileSync(BOARDS_FILE, 'utf8')); } catch { return {}; }
+}
+function writeBoards(boards) {
+  ensureDataDir();
+  fs.writeFileSync(BOARDS_FILE, JSON.stringify(boards, null, 2));
+}
+function getUserBoards(userId) {
+  return readBoards()[userId] || {};
+}
+function setUserBoards(userId, userBoards) {
+  const all = readBoards();
+  all[userId] = userBoards;
+  writeBoards(all);
+}
+function getUserSteamCreds(userId) {
+  const users = readUsers();
+  const user = users.find(u => u.id === userId);
+  return {
+    apiKey: user?.steamApiKey || GLOBAL_STEAM_API_KEY,
+    steamId: user?.steamId || GLOBAL_STEAM_ID,
+  };
+}
+
+// ── Startup: ensure admin exists, migrate legacy boards ───────────────────────
+
+async function ensureAdmin() {
+  const users = readUsers();
+  const existing = users.find(u => u.username === 'admin');
+  const hash = await bcrypt.hash(ADMIN_PASSWORD, 10);
+  if (!existing) {
+    users.push({ id: 'admin', username: 'admin', passwordHash: hash, role: 'admin', createdAt: new Date().toISOString() });
+    writeUsers(users);
+    console.log('[auth] Admin user created');
+  } else {
+    existing.passwordHash = hash;
+    writeUsers(users);
+  }
+  const all = readBoards();
+  const isLegacy = Object.values(all).some(v => v && typeof v === 'object' && !Array.isArray(v) && ('name' in v || 'columns' in v || 'games' in v));
+  if (isLegacy) {
+    console.log('[auth] Migrating legacy boards to admin user');
+    const adminBoards = {};
+    for (const [k, v] of Object.entries(all)) {
+      if (v && typeof v === 'object' && !Array.isArray(v) && ('name' in v || 'columns' in v || 'games' in v)) {
+        adminBoards[k] = v;
+      }
+    }
+    writeBoards({ admin: adminBoards });
+  }
+}
+
+// ── JWT middleware ────────────────────────────────────────────────────────────
+
+function requireAuth(req, res, next) {
+  const header = req.headers['authorization'];
+  if (!header) return res.status(401).json({ error: 'No token' });
+  const token = header.replace('Bearer ', '');
+  try { req.user = jwt.verify(token, JWT_SECRET); next(); }
+  catch { res.status(401).json({ error: 'Invalid token' }); }
+}
+function requireAdmin(req, res, next) {
+  requireAuth(req, res, () => {
+    if (req.user.role !== 'admin') return res.status(403).json({ error: 'Forbidden' });
+    next();
+  });
+}
+
+// ── Auth routes ───────────────────────────────────────────────────────────────
+
+app.post('/api/auth/login', async (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) return res.status(400).json({ error: 'Missing fields' });
+  const users = readUsers();
+  const user = users.find(u => u.username === username);
+  if (!user) return res.status(401).json({ error: 'Invalid credentials' });
+  if (!await bcrypt.compare(password, user.passwordHash)) return res.status(401).json({ error: 'Invalid credentials' });
+  const token = jwt.sign({ id: user.id, username: user.username, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
+  res.json({ token, user: { id: user.id, username: user.username, role: user.role } });
+});
+
+app.post('/api/auth/register', async (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) return res.status(400).json({ error: 'Missing fields' });
+  if (username.length < 3) return res.status(400).json({ error: 'Username too short (min 3)' });
+  if (password.length < 6) return res.status(400).json({ error: 'Password too short (min 6)' });
+  const users = readUsers();
+  if (users.find(u => u.username === username)) return res.status(409).json({ error: 'Username taken' });
+  const hash = await bcrypt.hash(password, 10);
+  const id = `user_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+  users.push({ id, username, passwordHash: hash, role: 'user', createdAt: new Date().toISOString() });
+  writeUsers(users);
+  const token = jwt.sign({ id, username, role: 'user' }, JWT_SECRET, { expiresIn: '7d' });
+  res.status(201).json({ token, user: { id, username, role: 'user' } });
+});
+
+app.get('/api/auth/me', requireAuth, (req, res) => {
+  const user = readUsers().find(u => u.id === req.user.id);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  res.json({ id: user.id, username: user.username, role: user.role });
+});
+
+// ── User settings (Steam credentials) ────────────────────────────────────────
+
+app.get('/api/user/settings', requireAuth, (req, res) => {
+  const user = readUsers().find(u => u.id === req.user.id);
+  if (!user) return res.status(404).json({ error: 'Not found' });
+  res.json({
+    steamApiKey: user.steamApiKey || '',
+    steamId: user.steamId || '',
+    hasSteamCreds: !!(user.steamApiKey && user.steamId),
+  });
+});
+
+app.patch('/api/user/settings', requireAuth, (req, res) => {
+  const users = readUsers();
+  const idx = users.findIndex(u => u.id === req.user.id);
+  if (idx === -1) return res.status(404).json({ error: 'Not found' });
+  if (req.body.steamApiKey !== undefined) users[idx].steamApiKey = req.body.steamApiKey.trim();
+  if (req.body.steamId !== undefined) users[idx].steamId = req.body.steamId.trim();
+  writeUsers(users);
+  // Invalidate this user's library cache
+  libraryCaches.delete(req.user.id);
+  res.json({ ok: true });
+});
+
+// ── Admin routes ──────────────────────────────────────────────────────────────
+
+app.get('/api/admin/users', requireAdmin, (req, res) => {
+  res.json(readUsers().map(u => ({ id: u.id, username: u.username, role: u.role, createdAt: u.createdAt })));
+});
+
+app.patch('/api/admin/users/:id', requireAdmin, async (req, res) => {
+  const users = readUsers();
+  const idx = users.findIndex(u => u.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'User not found' });
+  if (req.params.id === 'admin' && req.body.role) return res.status(400).json({ error: 'Cannot change admin role' });
+  if (req.body.role) users[idx].role = req.body.role;
+  if (req.body.password) {
+    if (req.body.password.length < 6) return res.status(400).json({ error: 'Password too short' });
+    users[idx].passwordHash = await bcrypt.hash(req.body.password, 10);
+  }
+  writeUsers(users);
+  res.json({ id: users[idx].id, username: users[idx].username, role: users[idx].role });
+});
+
+app.delete('/api/admin/users/:id', requireAdmin, (req, res) => {
+  if (req.params.id === 'admin') return res.status(400).json({ error: 'Cannot delete admin' });
+  const users = readUsers();
+  const idx = users.findIndex(u => u.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'User not found' });
+  users.splice(idx, 1);
+  writeUsers(users);
+  const all = readBoards();
+  delete all[req.params.id];
+  writeBoards(all);
+  res.json({ ok: true });
+});
+
+// ── Steam library cache (per user) ───────────────────────────────────────────
+
+const libraryCaches = new Map(); // userId -> { cache: Map, cacheAt: number }
+
+async function steamFetch(url) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`Steam API ${r.status}`);
+  return r.json();
+}
+
+async function getLibraryMap(userId) {
+  const creds = getUserSteamCreds(userId);
+  if (!creds.apiKey || !creds.steamId) return new Map();
+
+  const entry = libraryCaches.get(userId) || { cache: null, cacheAt: 0 };
+  if (entry.cache && Date.now() - entry.cacheAt < LIBRARY_TTL) return entry.cache;
+
   try {
-    const url = `https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key=${STEAM_API_KEY}&steamid=${STEAM_ID}&include_appinfo=1&include_played_free_games=1&format=json`;
+    const url = `https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key=${creds.apiKey}&steamid=${creds.steamId}&include_appinfo=1&include_played_free_games=1&format=json`;
     const data = await steamFetch(url);
-    libraryCache = new Map((data.response?.games || []).map(g => [
+    const cache = new Map((data.response?.games || []).map(g => [
       g.appid,
       {
         icon_url: g.img_icon_url
@@ -36,254 +226,234 @@ async function getLibraryMap() {
         playtime_forever: g.playtime_forever || 0,
       }
     ]));
-    libraryCacheAt = Date.now();
+    libraryCaches.set(userId, { cache, cacheAt: Date.now() });
+    return cache;
   } catch {
-    libraryCache = new Map();
-  }
-  return libraryCache;
-}
-
-// ─── Persistence ─────────────────────────────────────────────────────────────
-
-async function readData() {
-  try {
-    return JSON.parse(await fs.readFile(DATA_FILE, 'utf-8'));
-  } catch {
-    return { boards: {} };
+    libraryCaches.set(userId, { cache: new Map(), cacheAt: Date.now() });
+    return new Map();
   }
 }
 
-async function writeData(data) {
-  await fs.mkdir(path.dirname(DATA_FILE), { recursive: true });
-  await fs.writeFile(DATA_FILE, JSON.stringify(data, null, 2));
-}
+// ── Steam routes ──────────────────────────────────────────────────────────────
 
-function defaultColumns() {
-  return [{ id: `col_${Date.now()}`, label: 'Renomme moi', color: '#c0570a', emoji: '' }];
-}
-
-// ─── Steam helpers ────────────────────────────────────────────────────────────
-
-async function steamFetch(url) {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Steam API ${res.status}`);
-  return res.json();
-}
-
-function formatGame(g) {
-  return {
-    appid: g.appid,
-    name: g.name,
-    playtime_minutes: g.playtime_forever || 0,
-    playtime_hours: Math.round((g.playtime_forever || 0) / 60 * 10) / 10,
-    header_img: `https://cdn.akamai.steamstatic.com/steam/apps/${g.appid}/header.jpg`,
-    library_img: `https://cdn.akamai.steamstatic.com/steam/apps/${g.appid}/library_600x900.jpg`,
-  };
-}
-
-async function getGameInfo(appid) {
+app.get('/api/steam/search', requireAuth, async (req, res) => {
+  const { q } = req.query;
+  if (!q) return res.status(400).json({ error: 'Missing query' });
   try {
-    const url = `https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key=${STEAM_API_KEY}&steamid=${STEAM_ID}&include_appinfo=1&appids_filter[0]=${appid}&format=json`;
+    const url = `https://store.steampowered.com/api/storesearch/?term=${encodeURIComponent(q)}&l=english&cc=US`;
     const data = await steamFetch(url);
-    const game = data.response?.games?.[0];
-    if (game) return formatGame(game);
-  } catch {}
-  return {
-    appid: parseInt(appid), name: `App ${appid}`,
-    playtime_minutes: 0, playtime_hours: 0,
-    header_img: `https://cdn.akamai.steamstatic.com/steam/apps/${appid}/header.jpg`,
-    library_img: `https://cdn.akamai.steamstatic.com/steam/apps/${appid}/library_600x900.jpg`,
-  };
-}
-
-// ─── Health ───────────────────────────────────────────────────────────────────
-
-app.get('/api/health', (_req, res) => res.json({ ok: true }));
-
-// ─── Search store Steam (avec ownership) ─────────────────────────────────────
-
-app.get('/api/search/store', async (req, res) => {
-  try {
-    const q = (req.query.q || '').trim();
-    if (!q) return res.json([]);
-    const [storeData, library] = await Promise.all([
-      steamFetch(`https://store.steampowered.com/api/storesearch/?term=${encodeURIComponent(q)}&l=french&cc=FR`),
-      getLibraryMap(),
-    ]);
-    const results = (storeData.items || []).slice(0, 20).map(g => {
-      const libEntry = library.get(g.id);
+    const lib = await getLibraryMap(req.user.id);
+    const results = (data.items || []).map(g => {
+      const libEntry = lib.get(g.id);
       return {
-        appid: g.id, name: g.name,
-        playtime_minutes: 0, playtime_hours: 0,
-        header_img: `https://cdn.akamai.steamstatic.com/steam/apps/${g.id}/header.jpg`,
-        library_img: `https://cdn.akamai.steamstatic.com/steam/apps/${g.id}/library_600x900.jpg`,
-        // Icône ronde Steam (img_icon_url pour jeux possédés, sinon null)
+        appid: g.id,
+        name: g.name,
+        header_img: `https://cdn.cloudflare.steamstatic.com/steam/apps/${g.id}/header.jpg`,
         icon_img: libEntry?.icon_url || null,
-        price: g.price?.final_formatted || null,
-        owned: !!libEntry,
-        playtime_hours: libEntry ? Math.round((libEntry.playtime_forever || 0) / 60 * 10) / 10 : 0,
+        in_library: lib.has(g.id),
+        playtime_hours: libEntry ? Math.round(libEntry.playtime_forever / 60) : 0,
       };
     });
     res.json(results);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/steam/achievements/:appid', requireAuth, async (req, res) => {
+  const { appid } = req.params;
+  const creds = getUserSteamCreds(req.user.id);
+  if (!creds.apiKey || !creds.steamId) return res.status(400).json({ error: 'No Steam credentials configured' });
+  try {
+    const [statsData, schemaData] = await Promise.all([
+      steamFetch(`https://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/v1/?key=${creds.apiKey}&steamid=${creds.steamId}&appid=${appid}&l=english`),
+      steamFetch(`https://api.steampowered.com/ISteamUserStats/GetSchemaForGame/v2/?key=${creds.apiKey}&appid=${appid}&l=english`),
+    ]);
+    const playerAchs = statsData.playerstats?.achievements || [];
+    const schemaAchs = schemaData.game?.availableGameStats?.achievements || [];
+    const schemaMap = new Map(schemaAchs.map(a => [a.name, a]));
+    const achievements = playerAchs.map(a => {
+      const s = schemaMap.get(a.apiname) || {};
+      return {
+        apiname: a.apiname,
+        achieved: a.achieved === 1,
+        unlocktime: a.unlocktime,
+        name: s.displayName || a.apiname,
+        description: s.description || '',
+        icon: a.achieved ? s.icon : s.icongray,
+      };
+    });
+    res.json({ achievements, gameName: statsData.playerstats?.gameName || '' });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Public boards ─────────────────────────────────────────────────────────────
+
+app.get('/api/public/boards', requireAuth, (req, res) => {
+  const all = readBoards();
+  const users = readUsers();
+  const userMap = new Map(users.map(u => [u.id, u.username]));
+  const result = [];
+  for (const [userId, userBoards] of Object.entries(all)) {
+    for (const [boardId, board] of Object.entries(userBoards || {})) {
+      if (board.public) {
+        const gameCount = Object.keys(board.games || {}).length;
+        result.push({
+          id: boardId,
+          name: board.name,
+          emoji: board.emoji || '',
+          gameIcon: board.gameIcon || null,
+          columns: board.columns || [],
+          games: Object.values(board.games || {}),
+          gameCount,
+          ownerUsername: userMap.get(userId) || 'unknown',
+          ownerId: userId,
+          isOwner: userId === req.user.id,
+        });
+      }
+    }
   }
+  res.json(result);
 });
 
-// ─── Boards ───────────────────────────────────────────────────────────────────
+// ── Board routes (per user) ───────────────────────────────────────────────────
 
-app.get('/api/boards', async (_req, res) => {
-  const data = await readData();
-  res.json(Object.entries(data.boards).map(([id, b]) => ({
-    id, name: b.name, emoji: b.emoji || '',
-    gameIcon: b.gameIcon || null,
-    columns: b.columns || defaultColumns(),
-    gameCount: Object.keys(b.games || {}).length,
-  })));
+app.get('/api/boards', requireAuth, (req, res) => {
+  const userBoards = getUserBoards(req.user.id);
+  const list = Object.entries(userBoards).map(([id, b]) => ({
+    id, name: b.name, emoji: b.emoji || '🎮', gameIcon: b.gameIcon || null,
+    columns: b.columns || [], public: b.public || false,
+  }));
+  res.json(list);
 });
 
-app.post('/api/boards', async (req, res) => {
-  const { name, emoji = '', gameIcon = null } = req.body;
-  if (!name) return res.status(400).json({ error: 'name requis' });
-  const data = await readData();
-  const id = `board_${Date.now()}`;
-  data.boards[id] = { name, emoji, gameIcon, columns: defaultColumns(), games: {} };
-  await writeData(data);
-  res.json({ id, name, emoji, gameIcon, columns: data.boards[id].columns, gameCount: 0 });
-});
-
-app.patch('/api/boards/:boardId', async (req, res) => {
-  const { boardId } = req.params;
+app.post('/api/boards', requireAuth, (req, res) => {
   const { name, emoji, gameIcon } = req.body;
-  const data = await readData();
-  if (!data.boards[boardId]) return res.status(404).json({ error: 'Board introuvable' });
-  if (name !== undefined) data.boards[boardId].name = name;
-  if (emoji !== undefined) data.boards[boardId].emoji = emoji;
-  if (gameIcon !== undefined) data.boards[boardId].gameIcon = gameIcon;
-  await writeData(data);
+  if (!name) return res.status(400).json({ error: 'Missing name' });
+  const id = `board_${Date.now()}`;
+  const board = {
+    name, emoji: emoji || '🎮', gameIcon: gameIcon || null, public: false,
+    columns: [
+      { id: `col_${Date.now()}_1`, label: 'À jouer', emoji: '📋' },
+      { id: `col_${Date.now()}_2`, label: 'En cours', emoji: '🎮' },
+      { id: `col_${Date.now()}_3`, label: 'Terminé', emoji: '✅' },
+    ],
+    games: {},
+  };
+  const userBoards = getUserBoards(req.user.id);
+  userBoards[id] = board;
+  setUserBoards(req.user.id, userBoards);
+  res.status(201).json({ id, name: board.name, emoji: board.emoji, gameIcon: board.gameIcon, columns: board.columns, public: false });
+});
+
+app.patch('/api/boards/:boardId', requireAuth, (req, res) => {
+  const userBoards = getUserBoards(req.user.id);
+  const board = userBoards[req.params.boardId];
+  if (!board) return res.status(404).json({ error: 'Board not found' });
+  if (req.body.name !== undefined) board.name = req.body.name;
+  if (req.body.emoji !== undefined) board.emoji = req.body.emoji;
+  if (req.body.gameIcon !== undefined) board.gameIcon = req.body.gameIcon;
+  if (req.body.public !== undefined) board.public = !!req.body.public;
+  setUserBoards(req.user.id, userBoards);
+  res.json({ id: req.params.boardId, name: board.name, emoji: board.emoji, gameIcon: board.gameIcon, public: board.public });
+});
+
+app.delete('/api/boards/:boardId', requireAuth, (req, res) => {
+  const userBoards = getUserBoards(req.user.id);
+  if (!userBoards[req.params.boardId]) return res.status(404).json({ error: 'Board not found' });
+  delete userBoards[req.params.boardId];
+  setUserBoards(req.user.id, userBoards);
   res.json({ ok: true });
 });
 
-app.delete('/api/boards/:boardId', async (req, res) => {
-  const { boardId } = req.params;
-  const data = await readData();
-  delete data.boards[boardId];
-  await writeData(data);
-  res.json({ ok: true });
+// ── Column routes ─────────────────────────────────────────────────────────────
+
+app.get('/api/boards/:boardId/columns', requireAuth, (req, res) => {
+  const board = getUserBoards(req.user.id)[req.params.boardId];
+  if (!board) return res.status(404).json({ error: 'Board not found' });
+  res.json(board.columns || []);
 });
 
-// ─── Colonnes ─────────────────────────────────────────────────────────────────
+app.post('/api/boards/:boardId/columns', requireAuth, (req, res) => {
+  const { label, emoji } = req.body;
+  if (!label) return res.status(400).json({ error: 'Missing label' });
+  const userBoards = getUserBoards(req.user.id);
+  const board = userBoards[req.params.boardId];
+  if (!board) return res.status(404).json({ error: 'Board not found' });
+  const col = { id: `col_${Date.now()}`, label, emoji: emoji || '' };
+  board.columns = [...(board.columns || []), col];
+  setUserBoards(req.user.id, userBoards);
+  res.status(201).json(col);
+});
 
-app.post('/api/boards/:boardId/columns', async (req, res) => {
-  const { boardId } = req.params;
-  const { label } = req.body;
-  const data = await readData();
-  if (!data.boards[boardId]) return res.status(404).json({ error: 'Board introuvable' });
-  const col = { id: `col_${Date.now()}`, label: label || 'Nouvelle colonne', color: '#c0570a' };
-  data.boards[boardId].columns = [...(data.boards[boardId].columns || []), col];
-  await writeData(data);
+app.patch('/api/boards/:boardId/columns/:colId', requireAuth, (req, res) => {
+  const userBoards = getUserBoards(req.user.id);
+  const board = userBoards[req.params.boardId];
+  if (!board) return res.status(404).json({ error: 'Board not found' });
+  const col = (board.columns || []).find(c => c.id === req.params.colId);
+  if (!col) return res.status(404).json({ error: 'Column not found' });
+  if (req.body.label !== undefined) col.label = req.body.label;
+  if (req.body.emoji !== undefined) col.emoji = req.body.emoji;
+  setUserBoards(req.user.id, userBoards);
   res.json(col);
 });
 
-app.patch('/api/boards/:boardId/columns/:colId', async (req, res) => {
-  const { boardId, colId } = req.params;
-  const { label, color, emoji } = req.body;
-  const data = await readData();
-  if (!data.boards[boardId]) return res.status(404).json({ error: 'Board introuvable' });
-  const col = (data.boards[boardId].columns || []).find(c => c.id === colId);
-  if (!col) return res.status(404).json({ error: 'Colonne introuvable' });
-  if (label !== undefined) col.label = label;
-  if (color !== undefined) col.color = color;
-  if (emoji !== undefined) col.emoji = emoji;
-  await writeData(data);
+app.delete('/api/boards/:boardId/columns/:colId', requireAuth, (req, res) => {
+  const userBoards = getUserBoards(req.user.id);
+  const board = userBoards[req.params.boardId];
+  if (!board) return res.status(404).json({ error: 'Board not found' });
+  board.columns = (board.columns || []).filter(c => c.id !== req.params.colId);
+  setUserBoards(req.user.id, userBoards);
   res.json({ ok: true });
 });
 
-app.delete('/api/boards/:boardId/columns/:colId', async (req, res) => {
-  const { boardId, colId } = req.params;
-  const data = await readData();
-  if (!data.boards[boardId]) return res.status(404).json({ error: 'Board introuvable' });
-  data.boards[boardId].columns = (data.boards[boardId].columns || []).filter(c => c.id !== colId);
-  const firstCol = data.boards[boardId].columns[0];
-  if (firstCol) {
-    for (const g of Object.values(data.boards[boardId].games || {})) {
-      if (g.column === colId) g.column = firstCol.id;
-    }
-  }
-  await writeData(data);
+// ── Game routes ───────────────────────────────────────────────────────────────
+
+app.get('/api/boards/:boardId/games', requireAuth, (req, res) => {
+  const board = getUserBoards(req.user.id)[req.params.boardId];
+  if (!board) return res.status(404).json({ error: 'Board not found' });
+  res.json(Object.values(board.games || {}));
+});
+
+app.post('/api/boards/:boardId/games', requireAuth, (req, res) => {
+  const { appid, name, header_img, column, icon_img, type, emoji } = req.body;
+  if (!appid || !column) return res.status(400).json({ error: 'Missing fields' });
+  const userBoards = getUserBoards(req.user.id);
+  const board = userBoards[req.params.boardId];
+  if (!board) return res.status(404).json({ error: 'Board not found' });
+  if (!board.games) board.games = {};
+  board.games[appid] = {
+    appid, name, header_img: header_img || null, icon_img: icon_img || null,
+    column, type: type || 'steam', emoji: emoji || null,
+    addedAt: new Date().toISOString(),
+  };
+  setUserBoards(req.user.id, userBoards);
+  res.status(201).json(board.games[appid]);
+});
+
+app.patch('/api/boards/:boardId/games/:appid', requireAuth, (req, res) => {
+  const userBoards = getUserBoards(req.user.id);
+  const board = userBoards[req.params.boardId];
+  if (!board) return res.status(404).json({ error: 'Board not found' });
+  const game = (board.games || {})[req.params.appid];
+  if (!game) return res.status(404).json({ error: 'Game not found' });
+  if (req.body.column !== undefined) game.column = req.body.column;
+  if (req.body.notes !== undefined) game.notes = req.body.notes;
+  if (req.body.name !== undefined) game.name = req.body.name;
+  if (req.body.emoji !== undefined) game.emoji = req.body.emoji;
+  setUserBoards(req.user.id, userBoards);
+  res.json(game);
+});
+
+app.delete('/api/boards/:boardId/games/:appid', requireAuth, (req, res) => {
+  const userBoards = getUserBoards(req.user.id);
+  const board = userBoards[req.params.boardId];
+  if (!board) return res.status(404).json({ error: 'Board not found' });
+  if (!board.games?.[req.params.appid]) return res.status(404).json({ error: 'Game not found' });
+  delete board.games[req.params.appid];
+  setUserBoards(req.user.id, userBoards);
   res.json({ ok: true });
 });
 
-// ─── Jeux dans un board ───────────────────────────────────────────────────────
+// ── Start ─────────────────────────────────────────────────────────────────────
 
-app.get('/api/boards/:boardId/games', async (req, res) => {
-  const { boardId } = req.params;
-  const data = await readData();
-  const board = data.boards[boardId];
-  if (!board) return res.status(404).json({ error: 'Board introuvable' });
-  const games = await Promise.all(
-    Object.entries(board.games || {}).map(async ([appid, meta]) => {
-      const info = await getGameInfo(appid).catch(() => ({ appid: parseInt(appid), name: `App ${appid}` }));
-      return { ...info, column: meta.column };
-    })
-  );
-  res.json(games);
-});
-
-app.post('/api/boards/:boardId/games', async (req, res) => {
-  const { boardId } = req.params;
-  const { appid, column } = req.body;
-  const data = await readData();
-  if (!data.boards[boardId]) return res.status(404).json({ error: 'Board introuvable' });
-  const firstCol = (data.boards[boardId].columns || [])[0];
-  data.boards[boardId].games[appid] = { column: column || firstCol?.id || 'default' };
-  await writeData(data);
-  res.json({ ok: true });
-});
-
-app.delete('/api/boards/:boardId/games/:appid', async (req, res) => {
-  const { boardId, appid } = req.params;
-  const data = await readData();
-  if (!data.boards[boardId]) return res.status(404).json({ error: 'Board introuvable' });
-  delete data.boards[boardId].games[appid];
-  await writeData(data);
-  res.json({ ok: true });
-});
-
-app.post('/api/boards/:boardId/games/:appid/column', async (req, res) => {
-  const { boardId, appid } = req.params;
-  const { column } = req.body;
-  const data = await readData();
-  if (!data.boards[boardId]?.games[appid]) return res.status(404).json({ error: 'Jeu introuvable' });
-  data.boards[boardId].games[appid].column = column;
-  await writeData(data);
-  res.json({ ok: true });
-});
-
-// ─── Achievements ─────────────────────────────────────────────────────────────
-
-app.get('/api/games/:appid/achievements', async (req, res) => {
-  try {
-    const { appid } = req.params;
-    const [achievementsData, schemaData] = await Promise.all([
-      steamFetch(`https://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/v1/?key=${STEAM_API_KEY}&steamid=${STEAM_ID}&appid=${appid}&l=french`).catch(() => null),
-      steamFetch(`https://api.steampowered.com/ISteamUserStats/GetSchemaForGame/v1/?key=${STEAM_API_KEY}&appid=${appid}&l=french`).catch(() => null),
-    ]);
-    const playerAchievements = achievementsData?.playerstats?.achievements || [];
-    const schemaMap = Object.fromEntries((schemaData?.game?.availableGameStats?.achievements || []).map(a => [a.name, a]));
-    const merged = playerAchievements.map(a => ({
-      apiname: a.apiname, unlocked: a.achieved === 1, unlock_time: a.unlocktime,
-      name: schemaMap[a.apiname]?.displayName || a.apiname,
-      description: schemaMap[a.apiname]?.description || '',
-      icon: schemaMap[a.apiname]?.icon || '',
-      icon_gray: schemaMap[a.apiname]?.icongray || '',
-    }));
-    const total = merged.length;
-    const unlocked = merged.filter(a => a.unlocked).length;
-    res.json({ total, unlocked, percent: total > 0 ? Math.round(unlocked / total * 100) : 0, achievements: merged });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.listen(PORT, () => console.log(`✅ Backend démarré sur ${PORT}`));
+await ensureAdmin();
+app.listen(PORT, () => console.log(`Backend running on port ${PORT}`));
