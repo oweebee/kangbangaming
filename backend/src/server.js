@@ -283,6 +283,43 @@ app.delete('/api/admin/users/:id', requireAdmin, (req, res) => {
   res.json({ ok: true });
 });
 
+// ── Admin: board management ───────────────────────────────────────────────────
+
+app.get('/api/admin/boards', requireAdmin, (req, res) => {
+  const users = readUsers();
+  const allBoards = readBoards();
+  const userMap = new Map(users.map(u => [u.id, u.username]));
+  const result = [];
+  for (const [userId, userBoards] of Object.entries(allBoards)) {
+    for (const [boardId, board] of Object.entries(userBoards)) {
+      const gameCount = Object.keys(board.games || {}).length;
+      const firstGame = Object.values(board.games || {}).find(g => g.header_img);
+      result.push({
+        id: boardId,
+        name: board.name,
+        emoji: board.emoji || '🎮',
+        ownerUsername: userMap.get(userId) || userId,
+        ownerId: userId,
+        public: board.public || false,
+        gameCount,
+        headerImg: board.headerImg || firstGame?.header_img || null,
+        createdAt: board.createdAt || null,
+      });
+    }
+  }
+  result.sort((a, b) => (a.ownerUsername).localeCompare(b.ownerUsername));
+  res.json(result);
+});
+
+app.delete('/api/admin/boards/:userId/:boardId', requireAdmin, (req, res) => {
+  const { userId, boardId } = req.params;
+  const all = readBoards();
+  if (!all[userId] || !all[userId][boardId]) return res.status(404).json({ error: 'Board not found' });
+  delete all[userId][boardId];
+  writeBoards(all);
+  res.json({ ok: true });
+});
+
 // ── Steam library cache (per user) ───────────────────────────────────────────
 
 const libraryCaches = new Map();

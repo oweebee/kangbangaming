@@ -116,9 +116,14 @@ function AssigneeRow({ assignees = [], appUsers = [], borderColor = 'var(--borde
           background: 'var(--surface2)', border: '1px solid var(--border)',
           borderRadius: 9, padding: '10px 12px',
           zIndex: 9999, boxShadow: '0 4px 20px rgba(0,0,0,0.55)',
-          pointerEvents: 'none',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          pointerEvents: 'auto',
+          cursor: popup.user.steamId ? 'pointer' : 'default',
+        }}
+        onClick={() => popup.user.steamId && window.open(`https://steamcommunity.com/profiles/${popup.user.steamId}`, '_blank')}
+        onMouseEnter={() => clearTimeout(timerRef.current)}
+        onMouseLeave={() => { timerRef.current = setTimeout(() => setPopup(null), 80); }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: popup.user.steamId ? 8 : 0 }}>
             {popup.user.steamAvatar ? (
               <img src={popup.user.steamAvatar} alt="" style={{ width: 36, height: 36, borderRadius: '50%', border: '1px solid var(--border)', flexShrink: 0 }} />
             ) : (
@@ -133,6 +138,14 @@ function AssigneeRow({ assignees = [], appUsers = [], borderColor = 'var(--borde
               )}
             </div>
           </div>
+          {popup.user.steamId && (
+            <div style={{ textAlign: 'center', fontSize: 10, color: '#c7d5e0', background: '#1b2838', borderRadius: 5, padding: '4px 8px', letterSpacing: '0.02em' }}>
+              <svg viewBox="0 0 496 512" xmlns="http://www.w3.org/2000/svg" style={{ width: 9, height: 9, fill: '#c7d5e0', marginRight: 4, verticalAlign: 'middle' }}>
+                <path d="M496 256c0 137-111.2 248-248.4 248-113.8 0-209.7-76.3-239-180.4l95.2 39.3c6.4 32.1 34.9 56.4 68.9 56.4 38.2 0 69.1-31.1 68.9-69.3l84.5-60.2c52.1 1.3 95.8-40.9 95.8-93.5 0-51.6-42-93.5-93.7-93.5s-93.7 42-93.7 93.5v1.2L176.6 279c-15.5-.9-30.7 3.4-43.5 12.1L0 236.1C10.2 108.4 117.1 8 247.6 8 384.8 8 496 119 496 256z"/>
+              </svg>
+              Voir profil Steam
+            </div>
+          )}
         </div>,
         document.body
       )}

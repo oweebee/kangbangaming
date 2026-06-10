@@ -160,6 +160,10 @@ export default function App() {
   const [emojiPickerFor, setEmojiPickerFor] = useState(null);
   const [showDrawer, setShowDrawer] = useState(false);
 
+  // Board name inline edit
+  const [editingBoardName, setEditingBoardName] = useState(false);
+  const [boardNameInput, setBoardNameInput] = useState('');
+
   // Board game search
   const [boardSearchQuery, setBoardSearchQuery] = useState('');
   const [boardSearchResults, setBoardSearchResults] = useState([]);
@@ -251,6 +255,18 @@ export default function App() {
     const data = await res.json();
     setBoards(data);
   }, [token, activeBoardId]);
+
+  const saveBoardName = async () => {
+    const name = boardNameInput.trim();
+    setEditingBoardName(false);
+    if (!name || !activeBoardId || name === activeBoard?.name) return;
+    await fetch(`${API}/boards/${activeBoardId}`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    });
+    setBoards(prev => prev.map(b => b.id === activeBoardId ? { ...b, name } : b));
+  };
 
   const fetchGames = useCallback(async (boardId) => {
     if (!boardId || !token) return;
@@ -949,17 +965,38 @@ export default function App() {
             </>
           ) : (
             <>
-              {/* Board icon */}
-              {activeBoardHeaderImg ? (
-                <img
-                  src={activeBoardHeaderImg} alt=""
-                  style={{ height: 53, width: 'auto', maxWidth: 220, objectFit: 'contain', borderRadius: 6, flexShrink: 0, border: '1px solid var(--border)' }}
-                />
-              ) : activeBoard ? (
-                <span style={{ fontSize: 36, flexShrink: 0 }}>{activeBoard.emoji || '🎮'}</span>
-              ) : null}
+              {/* Board icon — clickable if Steam game */}
+              {(() => {
+                const steamAppId = activeBoardHeaderImg?.match(/apps\/(\d+)\//)?.[1];
+                return activeBoardHeaderImg ? (
+                  <img
+                    src={activeBoardHeaderImg} alt=""
+                    onClick={steamAppId ? () => window.open(`https://store.steampowered.com/app/${steamAppId}`, '_blank') : undefined}
+                    title={steamAppId ? 'Voir sur Steam' : undefined}
+                    style={{ height: 53, width: 'auto', maxWidth: 220, objectFit: 'contain', borderRadius: 6, flexShrink: 0, border: '1px solid var(--border)', cursor: steamAppId ? 'pointer' : 'default' }}
+                  />
+                ) : activeBoard ? (
+                  <span style={{ fontSize: 36, flexShrink: 0 }}>{activeBoard.emoji || '🎮'}</span>
+                ) : null;
+              })()}
               <button onClick={() => { setActiveBoardId(null); setShowHome(true); }} title="Accueil" style={{ background: 'none', border: 'none', color: 'var(--text)', fontSize: 18, cursor: 'pointer', padding: '2px 5px', opacity: 0.75, fontWeight: 700 }}>←</button>
-              <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 220 }}>{activeBoard?.name || '—'}</span>
+              {/* Board name — double-click to edit inline */}
+              {editingBoardName ? (
+                <input
+                  autoFocus
+                  value={boardNameInput}
+                  onChange={e => setBoardNameInput(e.target.value)}
+                  onBlur={saveBoardName}
+                  onKeyDown={e => { if (e.key === 'Enter') saveBoardName(); if (e.key === 'Escape') setEditingBoardName(false); }}
+                  style={{ fontWeight: 700, fontSize: 28, color: 'var(--text)', background: 'transparent', border: 'none', borderBottom: '2px solid var(--accent)', outline: 'none', maxWidth: 280, padding: '0 2px' }}
+                />
+              ) : (
+                <span
+                  onDoubleClick={() => { setBoardNameInput(activeBoard?.name || ''); setEditingBoardName(true); }}
+                  title="Double-cliquer pour renommer"
+                  style={{ fontWeight: 700, fontSize: 28, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 280, cursor: 'text', userSelect: 'none' }}
+                >{activeBoard?.name || '—'}</span>
+              )}
               {activeBoard && (
                 <span
                   onClick={() => toggleBoardPublic(activeBoard.id, !activeBoard.public)}

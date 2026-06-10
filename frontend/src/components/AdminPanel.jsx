@@ -26,6 +26,11 @@ export default function AdminPanel({ token, currentUser, onClose }) {
   const [saving, setSaving] = useState(false);
   const [tab, setTab] = useState('pending');
 
+  // Boards tab
+  const [boards, setBoards] = useState([]);
+  const [boardsLoading, setBoardsLoading] = useState(false);
+  const [boardsError, setBoardsError] = useState('');
+
   const h = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
 
   async function fetchUsers() {
@@ -39,6 +44,24 @@ export default function AdminPanel({ token, currentUser, onClose }) {
   }
 
   useEffect(() => { fetchUsers(); }, []);
+
+  async function fetchBoards() {
+    setBoardsLoading(true); setBoardsError('');
+    try {
+      const res = await fetch(`${API}/admin/boards`, { headers: h });
+      if (!res.ok) throw new Error('Erreur chargement');
+      setBoards(await res.json());
+    } catch (e) { setBoardsError(e.message); }
+    finally { setBoardsLoading(false); }
+  }
+
+  useEffect(() => { if (tab === 'boards') fetchBoards(); }, [tab]);
+
+  async function handleDeleteBoard(ownerId, boardId, boardName) {
+    if (!confirm(`Supprimer le board "${boardName}" ?`)) return;
+    await fetch(`${API}/admin/boards/${ownerId}/${boardId}`, { method: 'DELETE', headers: h });
+    fetchBoards();
+  }
 
   async function patch(id, body) {
     setSaving(true);
@@ -161,6 +184,7 @@ export default function AdminPanel({ token, currentUser, onClose }) {
           </button>
           <button style={tabStyle('active')} onClick={() => setTab('active')}>Actifs ({active.length})</button>
           <button style={tabStyle('suspended')} onClick={() => setTab('suspended')}>Suspendus ({suspended.length})</button>
+          <button style={tabStyle('boards')} onClick={() => setTab('boards')}>Boards</button>
         </div>
 
         {/* Body */}
@@ -182,6 +206,45 @@ export default function AdminPanel({ token, currentUser, onClose }) {
             suspended.length === 0
               ? <p style={{ color: 'var(--text-muted)', fontSize: 13, textAlign: 'center', marginTop: 32 }}>Aucun utilisateur suspendu</p>
               : suspended.map(u => renderUser(u, false))
+          )}
+
+          {tab === 'boards' && (
+            boardsLoading
+              ? <p style={{ color: 'var(--text-muted)', fontSize: 13, textAlign: 'center' }}>Chargement…</p>
+              : boardsError
+                ? <p style={{ color: '#f88', fontSize: 13 }}>{boardsError}</p>
+                : boards.length === 0
+                  ? <p style={{ color: 'var(--text-muted)', fontSize: 13, textAlign: 'center', marginTop: 32 }}>Aucun board</p>
+                  : boards.map(b => (
+                      <div key={`${b.ownerId}-${b.id}`} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 14px', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 12 }}>
+                        {/* Thumbnail */}
+                        <div style={{ width: 52, height: 30, borderRadius: 5, overflow: 'hidden', flexShrink: 0, background: 'var(--surface1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          {b.headerImg
+                            ? <img src={b.headerImg} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            : <span style={{ fontSize: 18 }}>{b.emoji}</span>
+                          }
+                        </div>
+                        {/* Info */}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
+                            <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 180 }}>{b.name}</span>
+                            <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 4, flexShrink: 0, color: b.public ? '#3db86a' : 'var(--text-muted)', border: `1px solid ${b.public ? '#3db86a' : 'var(--border)'}` }}>
+                              {b.public ? 'Public' : 'Privé'}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                            👤 {b.ownerUsername} · {b.gameCount} carte{b.gameCount !== 1 ? 's' : ''}
+                          </div>
+                        </div>
+                        {/* Delete */}
+                        <button
+                          onClick={() => handleDeleteBoard(b.ownerId, b.id, b.name)}
+                          style={{ background: 'rgba(220,50,50,.12)', border: '1px solid rgba(220,50,50,.25)', borderRadius: 6, padding: '5px 10px', color: '#f88', fontSize: 11, cursor: 'pointer', flexShrink: 0 }}
+                        >
+                          🗑 Supprimer
+                        </button>
+                      </div>
+                    ))
           )}
         </div>
       </div>
