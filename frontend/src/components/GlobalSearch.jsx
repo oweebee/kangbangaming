@@ -130,13 +130,13 @@ export default function GlobalSearch({ token, onGoToBoard, onOpenGame }) {
               onKeyDown={handleKeyDown}
               style={{
                 display: 'block',
-                background: 'var(--surface1)',
+                background: 'var(--surface)',
                 border: '1px solid var(--accent)',
                 borderRadius: 8,
                 padding: '7px 30px 7px 12px',
                 color: 'var(--text)', fontSize: 13, outline: 'none',
                 width: 260,
-                boxShadow: '0 6px 24px rgba(0,0,0,0.55)',
+                boxShadow: '0 6px 24px rgba(0,0,0,0.7)',
               }}
             />
             {loading && (
@@ -154,8 +154,8 @@ export default function GlobalSearch({ token, onGoToBoard, onOpenGame }) {
             <div style={{
               marginTop: 4,
               width: 380,
-              background: 'var(--surface1)', border: '1px solid var(--border)',
-              borderRadius: 10, boxShadow: '0 10px 40px rgba(0,0,0,.65)',
+              background: 'var(--surface)', border: '1px solid var(--border)',
+              borderRadius: 10, boxShadow: '0 10px 40px rgba(0,0,0,.85)',
               maxHeight: 460, overflowY: 'auto',
             }}>
               {!loading && results.length === 0 ? (

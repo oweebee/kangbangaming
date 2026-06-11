@@ -251,7 +251,8 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
 
         {/* ── Custom / edit tab ── */}
         {tab === 'custom' && (
-          <div style={{ flex: 1, overflowY: 'auto', padding: '20px 22px 28px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <div style={{ flex: 1, overflowY: 'auto', padding: '20px 22px 0', display: 'flex', flexDirection: 'column', gap: 18 }}>
             {!isEditMode && (
               <p style={{ margin: 0, fontSize: 14, color: 'var(--text-muted)' }}>
                 Crée une carte libre : projet perso, objectif, note de jeu…
@@ -559,12 +560,15 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
             {/* ── Notes ── */}
             <NotesSection notes={notes} onSave={setNotes} onDraftChange={setNotesDraft} compact />
 
-            {/* ── Submit ── */}
+          </div>
+
+          {/* ── Submit sticky ── */}
+          <div style={{ flexShrink: 0, padding: '14px 22px', borderTop: '1px solid var(--border)', background: 'var(--surface)' }}>
             <button
               onClick={handleSubmitCustom}
               disabled={!customName.trim()}
               style={{
-                padding: '14px', background: 'var(--accent)', border: 'none', borderRadius: 9,
+                width: '100%', padding: '14px', background: 'var(--accent)', border: 'none', borderRadius: 9,
                 color: '#fff', fontWeight: 700, fontSize: 17,
                 cursor: customName.trim() ? 'pointer' : 'not-allowed',
                 opacity: customName.trim() ? 1 : 0.5,
@@ -572,6 +576,7 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
             >
               {isEditMode ? '✓ Enregistrer les modifications' : (customOnly ? '+ Créer la tâche' : '+ Créer la carte')}
             </button>
+          </div>
           </div>
         )}
       </div>
