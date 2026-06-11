@@ -831,6 +831,15 @@ export default function App() {
           </>
         )}
 
+        {/* Séparateur épinglés / autres */}
+        {personalFavIds.length > 0 && sortedBoards.some(b => personalFavIds.includes(b.id)) && sortedBoards.some(b => !personalFavIds.includes(b.id)) && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 4px 2px', margin: '2px 0 4px' }}>
+            <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+            <span style={{ fontSize: 9, color: 'var(--text-muted)', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.06em', flexShrink: 0 }}>Mes boards</span>
+            <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+          </div>
+        )}
+
         {/* Non-pinned boards */}
         {sortedBoards.filter(b => !personalFavIds.includes(b.id)).map(b => (
           <div key={b.id}
@@ -878,12 +887,12 @@ export default function App() {
         ))}
       </div>
 
-      {/* Favorited public boards */}
+      {/* Followed public boards */}
       {favBoards.length > 0 && (
         <div style={{ padding: '4px 6px 0', borderTop: '1px solid var(--border)' }}>
           <div style={{ fontSize: 10, color: 'var(--text-muted)', padding: '4px 2px 4px 4px', letterSpacing: '0.06em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 4 }}>
-            <svg viewBox="0 0 24 24" width="10" height="10" fill="var(--accent)" stroke="var(--accent)" strokeWidth="1.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-            Publics favoris
+            <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            Boards publics suivis
           </div>
           {sortedFavBoards.map(b => (
             <div key={b.id}

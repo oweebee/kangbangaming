@@ -104,8 +104,8 @@ export default function PublicBoards({ token, currentUser, favBoardIds = new Set
                         onMouseLeave={() => setFavHover(null)}
                       >
                         {favHover === board.id
-                          ? <><span style={{ fontSize: 12, lineHeight: 1 }}>✕</span> Retirer</>
-                          : <><StarIcon filled size={13} /> Favori</>
+                          ? <><span style={{ fontSize: 12, lineHeight: 1 }}>✕</span> Ne plus suivre</>
+                          : <><StarIcon filled size={13} /> Suivi</>
                         }
                       </button>
                     ) : (
@@ -120,7 +120,7 @@ export default function PublicBoards({ token, currentUser, favBoardIds = new Set
                           opacity: toggling.has(board.id) ? 0.5 : 1, flexShrink: 0,
                         }}
                       >
-                        <StarIcon filled={false} size={13} /> + Favori
+                        + Suivre
                       </button>
                     )
                   )}
