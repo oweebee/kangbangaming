@@ -41,6 +41,7 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
   const isEditMode = !!initialGame;
 
   const [tab, setTab] = useState(customOnly || isEditMode ? 'custom' : 'steam');
+  const [customSubTab, setCustomSubTab] = useState('fiche'); // 'fiche' | 'notes'
 
   // Steam search
   const [query, setQuery] = useState('');
@@ -252,6 +253,24 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
         {/* ── Custom / edit tab ── */}
         {tab === 'custom' && (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+
+          {/* ── Sous-onglets Fiche / Notes ── */}
+          <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', padding: '0 22px', flexShrink: 0 }}>
+            {[
+              { id: 'fiche', label: 'Fiche' },
+              { id: 'notes', label: `Notes${notes.length > 0 ? ` (${notes.length})` : ''}` },
+            ].map(t => (
+              <button key={t.id} onClick={() => setCustomSubTab(t.id)} style={{
+                background: 'none', border: 'none',
+                borderBottom: customSubTab === t.id ? '2px solid var(--accent)' : '2px solid transparent',
+                padding: '9px 14px', color: customSubTab === t.id ? 'var(--text)' : 'var(--text-muted)',
+                fontWeight: customSubTab === t.id ? 700 : 400, fontSize: 13,
+                cursor: 'pointer', marginBottom: -1, transition: 'color .15s',
+              }}>{t.label}</button>
+            ))}
+          </div>
+
+          {customSubTab === 'fiche' && (
           <div style={{ flex: 1, overflowY: 'auto', padding: '20px 22px 0', display: 'flex', flexDirection: 'column', gap: 18 }}>
             {!isEditMode && (
               <p style={{ margin: 0, fontSize: 14, color: 'var(--text-muted)' }}>
@@ -557,10 +576,15 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
             {/* ── Progress ── */}
             <ProgressSlider value={progress} onChange={setProgress} compact />
 
-            {/* ── Notes ── */}
-            <NotesSection notes={notes} onSave={setNotes} onDraftChange={setNotesDraft} compact token={token} />
-
           </div>
+          )} {/* end customSubTab === 'fiche' */}
+
+          {/* ── Sous-onglet Notes ── */}
+          {customSubTab === 'notes' && (
+            <div style={{ flex: 1, overflowY: 'auto', padding: '16px 22px' }}>
+              <NotesSection notes={notes} onSave={setNotes} onDraftChange={setNotesDraft} compact={false} token={token} />
+            </div>
+          )}
 
           {/* ── Submit sticky ── */}
           <div style={{ flexShrink: 0, padding: '14px 22px', borderTop: '1px solid var(--border)', background: 'var(--surface)' }}>

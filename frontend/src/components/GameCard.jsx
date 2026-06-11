@@ -14,13 +14,14 @@ function formatPlaytime(minutes) {
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 
-export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArchive, onUnarchive, onDelete, onEdit, isDragging, readOnly, isTaskBoard, compact = false, assignees = [], appUsers = [], onToggleDone }) {
+export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArchive, onUnarchive, onDelete, onEdit, isDragging, readOnly, isTaskBoard, compact = false, assignees = [], appUsers = [], onToggleDone, onClickNotes }) {
   const [imgError, setImgError] = useState(false);
   const [ttImgError, setTtImgError] = useState(false);
   const isCustom   = game.type === 'custom';
   const isArchived = !!game.archived;
   const isUrgent   = !!game.urgent;
   const isDone     = !!game.done;
+  const notesCount = (game.notes || []).length;
   const tt         = game.taskType ? getTaskType(game.taskType) : null;
   const TtFallback = tt?.FallbackIcon;
   const dateInfo  = getDateInfo(game);
@@ -400,6 +401,51 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
             transition: 'width .3s, background .3s',
           }} />
         </div>
+      )}
+
+      {/* ── Bulle notes (compact + non-compact) ── */}
+      {notesCount > 0 && !isArchived && (
+        <button
+          onClick={e => { e.stopPropagation(); if (onClickNotes) onClickNotes(); else if (onClick) onClick(); }}
+          title={`${notesCount} note${notesCount > 1 ? 's' : ''} — ouvrir l'onglet notes`}
+          style={{
+            position: 'absolute',
+            ...(compact ? {
+              top: (isDone && !isArchived) ? 24 : 4,
+              left: 4,
+            } : {
+              top: isUrgent ? 26 : 5,
+              right: 5,
+            }),
+            background: 'rgba(80,150,240,0.22)',
+            border: '1px solid rgba(80,150,240,0.55)',
+            borderRadius: 5, padding: '2px 5px',
+            fontSize: compact ? 9 : 10, fontWeight: 700,
+            color: '#7ab8ff',
+            cursor: 'pointer', zIndex: 4,
+            display: 'flex', alignItems: 'center', gap: 3,
+            lineHeight: 1, userSelect: 'none',
+            boxShadow: '0 1px 4px rgba(0,0,0,0.4)',
+          }}
+        >
+          <svg viewBox="0 0 24 24" width={compact ? 9 : 10} height={compact ? 9 : 10} fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+          {notesCount}
+        </button>
+      )}
+
+      {/* ── Urgent badge en mode compact (absent des images) ── */}
+      {isUrgent && !isArchived && compact && (
+        <div style={{
+          position: 'absolute', top: 4,
+          left: (isDone && !isArchived) || notesCount > 0 ? ((isDone && !isArchived) && notesCount > 0 ? 50 : 24) : 4,
+          background: 'rgba(200,30,30,0.9)', color: '#fff',
+          width: 16, height: 16, borderRadius: '50%',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 10, fontWeight: 900, lineHeight: 1, zIndex: 4,
+          boxShadow: '0 0 5px rgba(220,40,40,0.5)',
+        }}>!</div>
       )}
     </div>
   );

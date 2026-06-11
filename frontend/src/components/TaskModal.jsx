@@ -155,13 +155,15 @@ function AssigneeRow({ assignees = [], appUsers = [], borderColor = 'var(--borde
 
 // ── TaskModal ─────────────────────────────────────────────────────────────────
 
-export default function TaskModal({ game, onClose, onEdit, appUsers = [], onPatchGame, isTaskBoard, token }) {
+export default function TaskModal({ game, onClose, onEdit, appUsers = [], onPatchGame, isTaskBoard, token, defaultTab = 'infos' }) {
   const tt        = game.taskType ? getTaskType(game.taskType) : null;
   const TtIcon    = tt?.FallbackIcon;
   const [ttImgError, setTtImgError] = useState(false);
+  const [activeTab, setActiveTab] = useState(defaultTab);
   const dateInfo  = getDateInfo(game);
   const isUrgent  = !!game.urgent;
   const isDone    = !!game.done;
+  const notesCount = (game.notes || []).length;
   const cardBorderColor = isDone ? 'rgba(61,184,106,0.6)' : isUrgent ? 'rgba(220,60,60,0.6)' : tt ? tt.border : 'var(--border)';
 
   const handleSaveNotes    = (notes)    => { if (onPatchGame) onPatchGame(game.appid, { notes }); };
@@ -264,117 +266,138 @@ export default function TaskModal({ game, onClose, onEdit, appUsers = [], onPatc
           </div>
         </div>
 
+        {/* ── Tabs bar ── */}
+        <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', flexShrink: 0, background: 'var(--surface)' }}>
+          {[
+            { id: 'infos', label: 'Infos' },
+            { id: 'notes', label: `Notes${notesCount > 0 ? ` (${notesCount})` : ''}` },
+          ].map(t => (
+            <button key={t.id} onClick={() => setActiveTab(t.id)} style={{
+              background: 'none', border: 'none',
+              borderBottom: activeTab === t.id ? '2px solid var(--accent)' : '2px solid transparent',
+              padding: '10px 18px', color: activeTab === t.id ? 'var(--text)' : 'var(--text-muted)',
+              fontWeight: activeTab === t.id ? 700 : 400, fontSize: 13,
+              cursor: 'pointer', marginBottom: -1, transition: 'color .15s',
+            }}>{t.label}</button>
+          ))}
+        </div>
+
         {/* ── Body ── */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '14px 16px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
 
-          {/* URGENT banner */}
-          {isUrgent && (
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 10,
-              background: 'rgba(200,30,30,0.12)',
-              border: '1.5px solid rgba(220,60,60,0.5)',
-              borderRadius: 9, padding: '10px 14px',
-            }}>
-              <span style={{ fontSize: 20, lineHeight: 1 }}>⚠</span>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 900, color: '#ff6060', letterSpacing: '0.06em', textTransform: 'uppercase' }}>URGENT</div>
-                <div style={{ fontSize: 11, color: 'rgba(255,100,100,0.7)', marginTop: 1 }}>Cette tâche est marquée comme urgente</div>
-              </div>
-            </div>
-          )}
+          {/* ══ ONGLET INFOS ══ */}
+          {activeTab === 'infos' && (<>
 
-          {/* Date block */}
-          {dateInfo && (
-            <div style={{
-              background: dateInfo.bg,
-              border: `1px solid ${dateInfo.border}`,
-              borderRadius: 9, padding: '10px 14px',
-              display: 'flex', alignItems: 'center', gap: 10,
-            }}>
-              <span style={{ fontSize: 18, lineHeight: 1 }}>📅</span>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 11, color: dateInfo.color, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>
-                  {STATUS_LABEL[dateInfo.status]}
-                </div>
-                <div style={{ fontSize: 13, color: 'var(--text)', fontWeight: 600 }}>{dateInfo.detail}</div>
-              </div>
+            {/* URGENT banner */}
+            {isUrgent && (
               <div style={{
-                background: dateInfo.bg, border: `1px solid ${dateInfo.border}`,
-                borderRadius: 5, padding: '2px 8px', fontSize: 11, color: dateInfo.color, fontWeight: 700,
+                display: 'flex', alignItems: 'center', gap: 10,
+                background: 'rgba(200,30,30,0.12)',
+                border: '1.5px solid rgba(220,60,60,0.5)',
+                borderRadius: 9, padding: '10px 14px',
               }}>
-                {dateInfo.label}
-              </div>
-            </div>
-          )}
-
-          {/* Assignees (Steam boards only) */}
-          {isTaskBoard && appUsers.length > 0 && (game.assignees?.length > 0) && (
-            <div style={{ background: 'var(--surface2)', border: `1px solid ${cardBorderColor}`, borderRadius: 9, padding: '10px 14px' }}>
-              <AssigneeRow assignees={game.assignees} appUsers={appUsers} borderColor={cardBorderColor} />
-            </div>
-          )}
-
-          {/* Terminée toggle */}
-          <button
-            onClick={handleToggleDone}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 10,
-              background: isDone ? 'rgba(61,184,106,0.12)' : 'var(--surface2)',
-              border: `1.5px solid ${isDone ? '#3db86a' : 'var(--border)'}`,
-              borderRadius: 9, padding: '11px 14px', width: '100%', cursor: 'pointer',
-              transition: 'all .15s', textAlign: 'left',
-            }}
-          >
-            <div style={{
-              width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
-              border: `2px solid ${isDone ? '#3db86a' : 'rgba(255,255,255,0.25)'}`,
-              background: isDone ? '#3db86a' : 'transparent',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              transition: 'all .15s',
-            }}>
-              {isDone && (
-                <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="20 6 9 17 4 12"/>
-                </svg>
-              )}
-            </div>
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: isDone ? '#3db86a' : 'var(--text)' }}>
-                {isDone ? 'Terminée ✓' : 'Marquer comme terminée'}
-              </div>
-              {isDone && (
-                <div style={{ fontSize: 10, color: 'rgba(61,184,106,0.7)', marginTop: 1 }}>
-                  Cette tâche est considérée comme complétée
+                <span style={{ fontSize: 20, lineHeight: 1 }}>⚠</span>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 900, color: '#ff6060', letterSpacing: '0.06em', textTransform: 'uppercase' }}>URGENT</div>
+                  <div style={{ fontSize: 11, color: 'rgba(255,100,100,0.7)', marginTop: 1 }}>Cette tâche est marquée comme urgente</div>
                 </div>
-              )}
+              </div>
+            )}
+
+            {/* Date block */}
+            {dateInfo && (
+              <div style={{
+                background: dateInfo.bg,
+                border: `1px solid ${dateInfo.border}`,
+                borderRadius: 9, padding: '10px 14px',
+                display: 'flex', alignItems: 'center', gap: 10,
+              }}>
+                <span style={{ fontSize: 18, lineHeight: 1 }}>📅</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 11, color: dateInfo.color, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>
+                    {STATUS_LABEL[dateInfo.status]}
+                  </div>
+                  <div style={{ fontSize: 13, color: 'var(--text)', fontWeight: 600 }}>{dateInfo.detail}</div>
+                </div>
+                <div style={{
+                  background: dateInfo.bg, border: `1px solid ${dateInfo.border}`,
+                  borderRadius: 5, padding: '2px 8px', fontSize: 11, color: dateInfo.color, fontWeight: 700,
+                }}>
+                  {dateInfo.label}
+                </div>
+              </div>
+            )}
+
+            {/* Assignees (Steam boards only) */}
+            {isTaskBoard && appUsers.length > 0 && (game.assignees?.length > 0) && (
+              <div style={{ background: 'var(--surface2)', border: `1px solid ${cardBorderColor}`, borderRadius: 9, padding: '10px 14px' }}>
+                <AssigneeRow assignees={game.assignees} appUsers={appUsers} borderColor={cardBorderColor} />
+              </div>
+            )}
+
+            {/* Terminée toggle */}
+            <button
+              onClick={handleToggleDone}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                background: isDone ? 'rgba(61,184,106,0.12)' : 'var(--surface2)',
+                border: `1.5px solid ${isDone ? '#3db86a' : 'var(--border)'}`,
+                borderRadius: 9, padding: '11px 14px', width: '100%', cursor: 'pointer',
+                transition: 'all .15s', textAlign: 'left',
+              }}
+            >
+              <div style={{
+                width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
+                border: `2px solid ${isDone ? '#3db86a' : 'rgba(255,255,255,0.25)'}`,
+                background: isDone ? '#3db86a' : 'transparent',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'all .15s',
+              }}>
+                {isDone && (
+                  <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                )}
+              </div>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: isDone ? '#3db86a' : 'var(--text)' }}>
+                  {isDone ? 'Terminée ✓' : 'Marquer comme terminée'}
+                </div>
+                {isDone && (
+                  <div style={{ fontSize: 10, color: 'rgba(61,184,106,0.7)', marginTop: 1 }}>
+                    Cette tâche est considérée comme complétée
+                  </div>
+                )}
+              </div>
+            </button>
+
+            {/* Progress */}
+            <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 9, padding: '12px 14px' }}>
+              <ProgressSlider
+                value={game.progress ?? null}
+                onChange={handleSaveProgress}
+              />
             </div>
-          </button>
 
-          {/* Progress */}
-          <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 9, padding: '12px 14px' }}>
-            <ProgressSlider
-              value={game.progress ?? null}
-              onChange={handleSaveProgress}
-            />
-          </div>
+            {/* Meta row — emoji only for untyped cards */}
+            {!game.taskType && game.emoji && (
+              <div style={{ display: 'flex', gap: 8 }}>
+                <div style={{ background: 'var(--surface2)', borderRadius: 7, padding: '5px 10px', fontSize: 20 }}>
+                  {game.emoji}
+                </div>
+              </div>
+            )}
 
-          {/* Notes */}
-          <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 9, padding: '12px 14px' }}>
+          </>)}
+
+          {/* ══ ONGLET NOTES ══ */}
+          {activeTab === 'notes' && (
             <NotesSection
               notes={game.notes || []}
               onSave={handleSaveNotes}
               compact={false}
               token={token}
             />
-          </div>
-
-          {/* Meta row — emoji only for untyped cards */}
-          {!game.taskType && game.emoji && (
-            <div style={{ display: 'flex', gap: 8 }}>
-              <div style={{ background: 'var(--surface2)', borderRadius: 7, padding: '5px 10px', fontSize: 20 }}>
-                {game.emoji}
-              </div>
-            </div>
           )}
         </div>
       </div>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import NotesSection from './NotesSection.jsx';
 
 function formatPlaytime(minutes) {
   if (!minutes || minutes === 0) return 'Jamais joué';
@@ -8,11 +9,13 @@ function formatPlaytime(minutes) {
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 
-export default function GameModal({ game, onClose, api, token }) {
+export default function GameModal({ game, onClose, api, token, onPatchGame, defaultTab = 'achievements' }) {
   const [achievements, setAchievements] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState('achievements');
+  const [tab, setTab] = useState(defaultTab);
   const [filter, setFilter] = useState('all');
+  const notesCount = (game.notes || []).length;
+  const handleSaveNotes = (notes) => { if (onPatchGame) onPatchGame(game.appid, { notes }); };
 
   useEffect(() => {
     async function load() {
@@ -99,7 +102,7 @@ export default function GameModal({ game, onClose, api, token }) {
 
         {/* Tabs */}
         <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', padding: '8px 16px 0', flexShrink: 0 }}>
-          {[['achievements', '🏆 Succès'], ['info', 'ℹ️ Infos']].map(([id, label]) => (
+          {[['achievements', '🏆 Succès'], ['info', 'ℹ️ Infos'], ['notes', `📝 Notes${notesCount > 0 ? ` (${notesCount})` : ''}`]].map(([id, label]) => (
             <button key={id} onClick={() => setTab(id)} style={{
               background: 'none', border: 'none',
               borderBottom: tab === id ? '2px solid var(--accent)' : '2px solid transparent',
@@ -165,6 +168,17 @@ export default function GameModal({ game, onClose, api, token }) {
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {tab === 'notes' && (
+            <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}>
+              <NotesSection
+                notes={game.notes || []}
+                onSave={handleSaveNotes}
+                compact={false}
+                token={token}
+              />
             </div>
           )}
         </div>

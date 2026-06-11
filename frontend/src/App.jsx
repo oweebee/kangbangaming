@@ -217,6 +217,7 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [selectedGame, setSelectedGame] = useState(null);
+  const [selectedGameDefaultTab, setSelectedGameDefaultTab] = useState('infos');
   const [editingGame,  setEditingGame]  = useState(null);
   const [showArchived, setShowArchived] = useState(false);
   const [infoPanelLocked, setInfoPanelLockedRaw] = useState(() => {
@@ -648,6 +649,12 @@ export default function App() {
     });
     setGames(prev => prev.map(g => g.appid === appid ? { ...g, ...fields } : g));
   };
+  // Open card directly on the Notes tab (from badge click)
+  const handleCardNotesClick = (game) => {
+    setSelectedGame(game);
+    setSelectedGameDefaultTab('notes');
+  };
+
   const moveGame = useCallback(async (appid, column) => {
     setGames(prev => prev.map(g => g.appid === appid ? { ...g, column } : g));
     const boardApi = getBoardApi();
@@ -1302,14 +1309,14 @@ export default function App() {
           loading ? (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Chargement...</div>
           ) : (
-            <MobileBoard columns={columns} byColumn={byColumn} onCardClick={setSelectedGame} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} isTaskBoard={isTaskBoard} onToggleDone={(appid, done) => patchGame(appid, { done })} />
+            <MobileBoard columns={columns} byColumn={byColumn} onCardClick={g => { setSelectedGameDefaultTab('infos'); setSelectedGame(g); }} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} isTaskBoard={isTaskBoard} onToggleDone={(appid, done) => patchGame(appid, { done })} onClickNotes={handleCardNotesClick} />
           )
         ) : !activeBoardId ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Crée un board pour commencer</div>
         ) : loading ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Chargement...</div>
         ) : (
-          <MobileBoard columns={columns} byColumn={byColumn} onCardClick={setSelectedGame} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} isTaskBoard={isTaskBoard} onToggleDone={(appid, done) => patchGame(appid, { done })} />
+          <MobileBoard columns={columns} byColumn={byColumn} onCardClick={g => { setSelectedGameDefaultTab('infos'); setSelectedGame(g); }} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} isTaskBoard={isTaskBoard} onToggleDone={(appid, done) => patchGame(appid, { done })} onClickNotes={handleCardNotesClick} />
         )}
         {(activeBoardId || publicBoardMode) && (
           <div style={{ background: 'var(--surface)', borderTop: '1px solid var(--border)', padding: '8px 12px', display: 'flex', gap: 8, flexShrink: 0 }}>
@@ -1333,8 +1340,8 @@ export default function App() {
         {showSearch && <SearchModal api={API} token={token} boardGames={games} onAdd={g => addGame(g, searchTargetCol)} onRemove={removeGame} onClose={() => { setShowSearch(false); setSearchTargetCol(null); }} customOnly={isTaskBoard} isTaskBoard={isTaskBoard} appUsers={appUsers} />}
         {editingGame && <SearchModal api={API} token={token} boardGames={games} onAdd={addGame} onRemove={removeGame} onClose={() => setEditingGame(null)} customOnly={isTaskBoard} isTaskBoard={isTaskBoard} appUsers={appUsers} initialGame={editingGame} onSave={async g => { await updateGame(g); setEditingGame(null); }} />}
         {displayedGame && displayedGame.type === 'custom'
-          ? <TaskModal game={displayedGame} appUsers={appUsers} onPatchGame={patchGame} onClose={() => setSelectedGame(null)} onEdit={() => { setEditingGame(displayedGame); setSelectedGame(null); }} isTaskBoard={isTaskBoard} token={token} />
-          : displayedGame && <GameModal game={displayedGame} onClose={() => setSelectedGame(null)} api={API} token={token} />
+          ? <TaskModal game={displayedGame} appUsers={appUsers} onPatchGame={patchGame} onClose={() => { setSelectedGame(null); setSelectedGameDefaultTab('infos'); }} onEdit={() => { setEditingGame(displayedGame); setSelectedGame(null); setSelectedGameDefaultTab('infos'); }} isTaskBoard={isTaskBoard} token={token} defaultTab={selectedGameDefaultTab} />
+          : displayedGame && <GameModal game={displayedGame} onClose={() => { setSelectedGame(null); setSelectedGameDefaultTab('infos'); }} api={API} token={token} onPatchGame={patchGame} defaultTab={selectedGameDefaultTab === 'notes' ? 'notes' : 'achievements'} />
         }
         {showAdmin && <AdminPanel token={token} currentUser={currentUser} onClose={() => setShowAdmin(false)} />}
         {showSteamSettings && <SteamSettings token={token} onSave={handleSteamSave} onClose={() => setShowSteamSettings(false)} />}
@@ -1495,14 +1502,14 @@ export default function App() {
           loading ? (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Chargement...</div>
           ) : (
-            <KanbanBoard columns={columns} byColumn={byColumn} dragging={dragging} setDragging={setDragging} moveGame={moveGame} onCardClick={setSelectedGame} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} onRenameColumn={renameColumn} onDeleteColumn={deleteColumn} onSetEmoji={setColumnEmoji} onReorderColumns={reorderColumns} onAddToColumn={colId => { setSearchTargetCol(colId); setShowSearch(true); }} onReorderGames={reorderGamesInColumn} isTaskBoard={isTaskBoard} appUsers={appUsers} compactView={compactView} leftOffset={infoPanelLocked && infoPanelSide === 'left' ? GAME_INFO_PANEL_WIDTH : 0} rightOffset={infoPanelLocked && infoPanelSide === 'right' ? GAME_INFO_PANEL_WIDTH : 0} onToggleDone={(appid, done) => patchGame(appid, { done })} />
+            <KanbanBoard columns={columns} byColumn={byColumn} dragging={dragging} setDragging={setDragging} moveGame={moveGame} onCardClick={g => { setSelectedGameDefaultTab('infos'); setSelectedGame(g); }} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} onRenameColumn={renameColumn} onDeleteColumn={deleteColumn} onSetEmoji={setColumnEmoji} onReorderColumns={reorderColumns} onAddToColumn={colId => { setSearchTargetCol(colId); setShowSearch(true); }} onReorderGames={reorderGamesInColumn} isTaskBoard={isTaskBoard} appUsers={appUsers} compactView={compactView} leftOffset={infoPanelLocked && infoPanelSide === 'left' ? GAME_INFO_PANEL_WIDTH : 0} rightOffset={infoPanelLocked && infoPanelSide === 'right' ? GAME_INFO_PANEL_WIDTH : 0} onToggleDone={(appid, done) => patchGame(appid, { done })} onClickNotes={handleCardNotesClick} />
           )
         ) : !activeBoardId ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Crée un board pour commencer</div>
         ) : loading ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Chargement...</div>
         ) : (
-          <KanbanBoard columns={columns} byColumn={byColumn} dragging={dragging} setDragging={setDragging} moveGame={moveGame} onCardClick={setSelectedGame} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} onRenameColumn={renameColumn} onDeleteColumn={deleteColumn} onSetEmoji={setColumnEmoji} onReorderColumns={reorderColumns} onAddToColumn={colId => { setSearchTargetCol(colId); setShowSearch(true); }} onReorderGames={reorderGamesInColumn} isTaskBoard={isTaskBoard} appUsers={appUsers} compactView={compactView} leftOffset={infoPanelLocked && infoPanelSide === 'left' ? GAME_INFO_PANEL_WIDTH : 0} rightOffset={infoPanelLocked && infoPanelSide === 'right' ? GAME_INFO_PANEL_WIDTH : 0} onToggleDone={(appid, done) => patchGame(appid, { done })} />
+          <KanbanBoard columns={columns} byColumn={byColumn} dragging={dragging} setDragging={setDragging} moveGame={moveGame} onCardClick={g => { setSelectedGameDefaultTab('infos'); setSelectedGame(g); }} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} onRenameColumn={renameColumn} onDeleteColumn={deleteColumn} onSetEmoji={setColumnEmoji} onReorderColumns={reorderColumns} onAddToColumn={colId => { setSearchTargetCol(colId); setShowSearch(true); }} onReorderGames={reorderGamesInColumn} isTaskBoard={isTaskBoard} appUsers={appUsers} compactView={compactView} leftOffset={infoPanelLocked && infoPanelSide === 'left' ? GAME_INFO_PANEL_WIDTH : 0} rightOffset={infoPanelLocked && infoPanelSide === 'right' ? GAME_INFO_PANEL_WIDTH : 0} onToggleDone={(appid, done) => patchGame(appid, { done })} onClickNotes={handleCardNotesClick} />
         )}
         </div>
       </div>
@@ -1514,8 +1521,8 @@ export default function App() {
       {showSearch && <SearchModal api={API} token={token} boardGames={games} onAdd={g => addGame(g, searchTargetCol)} onRemove={removeGame} onClose={() => { setShowSearch(false); setSearchTargetCol(null); }} customOnly={isTaskBoard} isTaskBoard={isTaskBoard} appUsers={appUsers} />}
       {editingGame && <SearchModal api={API} token={token} boardGames={games} onAdd={addGame} onRemove={removeGame} onClose={() => setEditingGame(null)} customOnly={isTaskBoard} isTaskBoard={isTaskBoard} appUsers={appUsers} initialGame={editingGame} onSave={async g => { await updateGame(g); setEditingGame(null); }} />}
       {displayedGame && displayedGame.type === 'custom'
-        ? <TaskModal game={displayedGame} appUsers={appUsers} onPatchGame={patchGame} onClose={() => setSelectedGame(null)} onEdit={() => { setEditingGame(displayedGame); setSelectedGame(null); }} isTaskBoard={isTaskBoard} token={token} />
-        : displayedGame && <GameModal game={displayedGame} onClose={() => setSelectedGame(null)} api={API} token={token} />
+        ? <TaskModal game={displayedGame} appUsers={appUsers} onPatchGame={patchGame} onClose={() => { setSelectedGame(null); setSelectedGameDefaultTab('infos'); }} onEdit={() => { setEditingGame(displayedGame); setSelectedGame(null); setSelectedGameDefaultTab('infos'); }} isTaskBoard={isTaskBoard} token={token} defaultTab={selectedGameDefaultTab} />
+        : displayedGame && <GameModal game={displayedGame} onClose={() => { setSelectedGame(null); setSelectedGameDefaultTab('infos'); }} api={API} token={token} onPatchGame={patchGame} defaultTab={selectedGameDefaultTab === 'notes' ? 'notes' : 'achievements'} />
       }
       {showAdmin && <AdminPanel token={token} currentUser={currentUser} onClose={() => setShowAdmin(false)} />}
       {showSteamSettings && <SteamSettings token={token} onSave={handleSteamSave} onClose={() => setShowSteamSettings(false)} />}
