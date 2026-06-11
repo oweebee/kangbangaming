@@ -739,9 +739,9 @@ app.delete('/api/public/boards/:boardId/games/:appid', requireAuth, (req, res) =
 app.get('/api/boards', requireAuth, (req, res) => {
   const userBoards = getUserBoards(req.user.id);
   res.json(Object.entries(userBoards).map(([id, b]) => {
-    const firstGame = Object.values(b.games || {}).find(g => g.header_img);
-    const headerImg = b.headerImg || firstGame?.header_img || null;
-    return { id, name: b.name, emoji: b.emoji || '🎮', gameIcon: b.gameIcon || null, headerImg, columns: b.columns || [], public: b.public || false };
+    // Only return the explicitly stored headerImg — do NOT fall back to game cards.
+    // The Steam encart must only appear on boards intentionally linked to a Steam game.
+    return { id, name: b.name, emoji: b.emoji || '🎮', gameIcon: b.gameIcon || null, headerImg: b.headerImg || null, columns: b.columns || [], public: b.public || false };
   }));
 });
 

@@ -280,6 +280,7 @@ export default function App() {
     setShowPublicBoards(false);
     setShowHome(false);
     setActiveBoardId(null);
+    setGames([]); // clear immediately so stale personal board games don't leak into Steam info effect
     setLoading(true);
     try {
       const h = { Authorization: `Bearer ${token}` };
@@ -398,14 +399,17 @@ export default function App() {
   // Use same fallback as the render path: board.headerImg OR first game with header_img
   useEffect(() => {
     const board = boards.find(b => b.id === activeBoardId);
-    // publicBoardMode.headerImg already contains board.headerImg || firstGame.header_img from the API
-    // Do NOT fall back to games[] here — games state may be stale from the previous board
-    const headerImg = board?.headerImg || publicBoardMode?.headerImg || null;
+    // Personal boards: only board.headerImg (explicitly stored — never computed from game cards)
+    // Public boards: publicBoardMode.headerImg first, then fallback to loaded games (safe: games are cleared on openPublicBoard)
+    const headerImg = board?.headerImg
+      || publicBoardMode?.headerImg
+      || (publicBoardMode ? games.find(g => g.header_img)?.header_img : null)
+      || null;
     const appId = headerImg?.match(/apps\/(\d+)\//)?.[1] || null;
     if (!appId || !token) { setGameInfo(null); return; }
     fetch(`${API}/steam/gameinfo/${appId}`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.ok ? r.json() : null).then(setGameInfo).catch(() => setGameInfo(null));
-  }, [activeBoardId, boards, token, publicBoardMode]);
+  }, [activeBoardId, boards, token, publicBoardMode, games]);
 
   // Board game search
   const searchBoardGames = useCallback(async (q) => {
