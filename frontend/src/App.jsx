@@ -8,7 +8,6 @@ import LoginPage from './components/LoginPage.jsx';
 import RegisterPage from './components/RegisterPage.jsx';
 import AdminPanel from './components/AdminPanel.jsx';
 import SteamSettings from './components/SteamSettings.jsx';
-import PublicBoards from './components/PublicBoards.jsx';
 import ProfilePage from './components/ProfilePage.jsx';
 import GameStatsWidget from './components/GameStatsWidget.jsx';
 import GlobalSearch from './components/GlobalSearch.jsx';
@@ -168,8 +167,6 @@ export default function App() {
   // Modals
   const [showAdmin, setShowAdmin] = useState(false);
   const [showSteamSettings, setShowSteamSettings] = useState(false);
-  const [showPublicBoards, setShowPublicBoards] = useState(false);
-  const [publicBoardsKey, setPublicBoardsKey] = useState(0);
   const [showProfile, setShowProfile] = useState(false);
 
   // Favorites (public boards pinned to sidebar)
@@ -310,7 +307,6 @@ export default function App() {
 
   const openPublicBoard = async (board) => {
     setPublicBoardMode(board);
-    setShowPublicBoards(false);
     setShowHome(false);
     setActiveBoardId(null);
     setGames([]); // clear immediately so stale personal board games don't leak into Steam info effect
@@ -393,7 +389,6 @@ export default function App() {
       setActiveBoardId(boardId);
       setShowHome(false);
       setPublicBoardMode(null);
-      setShowPublicBoards(false);
     }
   };
 
@@ -405,7 +400,6 @@ export default function App() {
       setActiveBoardId(boardId);
       setShowHome(false);
       setPublicBoardMode(null);
-      setShowPublicBoards(false);
       setPendingOpenGameId(gameId);
     }
   };
@@ -780,7 +774,10 @@ export default function App() {
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
               {homePublicBoards.map(b => (
-                <HomeBoardCard key={b.id} board={b} isPublic onClick={() => openPublicBoard(b)} />
+                <HomeBoardCard key={b.id} board={b} isPublic
+                  isFav={favBoards.some(f => f.id === b.id)}
+                  onToggleFav={(cur) => toggleFavorite(b.id, b, cur)}
+                  onClick={() => openPublicBoard(b)} />
               ))}
             </div>
           )}
@@ -848,24 +845,47 @@ export default function App() {
           </svg>
           <DiscordServerIcon size={35} borderColor="#111" />
         </div>
-        <span onClick={() => { setShowHome(true); setActiveBoardId(null); setPublicBoardMode(null); setShowPublicBoards(false); }} style={{ fontWeight: 800, fontSize: 16, letterSpacing: '0.04em', color: 'var(--text)', flex: 1, cursor: 'pointer' }}>KangBanGaming</span>
+        <span onClick={() => { setShowHome(true); setActiveBoardId(null); setPublicBoardMode(null); }} style={{ fontWeight: 800, fontSize: 16, letterSpacing: '0.04em', color: 'var(--text)', flex: 1, cursor: 'pointer' }}>KangBanGaming</span>
         {isMobile && <button onClick={() => setShowDrawer(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 18, cursor: 'pointer', lineHeight: 1 }}>✕</button>}
       </div>
 
-      {/* Boards publics button */}
-      <div style={{ padding: '6px 6px 0' }}>
+      {/* Tableau de Board — home nav button */}
+      <div style={{ padding: '8px 8px 4px' }}>
         <button
-          onClick={() => { setShowPublicBoards(true); if (isMobile) setShowDrawer(false); }}
+          onClick={() => { setShowHome(true); setActiveBoardId(null); setPublicBoardMode(null); if (isMobile) setShowDrawer(false); }}
           style={{
-            width: '100%', background: 'none', border: '1px solid var(--border)',
-            borderRadius: 7, padding: '6px 8px', color: 'var(--text-muted)', fontSize: 12,
-            cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 6,
+            width: '100%',
+            background: showHome && !activeBoardId && !publicBoardMode
+              ? 'linear-gradient(135deg, rgba(192,87,10,0.22) 0%, rgba(192,87,10,0.10) 100%)'
+              : 'linear-gradient(135deg, rgba(192,87,10,0.12) 0%, rgba(192,87,10,0.04) 100%)',
+            border: showHome && !activeBoardId && !publicBoardMode
+              ? '1.5px solid var(--accent)'
+              : '1.5px solid rgba(192,87,10,0.35)',
+            borderRadius: 9,
+            padding: '8px 10px',
+            cursor: 'pointer',
+            textAlign: 'left',
+            display: 'flex', alignItems: 'center', gap: 8,
+            transition: 'background .15s, border-color .15s, box-shadow .15s',
+            boxShadow: showHome && !activeBoardId && !publicBoardMode
+              ? '0 0 0 2px rgba(192,87,10,0.18), 0 2px 8px rgba(0,0,0,0.3)'
+              : '0 1px 4px rgba(0,0,0,0.2)',
           }}
         >
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-              <circle cx="10" cy="7" r="4"/><path d="M4 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M15 3.13a4 4 0 0 1 0 7.75"/><path d="M20 21v-2a4 4 0 0 0-3-3.85"/>
-            </svg>
-          <span style={{ color: 'var(--accent)', fontWeight: 600 }}>Boards Publics</span>
+          {/* Icon: grid/home */}
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="var(--accent)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+            <rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>
+          </svg>
+          <span style={{
+            color: 'var(--accent)',
+            fontWeight: 700,
+            fontSize: 13,
+            letterSpacing: '0.02em',
+            flex: 1,
+          }}>Tableau de Board</span>
+          {showHome && !activeBoardId && !publicBoardMode && (
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent)', flexShrink: 0, opacity: 0.9 }} />
+          )}
         </button>
       </div>
 
@@ -885,7 +905,7 @@ export default function App() {
             onDragEnd={() => { setBoardDragId(null); setBoardDragOverId(null); }}
             onDragOver={e => { e.preventDefault(); setBoardDragOverId(b.id); }}
             onDrop={e => { e.preventDefault(); handleBoardDrop(b.id); }}
-            onClick={() => { setActiveBoardId(b.id); setColumns(b.columns || []); setEmojiPickerFor(null); setShowHome(false); setPublicBoardMode(null); setShowPublicBoards(false); if (isMobile) setShowDrawer(false); }}
+            onClick={() => { setActiveBoardId(b.id); setColumns(b.columns || []); setEmojiPickerFor(null); setShowHome(false); setPublicBoardMode(null); if (isMobile) setShowDrawer(false); }}
             style={{
               padding: '6px 8px', borderRadius: 7, cursor: 'grab', marginBottom: 2,
               background: boardDragOverId === b.id && boardDragId !== b.id ? 'var(--accent-dim)' : activeBoardId === b.id ? 'var(--accent-dim)' : 'transparent',
@@ -943,7 +963,7 @@ export default function App() {
             onDragEnd={() => { setBoardDragId(null); setBoardDragOverId(null); }}
             onDragOver={e => { e.preventDefault(); setBoardDragOverId(b.id); }}
             onDrop={e => { e.preventDefault(); handleBoardDrop(b.id); }}
-            onClick={() => { setActiveBoardId(b.id); setColumns(b.columns || []); setEmojiPickerFor(null); setShowHome(false); setPublicBoardMode(null); setShowPublicBoards(false); if (isMobile) setShowDrawer(false); }}
+            onClick={() => { setActiveBoardId(b.id); setColumns(b.columns || []); setEmojiPickerFor(null); setShowHome(false); setPublicBoardMode(null); if (isMobile) setShowDrawer(false); }}
             style={{
               padding: '6px 8px', borderRadius: 7, cursor: 'grab', marginBottom: 2,
               background: boardDragOverId === b.id && boardDragId !== b.id ? 'var(--accent-dim)' : activeBoardId === b.id ? 'var(--accent-dim)' : 'transparent',
@@ -1147,9 +1167,7 @@ export default function App() {
             </>
           )}
         </header>
-        {showPublicBoards ? (
-          <PublicBoards key={publicBoardsKey} token={token} currentUser={currentUser} favBoardIds={new Set(favBoards.map(b => b.id))} onToggleFavorite={toggleFavorite} onOpenBoard={openPublicBoard} onClose={() => setShowPublicBoards(false)} />
-        ) : showHome && !publicBoardMode ? (
+        {showHome && !publicBoardMode ? (
           homeView
         ) : publicBoardMode ? (
           loading ? (
@@ -1257,27 +1275,10 @@ export default function App() {
                 style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 10px', color: 'var(--text)', fontSize: 12, outline: 'none', maxWidth: 180 }} />
               <button onClick={closePublicBoard} style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>✕ Quitter</button>
             </>
-          ) : showPublicBoards ? (
-            <>
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-                <circle cx="10" cy="7" r="4"/><path d="M4 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M15 3.13a4 4 0 0 1 0 7.75"/><path d="M20 21v-2a4 4 0 0 0-3-3.85"/>
-              </svg>
-              <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--accent)' }}>Boards Publics</span>
-              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Boards partagés par la communauté</span>
-              <button onClick={() => setPublicBoardsKey(k => k + 1)} style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 11px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ fontSize: 15, lineHeight: 1 }}>↻</span> Refresh</button>
-              <div style={{ flex: 1 }} />
-              <button onClick={() => setShowPublicBoards(false)} style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>✕ Fermer</button>
-            </>
           ) : showHome ? (
             <>
-              <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>Mes Boards</span>
+              <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>Tableau de Board</span>
               <div style={{ flex: 1 }} />
-              <button onClick={() => { setShowPublicBoards(true); }} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: 'var(--accent)', fontSize: 12, cursor: 'pointer', fontWeight: 600, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="10" cy="7" r="4"/><path d="M4 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M15 3.13a4 4 0 0 1 0 7.75"/><path d="M20 21v-2a4 4 0 0 0-3-3.85"/>
-                </svg>
-                Boards Publics
-              </button>
             </>
           ) : (
             <>
@@ -1359,9 +1360,7 @@ export default function App() {
           <GlobalSearch token={token} onGoToBoard={handleSearchGoToBoard} onOpenGame={handleSearchOpenGame} />
         </header>
         <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-        {showPublicBoards ? (
-          <PublicBoards key={publicBoardsKey} token={token} currentUser={currentUser} favBoardIds={new Set(favBoards.map(b => b.id))} onToggleFavorite={toggleFavorite} onOpenBoard={openPublicBoard} onClose={() => setShowPublicBoards(false)} />
-        ) : showHome && !publicBoardMode ? (
+        {showHome && !publicBoardMode ? (
           homeView
         ) : publicBoardMode ? (
           loading ? (
@@ -1393,7 +1392,7 @@ export default function App() {
       {showSteamSettings && <SteamSettings token={token} onSave={handleSteamSave} onClose={() => setShowSteamSettings(false)} />}
       {showProfile && <ProfilePage token={token} currentUser={currentUser} onClose={() => setShowProfile(false)} />}
       {/* Game stats widget — shown only when viewing a Steam-based board */}
-      {isTaskBoard && !showHome && !showPublicBoards && !isMobile && (
+      {isTaskBoard && !showHome && !isMobile && (
         <GameStatsWidget
           api={API}
           token={token}

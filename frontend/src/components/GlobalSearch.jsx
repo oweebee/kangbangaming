@@ -153,13 +153,13 @@ export default function GlobalSearch({ token, onGoToBoard, onOpenGame }) {
           {open && query.length >= 2 && (
             <div style={{
               marginTop: 4,
-              width: 380,
+              width: 420,
               background: 'var(--surface)', border: '1px solid var(--border)',
               borderRadius: 10, boxShadow: '0 10px 40px rgba(0,0,0,.85)',
-              maxHeight: 460, overflowY: 'auto',
+              maxHeight: 480, overflowY: 'auto',
             }}>
               {!loading && results.length === 0 ? (
-                <div style={{ padding: '18px 16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 12 }}>
+                <div style={{ padding: '18px 16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
                   Aucun résultat pour «&nbsp;{query}&nbsp;»
                 </div>
               ) : results.map((r, idx) => {
@@ -171,16 +171,16 @@ export default function GlobalSearch({ token, onGoToBoard, onOpenGame }) {
                     onClick={() => handleSelect(r)}
                     onMouseEnter={() => setActiveIdx(idx)}
                     style={{
-                      display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px',
+                      display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px',
                       cursor: 'pointer',
                       background: isActive ? 'var(--surface2)' : 'transparent',
                       borderBottom: '1px solid rgba(255,255,255,0.04)',
                       transition: 'background .08s',
                     }}
                   >
-                    {/* Miniature */}
+                    {/* Miniature — icône gauche +30% : 52×30 → 68×39 */}
                     <div style={{
-                      width: 52, height: 30, borderRadius: 5, overflow: 'hidden', flexShrink: 0,
+                      width: 68, height: 39, borderRadius: 5, overflow: 'hidden', flexShrink: 0,
                       background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                       border: '1px solid rgba(255,255,255,0.06)',
                     }}>
@@ -191,35 +191,35 @@ export default function GlobalSearch({ token, onGoToBoard, onOpenGame }) {
                       ) : r.boardIcon ? (
                         <img src={r.boardIcon} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
                       ) : (
-                        <span style={{ fontSize: 16 }}>🎮</span>
+                        <span style={{ fontSize: 20 }}>🎮</span>
                       )}
                     </div>
 
-                    {/* Texte */}
+                    {/* Texte — +25% */}
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, fontSize: 12, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.3 }}>
+                      <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.3 }}>
                         {r.type === 'board' ? highlight(r.boardName, query) : highlight(r.gameName, query)}
                       </div>
                       {r.type !== 'board' && (
-                        <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.3 }}>
+                        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.3 }}>
                           {r.matchedIn === 'note' && r.notePreview
                             ? <>📝 {highlight(r.notePreview, query)}</>
                             : `📋 ${r.boardName}`}
                         </div>
                       )}
                       {r.matchedIn === 'note' && (
-                        <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 1, lineHeight: 1.3 }}>📋 {r.boardName}</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 1, lineHeight: 1.3 }}>📋 {r.boardName}</div>
                       )}
                       {r.isPublic && r.ownerUsername && (
-                        <div style={{ fontSize: 10, color: PUBLIC_COLOR, marginTop: 1, lineHeight: 1.3, opacity: 0.8 }}>
+                        <div style={{ fontSize: 12, color: PUBLIC_COLOR, marginTop: 1, lineHeight: 1.3, opacity: 0.8 }}>
                           🌐 {r.isFollowed ? 'Suivi · ' : ''}{r.ownerUsername}
                         </div>
                       )}
                     </div>
 
-                    {/* Badge */}
+                    {/* Badge — +25% */}
                     <span style={{
-                      fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4, flexShrink: 0,
+                      fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 4, flexShrink: 0,
                       color: badge.color, border: `1px solid ${badge.color}`, opacity: 0.9,
                       letterSpacing: '0.03em',
                     }}>
