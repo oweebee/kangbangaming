@@ -386,7 +386,7 @@ app.get('/api/steam/gameinfo/:appid', requireAuth, async (req, res) => {
         ? fetch(`https://api.steampowered.com/ISteamUserStats/GetNumberOfCurrentPlayers/v1/?appid=${appid}&key=${GLOBAL_STEAM_API_KEY}`).then(r => r.json())
         : Promise.reject('no key'),
       fetch(`https://store.steampowered.com/appreviews/${appid}?json=1&language=all&num_per_page=0`).then(r => r.json()),
-      fetch(`https://store.steampowered.com/api/appdetails?appids=${appid}&filters=price_overview,metacritic&cc=FR&l=french`).then(r => r.json()),
+      fetch(`https://store.steampowered.com/api/appdetails?appids=${appid}&filters=basic,price_overview,metacritic,categories,genres&cc=FR&l=french`).then(r => r.json()),
     ]);
 
     const playerCount = playersRes.status === 'fulfilled'
@@ -405,6 +405,30 @@ app.get('/api/steam/gameinfo/:appid', requireAuth, async (req, res) => {
       ? Math.round((reviewSummary.total_positive / reviewSummary.total_reviews) * 100)
       : null;
 
+    // Genres — max 3
+    const genres = (appDetails?.genres || []).slice(0, 3).map(g => g.description);
+
+    // Developer
+    const developer = appDetails?.developers?.[0] ?? null;
+
+    // Release date
+    const releaseRaw = appDetails?.release_date ?? null;
+    const releaseDateStr = releaseRaw?.date || null;
+    const comingSoon = !!releaseRaw?.coming_soon;
+
+    // Multiplayer label from categories
+    const catIds = new Set((appDetails?.categories || []).map(c => Number(c.id)));
+    let multiplayerLabel = null;
+    if (catIds.has(2) && !catIds.has(1) && !catIds.has(9) && !catIds.has(38)) {
+      multiplayerLabel = 'Solo';
+    } else if (catIds.has(9) || catIds.has(38)) {
+      multiplayerLabel = 'Co-op';
+    } else if (catIds.has(1)) {
+      multiplayerLabel = 'Multijoueur';
+    }
+    // Refine with local co-op categories
+    if (catIds.has(24) || catIds.has(37)) multiplayerLabel = (multiplayerLabel ? multiplayerLabel + ' / ' : '') + 'Local co-op';
+
     const data = {
       appid,
       playerCount,
@@ -418,6 +442,11 @@ app.get('/api/steam/gameinfo/:appid', requireAuth, async (req, res) => {
       discount: appDetails?.price_overview?.discount_percent ?? 0,
       metacritic: appDetails?.metacritic?.score ?? null,
       metacriticUrl: appDetails?.metacritic?.url ?? null,
+      genres,
+      developer,
+      releaseDate: releaseDateStr,
+      comingSoon,
+      multiplayerLabel,
     };
 
     gameInfoCache.set(appid, { data, fetchedAt: Date.now() });

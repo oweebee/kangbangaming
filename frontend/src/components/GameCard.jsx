@@ -178,8 +178,8 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
       <div style={{ padding: '7px 9px', paddingRight: compact ? COMPACT_ICON_SIZE + 14 : 9, paddingBottom: compact ? COMPACT_ICON_SIZE + 10 : 7 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 4 }}>
           <div style={{
-            fontWeight: 600, fontSize: 16, lineHeight: '1.3', marginBottom: 3,
-            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1,
+            fontWeight: 600, fontSize: 14, lineHeight: '1.3', marginBottom: 3,
+            wordBreak: 'break-word', flex: 1,
           }} title={game.name}>{game.name}</div>
 
           {/* Action buttons */}
