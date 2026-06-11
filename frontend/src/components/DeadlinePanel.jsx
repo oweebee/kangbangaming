@@ -4,32 +4,56 @@ import GameCard from './GameCard.jsx';
 const API = '/api';
 
 // ── Catégoriser ────────────────────────────────────────────────────────────────
+
+// parseD : gère "YYYY-MM-DD", ISO complet, ou tout autre format Date-valide.
+// Toujours renvoie minuit LOCAL pour que les comparaisons soient cohérentes.
+function parseD(s) {
+  if (!s) return null;
+  let d;
+  // Format "YYYY-MM-DD" → on force minuit local explicitement
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    const [y, m, day] = s.split('-').map(Number);
+    d = new Date(y, m - 1, day, 0, 0, 0, 0);
+  } else {
+    d = new Date(s);
+    if (isNaN(d.getTime())) return null;
+    d.setHours(0, 0, 0, 0); // normalise à minuit local
+  }
+  return isNaN(d.getTime()) ? null : d;
+}
+
 function categorize(task) {
-  const today = new Date(); today.setHours(0, 0, 0, 0);
-  const in3   = new Date(today); in3.setDate(in3.getDate() + 3);
-  function parseD(s) { return s ? new Date(s + 'T00:00:00') : null; }
+  const now   = new Date(); now.setHours(0, 0, 0, 0);
+  const today = now.getTime();
+  const in3   = new Date(now); in3.setDate(in3.getDate() + 3);
+  const in3t  = in3.getTime();
 
   if (task.done) return null;
 
   if (task.startDate && task.endDate) {
     const start = parseD(task.startDate), end = parseD(task.endDate);
-    if (today > end)    return { cat: 'overdue',  refDate: end };
-    if (today >= start) return { cat: 'active',   refDate: end };
-    if (start <= in3)   return { cat: 'upcoming', refDate: start };
+    if (!start || !end) return null;
+    if (today > end.getTime())    return { cat: 'overdue',  refDate: end };
+    if (today >= start.getTime()) return { cat: 'active',   refDate: end };
+    if (start.getTime() <= in3t)  return { cat: 'upcoming', refDate: start };
     return null;
   }
   if (task.dueDate) {
     const due = parseD(task.dueDate);
-    if (today > due)                       return { cat: 'overdue',  refDate: due };
-    if (today.getTime() === due.getTime()) return { cat: 'active',   refDate: due };
-    if (due <= in3)                        return { cat: 'upcoming', refDate: due };
+    if (!due) return null;
+    const duet = due.getTime();
+    if (today > duet)    return { cat: 'overdue',  refDate: due };
+    if (today === duet)  return { cat: 'active',   refDate: due };
+    if (duet <= in3t)    return { cat: 'upcoming', refDate: due };
     return null;
   }
   if (task.startDate) {
     const start = parseD(task.startDate);
-    if (today > start)                       return { cat: 'overdue',  refDate: start };
-    if (today.getTime() === start.getTime()) return { cat: 'active',   refDate: start };
-    if (start <= in3)                        return { cat: 'upcoming', refDate: start };
+    if (!start) return null;
+    const st = start.getTime();
+    if (today > st)   return { cat: 'overdue',  refDate: start };
+    if (today === st) return { cat: 'active',   refDate: start };
+    if (st <= in3t)   return { cat: 'upcoming', refDate: start };
     return null;
   }
   return null;
@@ -135,17 +159,19 @@ function Section({ cat, tasks, onOpenTask }) {
 
 // ── Composant principal ────────────────────────────────────────────────────────
 export default function DeadlinePanel({ token, onOpenTask, refreshKey = 0 }) {
-  const [tasks, setTasks]     = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [tasks, setTasks]       = useState([]);
+  const [loading, setLoading]   = useState(true);
+  const [apiCount, setApiCount] = useState(null); // nb brut renvoyé par l'API
+  const [manualKey, setManualKey] = useState(0);
 
   useEffect(() => {
     if (!token) return;
     setLoading(true);
     fetch(`${API}/deadlines`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.ok ? r.json() : [])
-      .then(data => { setTasks(data); setLoading(false); })
-      .catch(() => setLoading(false));
-  }, [token, refreshKey]);
+      .then(data => { setApiCount(data.length); setTasks(data); setLoading(false); })
+      .catch(() => { setApiCount(0); setLoading(false); });
+  }, [token, refreshKey, manualKey]);
 
   const categorized = { overdue: [], active: [], upcoming: [] };
   for (const task of tasks) {
@@ -160,7 +186,7 @@ export default function DeadlinePanel({ token, onOpenTask, refreshKey = 0 }) {
 
   return (
     <>
-      {/* Header identique aux sections de la page d'accueil */}
+      {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#47a7f5" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
           <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
@@ -175,15 +201,34 @@ export default function DeadlinePanel({ token, onOpenTask, refreshKey = 0 }) {
             border: categorized.overdue.length > 0 ? '1px solid rgba(200,40,40,0.3)' : 'none',
           }}>{total}</span>
         )}
+        {/* Bouton actualiser */}
+        <button
+          onClick={() => setManualKey(k => k + 1)}
+          title="Actualiser"
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 2, display: 'flex', alignItems: 'center', opacity: loading ? 0.4 : 0.7 }}
+        >
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+          </svg>
+        </button>
       </div>
 
       {loading ? (
         <div style={{ color: 'var(--text-muted)', fontSize: 11, textAlign: 'center', padding: '20px 0' }}>Chargement…</div>
       ) : total === 0 ? (
-        <div style={{ textAlign: 'center', padding: '32px 8px', color: 'var(--text-muted)' }}>
+        <div style={{ textAlign: 'center', padding: '28px 8px', color: 'var(--text-muted)' }}>
           <div style={{ fontSize: 26, marginBottom: 10 }}>✅</div>
           <div style={{ fontSize: 12, fontWeight: 600 }}>Aucune échéance à venir</div>
-          <div style={{ fontSize: 11, marginTop: 4, opacity: 0.6 }}>Toutes les tâches avec des dates sont à jour</div>
+          {apiCount !== null && apiCount > 0 && (
+            <div style={{ fontSize: 10, marginTop: 6, color: '#c9a010', background: 'rgba(200,160,0,0.08)', border: '1px solid rgba(200,160,0,0.25)', borderRadius: 6, padding: '5px 10px' }}>
+              {apiCount} tâche(s) trouvée(s) mais aucune dans les 3 prochains jours.<br/>
+              Vérifiez que les tâches ne sont pas cochées comme terminées.
+            </div>
+          )}
+          {(apiCount === 0) && (
+            <div style={{ fontSize: 11, marginTop: 4, opacity: 0.6 }}>Ajoutez une date à vos tâches pour les voir ici</div>
+          )}
         </div>
       ) : (
         <>
