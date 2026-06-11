@@ -558,7 +558,7 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
             <ProgressSlider value={progress} onChange={setProgress} compact />
 
             {/* ── Notes ── */}
-            <NotesSection notes={notes} onSave={setNotes} onDraftChange={setNotesDraft} compact />
+            <NotesSection notes={notes} onSave={setNotes} onDraftChange={setNotesDraft} compact token={token} />
 
           </div>
 

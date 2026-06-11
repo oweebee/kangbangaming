@@ -184,34 +184,36 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
             ...(compact ? { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } : {}),
           }} title={game.name}>{game.name}</div>
 
+          {/* Bouton "terminée" — toujours rendu indépendamment de readOnly */}
+          {!isArchived && onToggleDone && (
+            <button
+              onClick={e => { e.stopPropagation(); onToggleDone(!isDone); }}
+              title={isDone ? 'Marquer non terminée' : 'Marquer terminée'}
+              style={{
+                background: isDone ? 'rgba(61,184,106,0.22)' : 'rgba(255,255,255,0.10)',
+                border: `1px solid ${isDone ? '#3db86a' : 'rgba(255,255,255,0.28)'}`,
+                borderRadius: 4, width: 20, height: 20, padding: 0,
+                cursor: 'pointer', flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: isDone ? '#3db86a' : 'rgba(255,255,255,0.65)',
+                transition: 'all .15s',
+                ...(compact ? { position: 'absolute', top: 4, right: 4, zIndex: 3 } : {}),
+              }}
+            >
+              <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            </button>
+          )}
+
           {/* Action buttons — absolute en compact, inline sinon */}
           {!readOnly && (
             <div style={compact ? {
-              position: 'absolute', top: 4, right: 4, zIndex: 2,
+              position: 'absolute', top: 4, right: compact && onToggleDone ? 27 : 4, zIndex: 2,
               display: 'flex', gap: 3, alignItems: 'center',
             } : {
               display: 'flex', gap: 3, flexShrink: 0, alignItems: 'center',
             }}>
-              {/* ✓ Coche "terminée" */}
-              {!isArchived && onToggleDone && (
-                <button
-                  onClick={e => { e.stopPropagation(); onToggleDone(!isDone); }}
-                  title={isDone ? 'Marquer non terminée' : 'Marquer terminée'}
-                  style={{
-                    background: isDone ? 'rgba(61,184,106,0.22)' : 'rgba(255,255,255,0.10)',
-                    border: `1px solid ${isDone ? '#3db86a' : 'rgba(255,255,255,0.28)'}`,
-                    borderRadius: 4, width: 20, height: 20, padding: 0,
-                    cursor: 'pointer', flexShrink: 0,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: isDone ? '#3db86a' : 'rgba(255,255,255,0.65)',
-                    transition: 'all .15s',
-                  }}
-                >
-                  <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="20 6 9 17 4 12"/>
-                  </svg>
-                </button>
-              )}
 
               {/* ✏ Éditer */}
               {!isArchived && onEdit && isCustom && (

@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
+import LinkPreview from './LinkPreview.jsx';
 
-// Renders text with URLs turned into clickable links
-function NoteText({ text }) {
+// Renders text with URLs turned into clickable links + rich preview cards
+function NoteText({ text, token }) {
   const parts = text.split(/(https?:\/\/\S+)/g);
+  const urls = parts.filter(p => /^https?:\/\//.test(p));
   return (
     <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.6 }}>
       {parts.map((part, i) =>
@@ -14,6 +16,10 @@ function NoteText({ text }) {
             </a>
           : <span key={i}>{part}</span>
       )}
+      {/* Preview cards — une par URL unique détectée */}
+      {urls.map((u, i) => (
+        <LinkPreview key={i} url={u} token={token} />
+      ))}
     </span>
   );
 }
@@ -31,7 +37,7 @@ function formatNoteDate(isoStr) {
 //   notes   – array of {id, text, createdAt, editedAt}
 //   onSave  – called with full updated notes array on any change
 //   compact – compact styling (SearchModal)
-export default function NotesSection({ notes: externalNotes = [], onSave, onDraftChange, compact = false }) {
+export default function NotesSection({ notes: externalNotes = [], onSave, onDraftChange, compact = false, token }) {
   const [notes, setNotes]         = useState(externalNotes);
   const [newNote, setNewNote]     = useState('');
   const [editingId, setEditingId] = useState(null);
@@ -147,7 +153,7 @@ export default function NotesSection({ notes: externalNotes = [], onSave, onDraf
               ) : (
                 <>
                   <div style={{ fontSize: compact ? 13 : 12, color: 'var(--text)', marginBottom: 5 }}>
-                    <NoteText text={note.text} />
+                    <NoteText text={note.text} token={token} />
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
                     <span style={{ fontSize: 10, color: 'var(--text-muted)', opacity: 0.7 }}>

@@ -1171,6 +1171,71 @@ app.delete('/api/boards/:boardId/games/:appid', requireAuth, (req, res) => {
   res.json({ ok: true });
 });
 
+// ── OG Preview proxy ─────────────────────────────────────────────────────────
+// Cache: url → { data, ts }
+const ogCache = new Map();
+const OG_TTL = 10 * 60 * 1000; // 10 min
+
+function extractOgMeta(html) {
+  const get = (prop) => {
+    const m = html.match(new RegExp(`<meta[^>]+(?:property|name)=["']${prop}["'][^>]+content=["']([^"']+)["']`, 'i'))
+           || html.match(new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["']${prop}["']`, 'i'));
+    return m ? m[1] : null;
+  };
+  const title = get('og:title') || get('twitter:title')
+    || (html.match(/<title[^>]*>([^<]+)<\/title>/i) || [])[1] || null;
+  const description = get('og:description') || get('twitter:description')
+    || get('description') || null;
+  const image = get('og:image') || get('twitter:image') || null;
+  const siteName = get('og:site_name') || null;
+  return {
+    title: title?.replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#039;/g, "'").trim() || null,
+    description: description?.replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#039;/g, "'").slice(0, 200) || null,
+    image: image || null,
+    siteName: siteName || null,
+  };
+}
+
+app.get('/api/og-preview', requireAuth, async (req, res) => {
+  const { url } = req.query;
+  if (!url || !/^https?:\/\//.test(url)) return res.status(400).json({ error: 'Invalid URL' });
+
+  // Check cache
+  const cached = ogCache.get(url);
+  if (cached && Date.now() - cached.ts < OG_TTL) return res.json(cached.data);
+
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 6000);
+    const r = await fetch(url, {
+      signal: ctrl.signal,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; OGPreviewBot/1.0)',
+        'Accept': 'text/html,application/xhtml+xml',
+      },
+      redirect: 'follow',
+    });
+    clearTimeout(timer);
+    const contentType = r.headers.get('content-type') || '';
+    if (!contentType.includes('text/html')) return res.json({ title: null, description: null, image: null, siteName: null });
+    // Read max 150 KB (enough for <head>)
+    const reader = r.body.getReader();
+    let html = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      html += new TextDecoder().decode(value);
+      if (html.length > 150_000) { reader.cancel(); break; }
+    }
+    const data = extractOgMeta(html);
+    ogCache.set(url, { data, ts: Date.now() });
+    res.json(data);
+  } catch (e) {
+    if (e.name === 'AbortError') return res.status(408).json({ error: 'Timeout' });
+    res.status(500).json({ error: 'Fetch failed' });
+  }
+});
+
 // ── Start ─────────────────────────────────────────────────────────────────────
 
 ensureAdmin().then(() => {

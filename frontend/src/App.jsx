@@ -1333,7 +1333,7 @@ export default function App() {
         {showSearch && <SearchModal api={API} token={token} boardGames={games} onAdd={g => addGame(g, searchTargetCol)} onRemove={removeGame} onClose={() => { setShowSearch(false); setSearchTargetCol(null); }} customOnly={isTaskBoard} isTaskBoard={isTaskBoard} appUsers={appUsers} />}
         {editingGame && <SearchModal api={API} token={token} boardGames={games} onAdd={addGame} onRemove={removeGame} onClose={() => setEditingGame(null)} customOnly={isTaskBoard} isTaskBoard={isTaskBoard} appUsers={appUsers} initialGame={editingGame} onSave={async g => { await updateGame(g); setEditingGame(null); }} />}
         {displayedGame && displayedGame.type === 'custom'
-          ? <TaskModal game={displayedGame} appUsers={appUsers} onPatchGame={patchGame} onClose={() => setSelectedGame(null)} onEdit={() => { setEditingGame(displayedGame); setSelectedGame(null); }} isTaskBoard={isTaskBoard} />
+          ? <TaskModal game={displayedGame} appUsers={appUsers} onPatchGame={patchGame} onClose={() => setSelectedGame(null)} onEdit={() => { setEditingGame(displayedGame); setSelectedGame(null); }} isTaskBoard={isTaskBoard} token={token} />
           : displayedGame && <GameModal game={displayedGame} onClose={() => setSelectedGame(null)} api={API} token={token} />
         }
         {showAdmin && <AdminPanel token={token} currentUser={currentUser} onClose={() => setShowAdmin(false)} />}
@@ -1514,7 +1514,7 @@ export default function App() {
       {showSearch && <SearchModal api={API} token={token} boardGames={games} onAdd={g => addGame(g, searchTargetCol)} onRemove={removeGame} onClose={() => { setShowSearch(false); setSearchTargetCol(null); }} customOnly={isTaskBoard} isTaskBoard={isTaskBoard} appUsers={appUsers} />}
       {editingGame && <SearchModal api={API} token={token} boardGames={games} onAdd={addGame} onRemove={removeGame} onClose={() => setEditingGame(null)} customOnly={isTaskBoard} isTaskBoard={isTaskBoard} appUsers={appUsers} initialGame={editingGame} onSave={async g => { await updateGame(g); setEditingGame(null); }} />}
       {displayedGame && displayedGame.type === 'custom'
-        ? <TaskModal game={displayedGame} appUsers={appUsers} onPatchGame={patchGame} onClose={() => setSelectedGame(null)} onEdit={() => { setEditingGame(displayedGame); setSelectedGame(null); }} isTaskBoard={isTaskBoard} />
+        ? <TaskModal game={displayedGame} appUsers={appUsers} onPatchGame={patchGame} onClose={() => setSelectedGame(null)} onEdit={() => { setEditingGame(displayedGame); setSelectedGame(null); }} isTaskBoard={isTaskBoard} token={token} />
         : displayedGame && <GameModal game={displayedGame} onClose={() => setSelectedGame(null)} api={API} token={token} />
       }
       {showAdmin && <AdminPanel token={token} currentUser={currentUser} onClose={() => setShowAdmin(false)} />}
