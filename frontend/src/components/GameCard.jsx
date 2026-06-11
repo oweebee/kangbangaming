@@ -252,7 +252,7 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
             <div style={{
               background: 'rgba(200,30,30,0.15)',
               color: '#ff6060',
-              border: '1.5px solid rgba(220,60,60,0.85)',
+              border: '2px solid rgba(220,60,60,0.85)',
               borderRadius: 4, padding: '1px 6px',
               fontSize: 9, fontWeight: 900,
               whiteSpace: 'nowrap', flexShrink: 0,
@@ -265,7 +265,7 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
             <div style={{
               background: dateInfo.bg,
               color: dateInfo.color,
-              border: `1.5px solid ${dateInfo.border}`,
+              border: `2px solid ${dateInfo.border}`,
               borderRadius: 4, padding: '1px 6px',
               fontSize: 9, fontWeight: 700,
               whiteSpace: 'nowrap', flexShrink: 0,

@@ -11,6 +11,31 @@ function truncate(str = '', n = 260) {
   return str.slice(0, n).replace(/\s+\S*$/, '') + '…';
 }
 
+const STEAM_CLAN_IMG = 'https://clan.akamai.steamstatic.com/images/';
+
+function extractNewsImage(contents = '') {
+  const bbMatch = contents.match(/\[img\][^[]*?(?:\{STEAM_CLAN_IMAGE\}|https?:\/\/)[^\s[\]]*\.(jpe?g|png|gif|webp)[^\s[\]]*\[\/img\]/i);
+  if (bbMatch) {
+    const inner = bbMatch[0].replace(/^\[img\]|\[\/img\]$/gi, '').trim();
+    return inner.replace(/\{STEAM_CLAN_IMAGE\}/g, STEAM_CLAN_IMG);
+  }
+  const htmlMatch = contents.match(/<img[^>]+src=["']([^"']+)["']/i);
+  if (htmlMatch) return htmlMatch[1];
+  const urlMatch = contents.match(/https?:\/\/[^\s[\]"'<>]+\.(jpe?g|png|gif|webp)/i);
+  if (urlMatch) return urlMatch[0];
+  return null;
+}
+
+function extractYoutubeId(contents = '') {
+  // [previewyoutube=VIDEO_ID;full][/previewyoutube]
+  const bbMatch = contents.match(/\[previewyoutube=([A-Za-z0-9_-]{8,15})[;\]]/i);
+  if (bbMatch) return bbMatch[1];
+  // youtube.com/watch?v=ID or youtu.be/ID
+  const urlMatch = contents.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]{8,15})/i);
+  if (urlMatch) return urlMatch[1];
+  return null;
+}
+
 function tagStyle(tag) {
   const map = {
     patchnotes: { bg: 'rgba(71,167,245,0.15)', color: '#47a7f5', border: 'rgba(71,167,245,0.75)' },
@@ -308,10 +333,10 @@ export default function GameInfoPanel({
             )}
             {/* Badges */}
             <div style={{ width: '100%', display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-              {gameInfo.earlyAccess && <span style={{ fontSize: 13, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: 'rgba(220,50,50,0.18)', color: '#ff5555', border: '1.5px solid rgba(220,50,50,0.85)' }}>⚠ Accès Anticipé</span>}
-              {gameInfo.comingSoon && !gameInfo.earlyAccess && <span style={{ fontSize: 13, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: 'rgba(245,197,24,0.12)', color: '#f5c518', border: '1.5px solid rgba(245,197,24,0.75)' }}>🔜 À venir</span>}
-              {gameInfo.multiplayerLabel && <span style={{ fontSize: 13, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: 'rgba(71,167,245,0.15)', color: '#47a7f5', border: '1.5px solid rgba(71,167,245,0.75)' }}>👥 {gameInfo.multiplayerLabel}</span>}
-              {(gameInfo.genres || []).map(g => <span key={g} style={{ fontSize: 13, padding: '2px 7px', borderRadius: 4, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)', border: '1.5px solid rgba(255,255,255,0.25)' }}>{g}</span>)}
+              {gameInfo.earlyAccess && <span style={{ fontSize: 13, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: 'rgba(220,50,50,0.18)', color: '#ff5555', border: '2px solid rgba(220,50,50,0.85)' }}>⚠ Accès Anticipé</span>}
+              {gameInfo.comingSoon && !gameInfo.earlyAccess && <span style={{ fontSize: 13, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: 'rgba(245,197,24,0.12)', color: '#f5c518', border: '2px solid rgba(245,197,24,0.75)' }}>🔜 À venir</span>}
+              {gameInfo.multiplayerLabel && <span style={{ fontSize: 13, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: 'rgba(71,167,245,0.15)', color: '#47a7f5', border: '2px solid rgba(71,167,245,0.75)' }}>👥 {gameInfo.multiplayerLabel}</span>}
+              {(gameInfo.genres || []).map(g => <span key={g} style={{ fontSize: 13, padding: '2px 7px', borderRadius: 4, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)', border: '2px solid rgba(255,255,255,0.25)' }}>{g}</span>)}
             </div>
             {/* Developer + date */}
             {(gameInfo.developer || gameInfo.releaseDate) && (
@@ -348,6 +373,8 @@ export default function GameInfoPanel({
             const shortContent = truncate(item.contents, 260);
             const hasMore = item.contents.length > 260;
             const ts = item.tags || [];
+            const ytId = extractYoutubeId(item.contents);
+            const imgUrl = !ytId ? extractNewsImage(item.contents) : null;
             return (
               <div
                 key={item.gid}
@@ -360,18 +387,41 @@ export default function GameInfoPanel({
                   <div style={{ display: 'flex', gap: 4, marginBottom: 5, flexWrap: 'wrap' }}>
                     {ts.map(tag => {
                       const s = tagStyle(tag);
-                      return <span key={tag} style={{ fontSize: 10, padding: '2px 7px', borderRadius: 3, background: s.bg, color: s.color, border: `1.5px solid ${s.border}`, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{tag}</span>;
+                      return <span key={tag} style={{ fontSize: 10, padding: '2px 7px', borderRadius: 3, background: s.bg, color: s.color, border: `2px solid ${s.border}`, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{tag}</span>;
                     })}
                   </div>
                 )}
                 {/* Title */}
-                <a href={item.url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', display: 'block', marginBottom: 5 }}>
+                <a href={item.url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', display: 'block', marginBottom: 7 }}>
                   <div
                     style={{ fontSize: 15, fontWeight: 700, color: '#c6d4df', lineHeight: 1.3, transition: 'color .12s' }}
                     onMouseEnter={e => e.target.style.color = '#fff'}
                     onMouseLeave={e => e.target.style.color = '#c6d4df'}
                   >{item.title}</div>
                 </a>
+                {/* YouTube embed */}
+                {ytId && (
+                  <div style={{ position: 'relative', width: '100%', paddingBottom: '56.25%', marginBottom: 8, borderRadius: 6, overflow: 'hidden', background: '#000' }}>
+                    <iframe
+                      src={`https://www.youtube-nocookie.com/embed/${ytId}`}
+                      title={item.title}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
+                    />
+                  </div>
+                )}
+                {/* Image preview */}
+                {imgUrl && (
+                  <a href={item.url} target="_blank" rel="noreferrer" style={{ display: 'block', marginBottom: 8 }}>
+                    <img
+                      src={imgUrl}
+                      alt=""
+                      onError={e => { e.currentTarget.style.display = 'none'; }}
+                      style={{ width: '100%', maxHeight: 160, objectFit: 'cover', borderRadius: 6, display: 'block' }}
+                    />
+                  </a>
+                )}
                 {/* Content */}
                 {item.contents && (
                   <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.48)', lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
