@@ -126,8 +126,8 @@ function HomeBoardCard({ board, isPublic, isFav, onToggleFav, onClick }) {
             }}
           >
             {isFav
-              ? (favHover ? <><span style={{ fontSize: 12, lineHeight: 1 }}>✕</span> Retirer</> : <>⭐ Épinglé</>)
-              : <>☆ Favoris</>
+              ? (favHover ? <><span style={{ fontSize: 12, lineHeight: 1 }}>✕</span> Retirer</> : <>📌 Épinglé</>)
+              : <>📌 Épingler</>
             }
           </button>
         </div>
