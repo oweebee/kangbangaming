@@ -592,6 +592,46 @@ app.get('/api/steam/profile', requireAuth, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ── Steam News ────────────────────────────────────────────────────────────────
+const NEWS_TTL = 30 * 60 * 1000; // 30 min
+const newsCaches = new Map(); // appid → { data, cacheAt }
+
+// Strip BBCode and basic HTML tags from Steam news content
+function stripMarkup(str = '') {
+  return str
+    .replace(/\[img\][^\[]*\[\/img\]/gi, '')          // remove images
+    .replace(/\[url=[^\]]*\](.*?)\[\/url\]/gi, '$1')  // url → text
+    .replace(/\[[^\]]+\]/g, '')                        // remaining BBCode tags
+    .replace(/<[^>]+>/g, '')                           // HTML tags
+    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
+    .replace(/\r?\n{3,}/g, '\n\n')                    // collapse excessive blank lines
+    .trim();
+}
+
+app.get('/api/steam/news/:appid', requireAuth, async (req, res) => {
+  const { appid } = req.params;
+  const entry = newsCaches.get(appid);
+  if (entry && Date.now() - entry.cacheAt < NEWS_TTL) return res.json(entry.data);
+  try {
+    const data = await steamFetch(
+      `https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=${appid}&count=15&maxlength=800&format=json`
+    );
+    const items = (data.appnews?.newsitems || []).map(n => ({
+      gid: n.gid,
+      title: n.title,
+      url: n.url,
+      author: n.author || null,
+      contents: stripMarkup(n.contents),
+      feedlabel: n.feedlabel || null,
+      date: n.date,
+      tags: n.tags || [],
+    }));
+    const result = { appid: Number(appid), items };
+    newsCaches.set(appid, { data: result, cacheAt: Date.now() });
+    res.json(result);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // ── Public boards ─────────────────────────────────────────────────────────────
 
 app.get('/api/public/boards', requireAuth, (req, res) => {

@@ -13,6 +13,7 @@ import ProfilePage from './components/ProfilePage.jsx';
 import GameStatsWidget from './components/GameStatsWidget.jsx';
 import GlobalSearch from './components/GlobalSearch.jsx';
 import SteamEncart from './components/SteamEncart.jsx';
+import GameInfoPanel, { GAME_INFO_PANEL_WIDTH } from './components/GameInfoPanel.jsx';
 
 const DISCORD_ICON_URL = 'https://cdn.discordapp.com/icons/983316258302877747/ebcf20448ef8818f93e8f31afad9f8d9.webp?size=64';
 
@@ -197,6 +198,7 @@ export default function App() {
   const [selectedGame, setSelectedGame] = useState(null);
   const [editingGame,  setEditingGame]  = useState(null);
   const [showArchived, setShowArchived] = useState(false);
+  const [infoPanelLocked, setInfoPanelLocked] = useState(false);
   const [searchTargetCol, setSearchTargetCol] = useState(null);
   const [appUsers, setAppUsers] = useState([]);
   const [showSearch, setShowSearch] = useState(false);
@@ -401,10 +403,11 @@ export default function App() {
     if (board) setColumns(board.columns || []);
   }, [activeBoardId, boards]);
 
-  // Fetch games only when the active board changes
+  // Fetch games only when the active board changes; also unlock the info panel
   useEffect(() => {
     if (!activeBoardId) return;
     fetchGames(activeBoardId);
+    setInfoPanelLocked(false);
   }, [activeBoardId]);
 
   // Memoize Steam appId — only changes when board identity/image changes, NOT on every card update.
@@ -1141,9 +1144,23 @@ export default function App() {
 
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
-      <aside style={{ width: 278, background: '#111', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
+      {/* Sidebar — z-index 22 so it appears above the GameInfoPanel (z-index 20) */}
+      <aside style={{ width: 278, background: '#111', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', flexShrink: 0, position: 'relative', zIndex: 22 }}>
         {sidebarContent}
       </aside>
+      {/* GameInfoPanel — pulls from behind sidebar, tab always visible */}
+      {isTaskBoard && !isMobile && (
+        <GameInfoPanel
+          api={API}
+          token={token}
+          gameInfo={gameInfo}
+          board={publicBoardMode || activeBoard}
+          appId={activeSteamAppIdForFetch}
+          locked={infoPanelLocked}
+          onLockChange={setInfoPanelLocked}
+          sidebarWidth={278}
+        />
+      )}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <header style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
           {publicBoardMode ? (
@@ -1279,6 +1296,12 @@ export default function App() {
             </>
           )}
         </header>
+        {/* When GameInfoPanel is locked open, shift board content right to make room */}
+        <div style={{
+          flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column',
+          paddingLeft: (!isMobile && isTaskBoard && infoPanelLocked) ? GAME_INFO_PANEL_WIDTH : 0,
+          transition: 'padding-left 0.32s cubic-bezier(0.4,0,0.2,1)',
+        }}>
         {showPublicBoards ? (
           <PublicBoards key={publicBoardsKey} token={token} currentUser={currentUser} favBoardIds={new Set(favBoards.map(b => b.id))} onToggleFavorite={toggleFavorite} onOpenBoard={openPublicBoard} onClose={() => setShowPublicBoards(false)} />
         ) : showHome && !publicBoardMode ? (
@@ -1296,6 +1319,7 @@ export default function App() {
         ) : (
           <KanbanBoard columns={columns} byColumn={byColumn} dragging={dragging} setDragging={setDragging} moveGame={moveGame} onCardClick={setSelectedGame} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} onRenameColumn={renameColumn} onDeleteColumn={deleteColumn} onSetEmoji={setColumnEmoji} onReorderColumns={reorderColumns} onAddToColumn={colId => { setSearchTargetCol(colId); setShowSearch(true); }} onReorderGames={reorderGamesInColumn} isTaskBoard={isTaskBoard} appUsers={appUsers} compactView={compactView} />
         )}
+        </div>
       </div>
       <footer style={{ position: 'fixed', bottom: 0, right: 0, padding: '5px 12px', display: 'flex', alignItems: 'center', gap: 8, fontSize: 10, color: 'var(--text-muted)' }}>
         <span>by Oweebee</span>
