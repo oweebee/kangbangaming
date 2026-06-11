@@ -149,12 +149,8 @@ export default function GameInfoPanel({
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
           width: 26,
           height: tabHeight,
-          background: locked
-            ? 'rgba(192,80,10,0.2)'
-            : 'rgba(30,34,44,0.35)',
-          backdropFilter: 'blur(8px)',
-          WebkitBackdropFilter: 'blur(8px)',
-          border: `1px solid ${locked ? 'rgba(232,129,58,0.4)' : 'rgba(255,255,255,0.08)'}`,
+          background: locked ? 'rgba(232,129,58,0.12)' : 'rgba(255,255,255,0.04)',
+          border: `1px solid ${locked ? 'rgba(232,129,58,0.35)' : 'rgba(255,255,255,0.06)'}`,
           ...(isLeft
             ? { borderLeft: 'none', borderRadius: '0 10px 10px 0', boxShadow: '3px 0 10px rgba(0,0,0,0.35)' }
             : { borderRight: 'none', borderRadius: '10px 0 0 10px', boxShadow: '-3px 0 10px rgba(0,0,0,0.35)' }),
