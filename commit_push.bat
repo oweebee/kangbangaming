@@ -4,9 +4,16 @@ echo  Deploy KangBanGaming
 echo ============================
 cd /d "%~dp0"
 del .git\index.lock 2>nul
+
 git add -A
-git commit -m "feat: task detail view, edit modal, date badges (single/period, yellow/green/red)"
-git push
-echo.
-echo Termine ! Redeploi dans Coolify.
+
+git diff --cached --quiet
+if %errorlevel%==0 (
+  echo Rien a commiter - tout est deja a jour.
+) else (
+  git commit -m "update: %date% %time%"
+  git push
+  echo.
+  echo Pousse ! Redeploi dans Coolify.
+)
 pause
