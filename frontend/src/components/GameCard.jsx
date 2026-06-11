@@ -4,7 +4,7 @@ import { getDateInfo } from './TaskModal.jsx';
 import { progressColor } from './ProgressSlider.jsx';
 import AssigneeAvatars from './AssigneeAvatars.jsx';
 
-const COMPACT_ICON_SIZE = 33; // 44 * 0.75
+const COMPACT_ICON_SIZE = 40; // 33 * 1.2 ≈ 40
 
 function formatPlaytime(minutes) {
   if (!minutes || minutes === 0) return null;
@@ -176,61 +176,97 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
       ) : null}
 
       {/* ── Info area ── */}
-      <div style={{ padding: '7px 9px', paddingRight: compact ? COMPACT_ICON_SIZE + 14 : 9, paddingBottom: compact ? COMPACT_ICON_SIZE + 10 : 7 }}>
+      <div style={{ padding: compact ? '4px 9px' : '7px 9px', paddingRight: compact ? 76 : 9, paddingBottom: compact ? COMPACT_ICON_SIZE + 6 : 7 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 4 }}>
           <div style={{
-            fontWeight: 600, fontSize: 14, lineHeight: '1.3', marginBottom: 3,
+            fontWeight: 600, fontSize: compact ? 13 : 14, lineHeight: compact ? '1.2' : '1.3', marginBottom: compact ? 1 : 3,
             wordBreak: 'break-word', flex: 1,
+            ...(compact ? { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } : {}),
           }} title={game.name}>{game.name}</div>
 
-          {/* Action buttons */}
+          {/* Action buttons — absolute en compact, inline sinon */}
           {!readOnly && (
-            <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
+            <div style={compact ? {
+              position: 'absolute', top: 4, right: 4, zIndex: 2,
+              display: 'flex', gap: 3, alignItems: 'center',
+            } : {
+              display: 'flex', gap: 3, flexShrink: 0, alignItems: 'center',
+            }}>
+              {/* ✓ Coche "terminée" */}
+              {!isArchived && onToggleDone && (
+                <button
+                  onClick={e => { e.stopPropagation(); onToggleDone(!isDone); }}
+                  title={isDone ? 'Marquer non terminée' : 'Marquer terminée'}
+                  style={{
+                    background: isDone ? 'rgba(61,184,106,0.22)' : 'rgba(255,255,255,0.10)',
+                    border: `1px solid ${isDone ? '#3db86a' : 'rgba(255,255,255,0.28)'}`,
+                    borderRadius: 4, width: 20, height: 20, padding: 0,
+                    cursor: 'pointer', flexShrink: 0,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: isDone ? '#3db86a' : 'rgba(255,255,255,0.65)',
+                    transition: 'all .15s',
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                </button>
+              )}
+
+              {/* ✏ Éditer */}
               {!isArchived && onEdit && isCustom && (
                 <button
                   onClick={e => { e.stopPropagation(); onEdit(game); }}
-                  style={{
-                    background: 'none', border: 'none', color: 'var(--text-muted)',
-                    cursor: 'pointer', opacity: 0.6, padding: '1px 3px',
-                    lineHeight: 1, flexShrink: 0, display: 'flex', alignItems: 'center',
-                  }}
                   title="Éditer"
+                  style={{
+                    background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.28)',
+                    borderRadius: 4, width: 20, height: 20, padding: 0,
+                    cursor: 'pointer', flexShrink: 0,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: 'rgba(255,255,255,0.65)',
+                  }}
                 >
-                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
                   </svg>
                 </button>
               )}
+
+              {/* Archive / Restaurer / Supprimer */}
               {isArchived ? (
                 <>
                   <button
                     onClick={e => { e.stopPropagation(); onUnarchive && onUnarchive(); }}
-                    style={{
-                      background: 'none', border: 'none', color: '#6090c0',
-                      fontSize: 13, cursor: 'pointer', opacity: 0.8, padding: '0 2px',
-                      lineHeight: 1, flexShrink: 0,
-                    }}
                     title="Restaurer"
+                    style={{
+                      background: 'rgba(96,144,192,0.18)', border: '1px solid rgba(96,144,192,0.45)',
+                      borderRadius: 4, width: 20, height: 20, padding: 0,
+                      cursor: 'pointer', flexShrink: 0, fontSize: 12,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6090c0',
+                    }}
                   >↩</button>
                   <button
                     onClick={e => { e.stopPropagation(); onDelete && onDelete(); }}
-                    style={{
-                      background: 'none', border: 'none', color: '#c04040',
-                      fontSize: 13, cursor: 'pointer', opacity: 0.8, padding: '0 0 0 2px',
-                      lineHeight: 1, flexShrink: 0,
-                    }}
                     title="Supprimer définitivement"
+                    style={{
+                      background: 'rgba(192,64,64,0.18)', border: '1px solid rgba(192,64,64,0.45)',
+                      borderRadius: 4, width: 20, height: 20, padding: 0,
+                      cursor: 'pointer', flexShrink: 0, fontSize: 12,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}
                   >🗑</button>
                 </>
               ) : (
                 <button
                   onClick={e => { e.stopPropagation(); onArchive && onArchive(); }}
-                  style={{
-                    background: 'none', border: 'none', color: 'var(--text-muted)',
-                    fontSize: 14, cursor: 'pointer', opacity: 0.5, padding: '0 0 0 2px',
-                    lineHeight: 1, flexShrink: 0,
-                  }}
                   title="Archiver"
+                  style={{
+                    background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.28)',
+                    borderRadius: 4, width: 20, height: 20, padding: 0,
+                    cursor: 'pointer', flexShrink: 0,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: 'rgba(255,255,255,0.65)', fontSize: 12, lineHeight: 1,
+                  }}
                 >✕</button>
               )}
             </div>
@@ -238,11 +274,11 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
         </div>
 
         {/* Sub-info row */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, minHeight: 18 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, minHeight: compact ? 14 : 18 }}>
           <div style={{ fontSize: 11, color: 'var(--text-muted)', minWidth: 0 }}>
             {isCustom
               ? <span style={{ color: tt ? tt.textColor : 'var(--accent)', opacity: 0.8 }}>
-                  {tt ? `${tt.emoji} ${tt.label}` : (isTaskBoard ? 'Tâche' : 'Carte perso')}
+                  {tt ? tt.label : (isTaskBoard ? 'Tâche' : 'Carte perso')}
                 </span>
               : formatPlaytime(game.playtime_minutes)
             }
@@ -326,31 +362,6 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
         </>
       )}
 
-      {/* ── Done toggle button — bottom of info area ── */}
-      {!isArchived && onToggleDone && (
-        <div style={{ padding: '0 9px 7px', marginTop: -4 }}>
-          <button
-            onClick={e => { e.stopPropagation(); onToggleDone(!isDone); }}
-            title={isDone ? 'Marquer comme non terminée' : 'Marquer comme terminée'}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 5,
-              background: isDone ? 'rgba(61,184,106,0.12)' : 'rgba(255,255,255,0.04)',
-              border: `1px solid ${isDone ? '#3db86a' : 'rgba(255,255,255,0.1)'}`,
-              borderRadius: 5, padding: '3px 8px',
-              color: isDone ? '#3db86a' : 'var(--text-muted)',
-              fontSize: 10, fontWeight: isDone ? 700 : 400,
-              cursor: 'pointer', width: '100%', justifyContent: 'center',
-              transition: 'all .15s',
-            }}
-          >
-            {isDone ? (
-              <><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Terminée</>
-            ) : (
-              <><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/></svg> Marquer terminée</>
-            )}
-          </button>
-        </div>
-      )}
 
       {/* Done badge overlay on image */}
       {isDone && !isArchived && !compact && (
