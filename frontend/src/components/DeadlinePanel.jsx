@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getDateInfo } from './TaskModal.jsx';
-import { getTaskType } from '../taskTypes.jsx';
+import GameCard from './GameCard.jsx';
 
 const API = '/api';
 
@@ -42,57 +41,26 @@ const CAT_META = {
   upcoming: { label: 'Dans 3 jours',           color: '#c9a010', icon: '🕐' },
 };
 
-// ── Carte tâche (full-width, pour colonne) ─────────────────────────────────────
-function TaskDeadlineCard({ task, onOpen }) {
-  const tt   = task.taskType ? getTaskType(task.taskType) : null;
-  const info = getDateInfo(task);
-  const isCustom = task.type === 'custom';
-  const [hov, setHov] = useState(false);
-
-  return (
-    <div
-      onClick={() => onOpen(task)}
-      onMouseEnter={() => setHov(true)}
-      onMouseLeave={() => setHov(false)}
-      style={{
-        display: 'flex', alignItems: 'center', gap: 9,
-        background: hov ? 'var(--surface2)' : 'var(--surface)',
-        border: `1px solid ${hov ? 'var(--accent)' : (tt ? tt.border : 'var(--border)')}`,
-        borderRadius: 9, padding: '8px 10px', cursor: 'pointer',
-        transition: 'background .1s, border-color .12s',
-      }}
-    >
-      {/* Miniature */}
-      <div style={{
-        width: 44, height: 28, borderRadius: 4, overflow: 'hidden', flexShrink: 0,
-        background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      }}>
-        {task.header_img
-          ? <img src={task.header_img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          : <span style={{ fontSize: 16 }}>{tt?.emoji || task.emoji || '📋'}</span>
-        }
-      </div>
-
-      {/* Texte */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {task.name}
-        </div>
-        <div style={{ fontSize: 9, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 1 }}>
-          {task.boardName}{task.ownerUsername ? ` · ${task.ownerUsername}` : ''}
-        </div>
-        {info && (
-          <div style={{
-            marginTop: 3, display: 'inline-block',
-            fontSize: 8, fontWeight: 700, padding: '1px 5px', borderRadius: 3,
-            color: info.color, border: `1px solid ${info.border}`, background: info.bg,
-          }}>
-            {info.label}
-          </div>
-        )}
-      </div>
-    </div>
-  );
+// ── Convertit un task API → objet game attendu par GameCard ───────────────────
+function taskToGame(task) {
+  return {
+    appid:            task.gameId,
+    name:             task.name,
+    header_img:       task.header_img  || null,
+    icon_img:         task.icon_img    || null,
+    type:             task.type        || 'steam',
+    taskType:         task.taskType    || null,
+    emoji:            task.emoji       || null,
+    progress:         typeof task.progress === 'number' ? task.progress : null,
+    done:             !!task.done,
+    urgent:           !!task.urgent,
+    dueDate:          task.dueDate     || null,
+    startDate:        task.startDate   || null,
+    endDate:          task.endDate     || null,
+    archived:         false,
+    playtime_minutes: null,
+    notes:            [],
+  };
 }
 
 // ── Section ────────────────────────────────────────────────────────────────────
@@ -102,10 +70,10 @@ function Section({ cat, tasks, onOpenTask }) {
   if (tasks.length === 0) return null;
 
   return (
-    <div style={{ marginBottom: 16 }}>
+    <div style={{ marginBottom: 20 }}>
       <div
         onClick={() => setCollapsed(v => !v)}
-        style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: collapsed ? 0 : 8, cursor: 'pointer', userSelect: 'none' }}
+        style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: collapsed ? 0 : 10, cursor: 'pointer', userSelect: 'none' }}
       >
         <span style={{ fontSize: 11 }}>{meta.icon}</span>
         <span style={{ fontSize: 11, fontWeight: 700, color: meta.color, textTransform: 'uppercase', letterSpacing: '0.07em', flex: 1 }}>
@@ -116,11 +84,49 @@ function Section({ cat, tasks, onOpenTask }) {
         </span>
         <span style={{ fontSize: 9, color: 'var(--text-muted)', transition: 'transform .15s', transform: collapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }}>▾</span>
       </div>
+
       {!collapsed && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {tasks.map((t, i) => (
-            <TaskDeadlineCard key={`${t.boardId}-${t.gameId}-${i}`} task={t} onOpen={onOpenTask} />
-          ))}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
+          {tasks.map((task, i) => {
+            const game = taskToGame(task);
+            const isPublic = task.isPublic;
+            return (
+              <div key={`${task.boardId}-${task.gameId}-${i}`} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <GameCard
+                  game={game}
+                  onClick={() => onOpenTask(task)}
+                  readOnly={false}
+                  isTaskBoard={task.type === 'custom'}
+                  onDragStart={() => {}}
+                  onDragEnd={() => {}}
+                />
+                {/* Nom du board — toujours visible sous la carte */}
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 4,
+                  padding: '3px 6px',
+                  background: 'var(--surface2)', borderRadius: 5,
+                  border: '1px solid var(--border)',
+                }}>
+                  {task.boardIcon
+                    ? <img src={task.boardIcon} alt="" style={{ width: 14, height: 14, borderRadius: '50%', flexShrink: 0 }} />
+                    : <span style={{ fontSize: 11, flexShrink: 0 }}>📋</span>
+                  }
+                  <span style={{
+                    fontSize: 10, color: isPublic ? '#47a7f5' : 'var(--text-muted)',
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1,
+                    fontWeight: 600,
+                  }}>
+                    {task.boardName}
+                  </span>
+                  {isPublic && task.ownerUsername && (
+                    <span style={{ fontSize: 9, color: '#47a7f5', opacity: 0.7, flexShrink: 0 }}>
+                      🌐 {task.ownerUsername}
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
@@ -154,7 +160,7 @@ export default function DeadlinePanel({ token, onOpenTask }) {
 
   return (
     <>
-      {/* Header — identique aux sections de la page d'accueil */}
+      {/* Header identique aux sections de la page d'accueil */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#47a7f5" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
           <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
@@ -174,10 +180,10 @@ export default function DeadlinePanel({ token, onOpenTask }) {
       {loading ? (
         <div style={{ color: 'var(--text-muted)', fontSize: 11, textAlign: 'center', padding: '20px 0' }}>Chargement…</div>
       ) : total === 0 ? (
-        <div style={{ textAlign: 'center', padding: '24px 8px', color: 'var(--text-muted)' }}>
-          <div style={{ fontSize: 22, marginBottom: 8 }}>✅</div>
-          <div style={{ fontSize: 11, fontWeight: 600 }}>Aucune échéance</div>
-          <div style={{ fontSize: 10, marginTop: 4, opacity: 0.6 }}>Toutes les tâches avec des dates sont à jour</div>
+        <div style={{ textAlign: 'center', padding: '32px 8px', color: 'var(--text-muted)' }}>
+          <div style={{ fontSize: 26, marginBottom: 10 }}>✅</div>
+          <div style={{ fontSize: 12, fontWeight: 600 }}>Aucune échéance à venir</div>
+          <div style={{ fontSize: 11, marginTop: 4, opacity: 0.6 }}>Toutes les tâches avec des dates sont à jour</div>
         </div>
       ) : (
         <>

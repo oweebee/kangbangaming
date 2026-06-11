@@ -755,13 +755,13 @@ export default function App() {
   const homeView = (
     <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
 
-      {/* ── Colonne gauche : Échéances (50%) ── */}
-      <div style={{ flex: 1, borderRight: '1px solid var(--border)', overflowY: 'auto', padding: '28px 28px' }}>
+      {/* ── Colonne gauche : Échéances (35%) ── */}
+      <div style={{ flex: 35, minWidth: 0, borderRight: '1px solid var(--border)', overflowY: 'auto', padding: '28px 20px' }}>
         <DeadlinePanel token={token} onOpenTask={handleDeadlineOpen} />
       </div>
 
-      {/* ── Colonne droite : Boards (50%) ── */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '28px 28px' }}>
+      {/* ── Colonne droite : Boards (65%) ── */}
+      <div style={{ flex: 65, minWidth: 0, overflowY: 'auto', padding: '28px 28px' }}>
       <div style={{ maxWidth: 960, margin: '0 auto' }}>
         {/* Boards publics de la communauté */}
         <div style={{ marginBottom: 36 }}>

@@ -158,6 +158,7 @@ function AssigneeRow({ assignees = [], appUsers = [], borderColor = 'var(--borde
 export default function TaskModal({ game, onClose, onEdit, appUsers = [], onPatchGame, isTaskBoard }) {
   const tt        = game.taskType ? getTaskType(game.taskType) : null;
   const TtIcon    = tt?.FallbackIcon;
+  const [ttImgError, setTtImgError] = useState(false);
   const dateInfo  = getDateInfo(game);
   const isUrgent  = !!game.urgent;
   const isDone    = !!game.done;
@@ -192,12 +193,21 @@ export default function TaskModal({ game, onClose, onEdit, appUsers = [], onPatc
 
         {/* ── Header illustration / emoji ── */}
         <div style={{
-          position: 'relative', height: 148, flexShrink: 0,
-          background: tt ? tt.imgBg : 'linear-gradient(135deg,#1a1a2e 0%,#16213e 60%,#0f3460 100%)',
+          position: 'relative', flexShrink: 0,
+          background: tt ? 'linear-gradient(135deg,#111 0%,#1a1a1a 100%)' : 'linear-gradient(135deg,#1a1a2e 0%,#16213e 60%,#0f3460 100%)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          overflow: 'hidden',
+          overflow: 'hidden', minHeight: tt?.img && !ttImgError ? 0 : 148,
         }}>
-          {tt ? <TtIcon /> : (
+          {tt ? (
+            tt.img && !ttImgError ? (
+              <img src={tt.img} alt={tt.label} onError={() => setTtImgError(true)}
+                style={{ width: '100%', height: 'auto', display: 'block' }} />
+            ) : (
+              <div style={{ width: '100%', height: 148, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {TtIcon ? <TtIcon /> : <span style={{ fontSize: 60 }}>{tt.emoji}</span>}
+              </div>
+            )
+          ) : (
             <span style={{ fontSize: 60, lineHeight: 1, userSelect: 'none' }}>{game.emoji || '🎮'}</span>
           )}
 
