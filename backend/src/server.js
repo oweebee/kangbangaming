@@ -405,10 +405,10 @@ app.get('/api/steam/gameinfo/:appid', requireAuth, async (req, res) => {
       ? Math.round((reviewSummary.total_positive / reviewSummary.total_reviews) * 100)
       : null;
 
-    // Genres — max 3, excluant Early Access (affiché séparément)
+    // Genres — max 3, Early Access (ID "70") exclu car traité séparément
     const allGenres = appDetails?.genres || [];
-    const isEarlyAccess = allGenres.some(g => g.id === '70');
-    const genres = allGenres.filter(g => g.id !== '70').slice(0, 3).map(g => g.description);
+    const earlyAccessFromGenres = allGenres.some(g => String(g.id) === '70');
+    const genres = allGenres.filter(g => String(g.id) !== '70').slice(0, 3).map(g => g.description);
 
     // Developer
     const developer = appDetails?.developers?.[0] ?? null;
@@ -431,8 +431,8 @@ app.get('/api/steam/gameinfo/:appid', requireAuth, async (req, res) => {
     // Refine with local co-op categories
     if (catIds.has(24) || catIds.has(37)) multiplayerLabel = (multiplayerLabel ? multiplayerLabel + ' / ' : '') + 'Local co-op';
 
-    // Early Access (category 70)
-    const earlyAccess = catIds.has(70);
+    // Early Access : genre ID "70" (pas une catégorie)
+    const earlyAccess = earlyAccessFromGenres;
 
     const data = {
       appid,
