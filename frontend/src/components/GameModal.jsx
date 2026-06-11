@@ -15,7 +15,11 @@ export default function GameModal({ game, onClose, api, token, onPatchGame, defa
   const [tab, setTab] = useState(defaultTab);
   const [filter, setFilter] = useState('all');
   const notesCount = (game.notes || []).length;
-  const handleSaveNotes = (notes) => { if (onPatchGame) onPatchGame(game.appid, { notes }); };
+  const isDone   = !!game.done;
+  const isUrgent = !!game.urgent;
+  const handleSaveNotes    = (notes)   => { if (onPatchGame) onPatchGame(game.appid, { notes }); };
+  const handleToggleDone   = ()        => { if (onPatchGame) onPatchGame(game.appid, { done: !isDone }); };
+  const handleToggleUrgent = ()        => { if (onPatchGame) onPatchGame(game.appid, { urgent: !isUrgent }); };
 
   useEffect(() => {
     async function load() {
@@ -155,7 +159,42 @@ export default function GameModal({ game, onClose, api, token, onPatchGame, defa
           )}
 
           {tab === 'info' && (
-            <div style={{ padding: 16 }}>
+            <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {/* Terminée + Urgent côte à côte */}
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button onClick={handleToggleDone} style={{
+                  flex: 1, display: 'flex', alignItems: 'center', gap: 8,
+                  background: isDone ? 'rgba(61,184,106,0.12)' : 'var(--surface2)',
+                  border: `1.5px solid ${isDone ? '#3db86a' : 'var(--border)'}`,
+                  borderRadius: 9, padding: '11px 14px', cursor: 'pointer',
+                  transition: 'all .15s', textAlign: 'left',
+                }}>
+                  <div style={{
+                    width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
+                    border: `2px solid ${isDone ? '#3db86a' : 'rgba(255,255,255,0.25)'}`,
+                    background: isDone ? '#3db86a' : 'transparent',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    {isDone && <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
+                  </div>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: isDone ? '#3db86a' : 'var(--text)' }}>
+                    {isDone ? 'Terminée ✓' : 'Terminée'}
+                  </span>
+                </button>
+                <button onClick={handleToggleUrgent} style={{
+                  flex: 1, display: 'flex', alignItems: 'center', gap: 8,
+                  background: isUrgent ? 'rgba(220,40,40,0.12)' : 'var(--surface2)',
+                  border: `1.5px solid ${isUrgent ? 'rgba(220,60,60,0.6)' : 'var(--border)'}`,
+                  borderRadius: 9, padding: '11px 14px', cursor: 'pointer',
+                  transition: 'all .15s', textAlign: 'left',
+                }}>
+                  <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>⚠</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: isUrgent ? '#ff6060' : 'var(--text-muted)' }}>
+                    {isUrgent ? 'Urgent !' : 'Urgent'}
+                  </span>
+                </button>
+              </div>
+              {/* Infos */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {[
                   ['App ID', game.appid],

@@ -300,31 +300,47 @@ export default function TaskModal({ game, onClose, onEdit, appUsers = [], onPatc
           {/* ══ ONGLET INFOS ══ */}
           {activeTab === 'infos' && (<>
 
-            {/* URGENT banner — cliquable pour toggle */}
-            <button
-              onClick={handleToggleUrgent}
-              title={isUrgent ? 'Retirer l\'urgence' : 'Marquer comme urgent'}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 10, width: '100%',
-                background: isUrgent ? 'rgba(200,30,30,0.12)' : 'var(--surface2)',
-                border: `1.5px solid ${isUrgent ? 'rgba(220,60,60,0.5)' : 'var(--border)'}`,
-                borderRadius: 9, padding: '10px 14px', cursor: 'pointer',
-                transition: 'all .15s', textAlign: 'left',
-              }}
-            >
-              <span style={{ fontSize: 20, lineHeight: 1 }}>⚠</span>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 13, fontWeight: 900, color: isUrgent ? '#ff6060' : 'var(--text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                  {isUrgent ? 'URGENT' : 'Marquer urgent'}
+            {/* ── Terminée + Urgent côte à côte ── */}
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                onClick={handleToggleDone}
+                style={{
+                  flex: 1, display: 'flex', alignItems: 'center', gap: 8,
+                  background: isDone ? 'rgba(61,184,106,0.12)' : 'var(--surface2)',
+                  border: `1.5px solid ${isDone ? '#3db86a' : 'var(--border)'}`,
+                  borderRadius: 9, padding: '11px 14px', cursor: 'pointer',
+                  transition: 'all .15s', textAlign: 'left',
+                }}
+              >
+                <div style={{
+                  width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
+                  border: `2px solid ${isDone ? '#3db86a' : 'rgba(255,255,255,0.25)'}`,
+                  background: isDone ? '#3db86a' : 'transparent',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  transition: 'all .15s',
+                }}>
+                  {isDone && <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
                 </div>
-                {isUrgent && <div style={{ fontSize: 11, color: 'rgba(255,100,100,0.7)', marginTop: 1 }}>Cliquer pour retirer l'urgence</div>}
-              </div>
-              {isUrgent && (
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#ff6060" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                </svg>
-              )}
-            </button>
+                <div style={{ fontSize: 13, fontWeight: 700, color: isDone ? '#3db86a' : 'var(--text)' }}>
+                  {isDone ? 'Terminée ✓' : 'Terminée'}
+                </div>
+              </button>
+              <button
+                onClick={handleToggleUrgent}
+                style={{
+                  flex: 1, display: 'flex', alignItems: 'center', gap: 8,
+                  background: isUrgent ? 'rgba(220,40,40,0.12)' : 'var(--surface2)',
+                  border: `1.5px solid ${isUrgent ? 'rgba(220,60,60,0.6)' : 'var(--border)'}`,
+                  borderRadius: 9, padding: '11px 14px', cursor: 'pointer',
+                  transition: 'all .15s', textAlign: 'left',
+                }}
+              >
+                <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>⚠</span>
+                <div style={{ fontSize: 13, fontWeight: 700, color: isUrgent ? '#ff6060' : 'var(--text-muted)' }}>
+                  {isUrgent ? 'Urgent !' : 'Urgent'}
+                </div>
+              </button>
+            </div>
 
             {/* Date block */}
             {dateInfo && (
@@ -429,42 +445,6 @@ export default function TaskModal({ game, onClose, onEdit, appUsers = [], onPatc
                 )}
               </div>
             )}
-
-            {/* Terminée toggle */}
-            <button
-              onClick={handleToggleDone}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 10,
-                background: isDone ? 'rgba(61,184,106,0.12)' : 'var(--surface2)',
-                border: `1.5px solid ${isDone ? '#3db86a' : 'var(--border)'}`,
-                borderRadius: 9, padding: '11px 14px', width: '100%', cursor: 'pointer',
-                transition: 'all .15s', textAlign: 'left',
-              }}
-            >
-              <div style={{
-                width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
-                border: `2px solid ${isDone ? '#3db86a' : 'rgba(255,255,255,0.25)'}`,
-                background: isDone ? '#3db86a' : 'transparent',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                transition: 'all .15s',
-              }}>
-                {isDone && (
-                  <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="20 6 9 17 4 12"/>
-                  </svg>
-                )}
-              </div>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: isDone ? '#3db86a' : 'var(--text)' }}>
-                  {isDone ? 'Terminée ✓' : 'Marquer comme terminée'}
-                </div>
-                {isDone && (
-                  <div style={{ fontSize: 10, color: 'rgba(61,184,106,0.7)', marginTop: 1 }}>
-                    Cette tâche est considérée comme complétée
-                  </div>
-                )}
-              </div>
-            </button>
 
             {/* Progress */}
             <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 9, padding: '12px 14px' }}>
