@@ -122,7 +122,7 @@ export default function GameInfoPanel({
     ? '15 18 9 12 15 6'  // ←
     : '9 18 15 12 9 6';  // →
 
-  const tabHeight = isOpen ? 108 : 80;
+  const tabHeight = isOpen ? 116 : 88;
 
   const accentColor = locked ? '#e8813a' : 'rgba(255,255,255,0.65)';
   const dimColor    = locked ? '#e8813a' : 'rgba(255,255,255,0.4)';
@@ -147,7 +147,7 @@ export default function GameInfoPanel({
           transition: 'transform 0.32s cubic-bezier(0.4,0,0.2,1), height 0.2s ease, background 0.2s',
           zIndex: 26,
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          width: 22,
+          width: 26,
           height: tabHeight,
           background: locked
             ? 'linear-gradient(180deg, rgba(232,129,58,0.3) 0%, rgba(192,80,10,0.3) 100%)'
@@ -167,12 +167,9 @@ export default function GameInfoPanel({
           title={isLeft ? 'Déplacer le panneau à droite' : 'Déplacer le panneau à gauche'}
           style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', flex: 1, paddingTop: 6 }}
         >
-          <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke={dimColor} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            {isLeft ? (
-              <g><line x1="5" y1="12" x2="19" y2="12"/><polyline points="13 6 19 12 13 18"/></g>
-            ) : (
-              <g><line x1="19" y1="12" x2="5" y2="12"/><polyline points="11 6 5 12 11 18"/></g>
-            )}
+          {/* ↔ swap icon — distinct from chevron */}
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke={dimColor} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M7 16l-4-4 4-4M17 8l4 4-4 4M3 12h18"/>
           </svg>
         </div>
 
@@ -182,7 +179,7 @@ export default function GameInfoPanel({
           title={isOpen ? (locked ? 'Panneau verrouillé ouvert' : 'Fermer') : 'Infos & Actualités du jeu'}
           style={{ cursor: locked ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', flex: 1 }}
         >
-          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke={accentColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke={accentColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/>
             <path d="M18 14h-8M15 18h-5M10 6h8v4h-8z"/>
           </svg>
@@ -202,7 +199,7 @@ export default function GameInfoPanel({
             color: locked ? '#e8813a' : 'rgba(255,255,255,0.5)',
           }}
         >
-          <LockIcon locked={locked} size={12} />
+          <LockIcon locked={locked} size={14} />
         </div>
 
         {/* Chevron — bottom, click to open/close */}
@@ -210,7 +207,7 @@ export default function GameInfoPanel({
           onClick={handleTabClick}
           style={{ cursor: locked ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', flex: 1, paddingBottom: 6 }}
         >
-          <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke={dimColor} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke={dimColor} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <polyline points={chevronPoints} />
           </svg>
         </div>

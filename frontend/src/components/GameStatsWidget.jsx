@@ -74,7 +74,7 @@ export default function GameStatsWidget({ api, token, board, rightOffset = 0 }) 
   return (
     <div style={{
       position: 'fixed',
-      bottom: '25vh',
+      bottom: 150,
       right: rightOffset,
       zIndex: 40,
       width: 258,
