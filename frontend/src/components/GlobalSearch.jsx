@@ -76,17 +76,19 @@ export default function GlobalSearch({ token, onGoToBoard, onOpenGame }) {
     setTimeout(() => inputRef.current?.focus(), 50);
   };
 
-  // Close on outside click
+  // Close on outside click — always collapse and clear
   useEffect(() => {
     const fn = (e) => {
       if (containerRef.current && !containerRef.current.contains(e.target)) {
         setOpen(false);
-        if (!query) setExpanded(false);
+        setExpanded(false);
+        setQuery('');
+        setResults([]);
       }
     };
     document.addEventListener('mousedown', fn);
     return () => document.removeEventListener('mousedown', fn);
-  }, [query]);
+  }, []);
 
   return (
     <div ref={containerRef} style={{ position: 'relative', flexShrink: 0, display: 'flex', alignItems: 'center' }}>
