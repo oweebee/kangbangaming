@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { getTaskType } from '../taskTypes.jsx';
 import NotesSection from './NotesSection.jsx';
 import ProgressSlider, { progressColor } from './ProgressSlider.jsx';
+import { StatusToggles, DatePicker } from './CardControls.jsx';
 
 // ── Date helpers ──────────────────────────────────────────────────────────────
 
@@ -169,6 +170,12 @@ export default function TaskModal({ game, onClose, onEdit, appUsers = [], onPatc
   const [showAssigneeMenu, setShowAssigneeMenu] = useState(false);
   const assigneeMenuRef = useRef(null);
 
+  // Date state — éditable directement depuis la modal
+  const [dateMode,   setDateMode]   = useState(game.startDate ? 'period' : game.dueDate ? 'single' : 'none');
+  const [dueDate,    setDueDate]    = useState(game.dueDate    || '');
+  const [startDate,  setStartDate]  = useState(game.startDate  || '');
+  const [endDate,    setEndDate]    = useState(game.endDate    || '');
+
   useEffect(() => {
     if (!showAssigneeMenu) return;
     const handler = e => { if (assigneeMenuRef.current && !assigneeMenuRef.current.contains(e.target)) setShowAssigneeMenu(false); };
@@ -187,6 +194,16 @@ export default function TaskModal({ game, onClose, onEdit, appUsers = [], onPatc
   const handleToggleDone   = () => { if (onPatchGame) onPatchGame(game.appid, { done: !isDone }); };
   const handleToggleUrgent = () => { if (onPatchGame) onPatchGame(game.appid, { urgent: !isUrgent }); };
   const handleUpdateAssignees = (assignees) => { if (onPatchGame) onPatchGame(game.appid, { assignees }); };
+
+  const handleDateModeChange  = (mode) => {
+    setDateMode(mode);
+    if (mode === 'none')   { setDueDate(''); setStartDate(''); setEndDate(''); if (onPatchGame) onPatchGame(game.appid, { dueDate: null, startDate: null, endDate: null }); }
+    if (mode === 'single') { setStartDate(''); setEndDate(''); }
+    if (mode === 'period') { setDueDate(''); }
+  };
+  const handleDueDateChange    = (v) => { setDueDate(v);    if (onPatchGame) onPatchGame(game.appid, { dueDate: v || null }); };
+  const handleStartDateChange  = (v) => { setStartDate(v);  if (onPatchGame) onPatchGame(game.appid, { startDate: v || null }); };
+  const handleEndDateChange    = (v) => { setEndDate(v);    if (onPatchGame) onPatchGame(game.appid, { endDate: v || null }); };
 
   return (
     <div
@@ -300,47 +317,11 @@ export default function TaskModal({ game, onClose, onEdit, appUsers = [], onPatc
           {/* ══ ONGLET INFOS ══ */}
           {activeTab === 'infos' && (<>
 
-            {/* ── Terminée + Urgent côte à côte ── */}
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button
-                onClick={handleToggleDone}
-                style={{
-                  flex: 1, display: 'flex', alignItems: 'center', gap: 8,
-                  background: isDone ? 'rgba(61,184,106,0.12)' : 'var(--surface2)',
-                  border: `1.5px solid ${isDone ? '#3db86a' : 'var(--border)'}`,
-                  borderRadius: 9, padding: '11px 14px', cursor: 'pointer',
-                  transition: 'all .15s', textAlign: 'left',
-                }}
-              >
-                <div style={{
-                  width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
-                  border: `2px solid ${isDone ? '#3db86a' : 'rgba(255,255,255,0.25)'}`,
-                  background: isDone ? '#3db86a' : 'transparent',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  transition: 'all .15s',
-                }}>
-                  {isDone && <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
-                </div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: isDone ? '#3db86a' : 'var(--text)' }}>
-                  {isDone ? 'Terminée ✓' : 'Terminée'}
-                </div>
-              </button>
-              <button
-                onClick={handleToggleUrgent}
-                style={{
-                  flex: 1, display: 'flex', alignItems: 'center', gap: 8,
-                  background: isUrgent ? 'rgba(220,40,40,0.12)' : 'var(--surface2)',
-                  border: `1.5px solid ${isUrgent ? 'rgba(220,60,60,0.6)' : 'var(--border)'}`,
-                  borderRadius: 9, padding: '11px 14px', cursor: 'pointer',
-                  transition: 'all .15s', textAlign: 'left',
-                }}
-              >
-                <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>⚠</span>
-                <div style={{ fontSize: 13, fontWeight: 700, color: isUrgent ? '#ff6060' : 'var(--text-muted)' }}>
-                  {isUrgent ? 'Urgent !' : 'Urgent'}
-                </div>
-              </button>
-            </div>
+            {/* ── Terminée + Urgent ── */}
+            <StatusToggles
+              isDone={isDone} onToggleDone={handleToggleDone}
+              isUrgent={isUrgent} onToggleUrgent={handleToggleUrgent}
+            />
 
             {/* Date block */}
             {dateInfo && (
