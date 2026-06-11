@@ -110,7 +110,7 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
           <img
             src={game.header_img} alt={game.name}
             onError={() => setImgError(true)}
-            style={{ width: '100%', height: 88, objectFit: 'cover', display: 'block' }}
+            style={{ width: '100%', height: 'auto', display: 'block' }}
             draggable={false}
           />
           {isUrgent && !isArchived && (

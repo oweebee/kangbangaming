@@ -68,7 +68,7 @@ function BoardEmojiPicker({ current, onSelect, onClose }) {
 
 const API = import.meta.env.VITE_API_URL || '/api';
 
-function HomeBoardCard({ board, isPublic, onClick }) {
+function HomeBoardCard({ board, isPublic, isFav, onToggleFav, onClick }) {
   const [hover, setHover] = React.useState(false);
   return (
     <div
@@ -77,21 +77,44 @@ function HomeBoardCard({ board, isPublic, onClick }) {
       onMouseLeave={() => setHover(false)}
       style={{
         background: hover ? 'var(--surface2)' : 'var(--surface)',
-        border: '1px solid var(--border)',
+        border: `1px solid ${isFav ? 'rgba(245,197,24,0.35)' : 'var(--border)'}`,
         borderRadius: 12, cursor: 'pointer', overflow: 'hidden',
-        transition: 'background .12s', display: 'flex', flexDirection: 'column',
+        transition: 'background .12s, border-color .12s', display: 'flex', flexDirection: 'column',
+        position: 'relative',
       }}
     >
       {/* Banner */}
-      <div style={{ width: '100%', height: 110, background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
+      <div style={{ width: '100%', height: 110, background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0, position: 'relative' }}>
         {(board.headerImg || board.gameIcon) ? (
           <img src={board.headerImg || board.gameIcon} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         ) : (
           <span style={{ fontSize: 44 }}>{board.emoji || '🎮'}</span>
         )}
+        {/* Star button — personal boards only */}
+        {onToggleFav && (
+          <button
+            onClick={e => { e.stopPropagation(); onToggleFav(isFav); }}
+            title={isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+            style={{
+              position: 'absolute', top: 6, right: 6,
+              background: 'rgba(0,0,0,0.55)', border: 'none', borderRadius: '50%',
+              width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', opacity: isFav || hover ? 1 : 0,
+              transition: 'opacity .15s',
+            }}
+          >
+            <svg viewBox="0 0 24 24" width="14" height="14"
+              fill={isFav ? '#f5c518' : 'none'}
+              stroke={isFav ? '#f5c518' : '#fff'} strokeWidth="2"
+              strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+            </svg>
+          </button>
+        )}
       </div>
       {/* Info */}
       <div style={{ padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 6 }}>
+        {isFav && <svg viewBox="0 0 24 24" width="10" height="10" fill="#f5c518" stroke="#f5c518" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>}
         <span style={{ flex: 1, fontWeight: 700, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text)' }}>{board.name}</span>
         <span style={{ fontSize: 10, fontWeight: 700, color: (isPublic || board.public) ? '#3db86a' : '#f5a500', border: `1px solid ${(isPublic || board.public) ? '#3db86a' : '#f5a500'}`, borderRadius: 4, padding: '1px 5px', flexShrink: 0 }}>
           {(isPublic || board.public) ? 'Public' : 'Privé'}
@@ -129,6 +152,8 @@ export default function App() {
 
   // Favorites (public boards pinned to sidebar)
   const [favBoards, setFavBoards] = useState([]);
+  // Personal board favorites (IDs only)
+  const [personalFavIds, setPersonalFavIds] = useState([]);
   // Collaborative public board currently open (null = own boards mode)
   const [publicBoardMode, setPublicBoardMode] = useState(null); // { id, name, ownerUsername }
 
@@ -203,6 +228,20 @@ export default function App() {
       if (res.ok) setFavBoards(await res.json());
     } catch {}
   }, [token]);
+
+  const fetchPersonalFavorites = useCallback(async () => {
+    if (!token) return;
+    try {
+      const res = await fetch(`${API}/user/personal-favorites`, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) setPersonalFavIds(await res.json());
+    } catch {}
+  }, [token]);
+
+  const togglePersonalFavorite = async (boardId, isFav) => {
+    const method = isFav ? 'DELETE' : 'POST';
+    await fetch(`${API}/user/personal-favorites/${boardId}`, { method, headers: { Authorization: `Bearer ${token}` } });
+    setPersonalFavIds(prev => isFav ? prev.filter(id => id !== boardId) : [...prev, boardId]);
+  };
 
   const toggleFavorite = async (boardId, boardData, isFav) => {
     const method = isFav ? 'DELETE' : 'POST';
@@ -312,7 +351,7 @@ export default function App() {
 
   useEffect(() => {
     if (token && currentUser) {
-      fetchBoards(); fetchFavorites();
+      fetchBoards(); fetchFavorites(); fetchPersonalFavorites();
       try { const saved = JSON.parse(localStorage.getItem(`boardOrder_${currentUser.id}`) || 'null'); if (Array.isArray(saved)) setBoardOrder(saved); } catch {}
       try { const saved = JSON.parse(localStorage.getItem(`favOrder_${currentUser.id}`) || 'null'); if (Array.isArray(saved)) setFavOrder(saved); } catch {}
     }
@@ -638,22 +677,47 @@ export default function App() {
         <div style={{ borderTop: '1px solid var(--border)', marginBottom: 32 }} />
 
         {/* Mes boards */}
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-            <span style={{ fontSize: 14 }}>🔒</span>
-            <span style={{ fontSize: 12, fontWeight: 700, color: '#f5a500', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Mes Boards</span>
-            <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--surface2)', borderRadius: 99, padding: '1px 7px' }}>{sortedBoards.length}</span>
-          </div>
-          {sortedBoards.length === 0 ? (
-            <div style={{ color: 'var(--text-muted)', fontSize: 12, padding: '16px 0' }}>Crée un board pour commencer.</div>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
-              {sortedBoards.map(b => (
-                <HomeBoardCard key={b.id} board={b} onClick={() => openBoard(b)} />
-              ))}
-            </div>
-          )}
-        </div>
+        {(() => {
+          const favSet = new Set(personalFavIds);
+          const favBoards2 = sortedBoards.filter(b => favSet.has(b.id));
+          const otherBoards = sortedBoards.filter(b => !favSet.has(b.id));
+          return (
+            <>
+              {favBoards2.length > 0 && (
+                <div style={{ marginBottom: 28 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="#f5c518" stroke="#f5c518" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: '#f5c518', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Mes Favoris</span>
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--surface2)', borderRadius: 99, padding: '1px 7px' }}>{favBoards2.length}</span>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
+                    {favBoards2.map(b => (
+                      <HomeBoardCard key={b.id} board={b} isFav onToggleFav={(cur) => togglePersonalFavorite(b.id, cur)} onClick={() => openBoard(b)} />
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+                  <span style={{ fontSize: 14 }}>🔒</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: '#f5a500', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Mes Boards</span>
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--surface2)', borderRadius: 99, padding: '1px 7px' }}>{otherBoards.length}</span>
+                </div>
+                {sortedBoards.length === 0 ? (
+                  <div style={{ color: 'var(--text-muted)', fontSize: 12, padding: '16px 0' }}>Crée un board pour commencer.</div>
+                ) : otherBoards.length === 0 ? (
+                  <div style={{ color: 'var(--text-muted)', fontSize: 12, padding: '8px 0' }}>Tous tes boards sont en favoris ⭐</div>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
+                    {otherBoards.map(b => (
+                      <HomeBoardCard key={b.id} board={b} isFav={false} onToggleFav={(cur) => togglePersonalFavorite(b.id, cur)} onClick={() => openBoard(b)} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
+          );
+        })()}
       </div>
     </div>
   );
@@ -693,7 +757,14 @@ export default function App() {
 
       {/* Boards list */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '6px 6px' }}>
-        {sortedBoards.map(b => (
+        {/* ⭐ Épinglés */}
+        {personalFavIds.length > 0 && sortedBoards.some(b => personalFavIds.includes(b.id)) && (
+          <>
+            <div style={{ fontSize: 9, fontWeight: 700, color: '#f5c518', textTransform: 'uppercase', letterSpacing: '0.08em', padding: '4px 6px 2px', opacity: 0.8, display: 'flex', alignItems: 'center', gap: 4 }}>
+              <svg viewBox="0 0 24 24" width="8" height="8" fill="#f5c518" stroke="#f5c518" strokeWidth="1.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+              Épinglés
+            </div>
+            {sortedBoards.filter(b => personalFavIds.includes(b.id)).map(b => (
           <div key={b.id}
             draggable
             onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; setBoardDragId(b.id); }}
@@ -726,6 +797,54 @@ export default function App() {
             )}
             <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 14, fontWeight: 700 }}>{b.name}</span>
             {/* Public toggle */}
+            <button
+              onClick={e => { e.stopPropagation(); toggleBoardPublic(b.id, !b.public); }}
+              title={b.public ? 'Board public — cliquer pour rendre privé' : 'Board privé — cliquer pour rendre public'}
+              style={{ background: 'none', border: 'none', fontSize: 11, padding: 0, cursor: 'pointer', flexShrink: 0, opacity: b.public ? 1 : 0.3, lineHeight: 1 }}
+            >{b.public ? (
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="var(--accent)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="10" cy="7" r="4"/><path d="M4 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M15 3.13a4 4 0 0 1 0 7.75"/><path d="M20 21v-2a4 4 0 0 0-3-3.85"/>
+              </svg>
+            ) : '🔒'}</button>
+            <button onClick={e => { e.stopPropagation(); deleteBoard(b.id); }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 11, padding: 0, opacity: 0.4, cursor: 'pointer', flexShrink: 0 }}>✕</button>
+          </div>
+            ))}
+          </>
+        )}
+
+        {/* Non-pinned boards */}
+        {sortedBoards.filter(b => !personalFavIds.includes(b.id)).map(b => (
+          <div key={b.id}
+            draggable
+            onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; setBoardDragId(b.id); }}
+            onDragEnd={() => { setBoardDragId(null); setBoardDragOverId(null); }}
+            onDragOver={e => { e.preventDefault(); setBoardDragOverId(b.id); }}
+            onDrop={e => { e.preventDefault(); handleBoardDrop(b.id); }}
+            onClick={() => { setActiveBoardId(b.id); setColumns(b.columns || []); setEmojiPickerFor(null); setShowHome(false); setPublicBoardMode(null); setShowPublicBoards(false); if (isMobile) setShowDrawer(false); }}
+            style={{
+              padding: '6px 8px', borderRadius: 7, cursor: 'grab', marginBottom: 2,
+              background: boardDragOverId === b.id && boardDragId !== b.id ? 'var(--accent-dim)' : activeBoardId === b.id ? 'var(--accent-dim)' : 'transparent',
+              borderLeft: activeBoardId === b.id ? '3px solid var(--accent)' : boardDragOverId === b.id && boardDragId !== b.id ? '3px solid #3db86a' : '3px solid transparent',
+              color: activeBoardId === b.id ? 'var(--text)' : 'var(--text-muted)',
+              display: 'flex', alignItems: 'center', gap: 5,
+              opacity: boardDragId === b.id ? 0.4 : 1,
+              transition: 'background .12s, opacity .12s', position: 'relative',
+            }}
+          >
+            {b.gameIcon ? (
+              <img src={b.gameIcon} alt="" style={{ width: 34, height: 34, objectFit: 'cover', borderRadius: '50%', flexShrink: 0, border: '1.5px solid white' }} />
+            ) : (
+              <div style={{ position: 'relative' }}>
+                <button
+                  onClick={e => { e.stopPropagation(); setEmojiPickerFor(emojiPickerFor === b.id ? null : b.id); }}
+                  style={{ background: b.emoji ? 'transparent' : 'var(--surface3)', border: '1.5px solid white', borderRadius: 4, width: 34, height: 34, fontSize: b.emoji ? 18 : 11, cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                >{b.emoji || '+'}</button>
+                {emojiPickerFor === b.id && (
+                  <BoardEmojiPicker current={b.emoji || ''} onSelect={emoji => { setBoardEmoji(b.id, emoji); setEmojiPickerFor(null); }} onClose={() => setEmojiPickerFor(null)} />
+                )}
+              </div>
+            )}
+            <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 14, fontWeight: 700 }}>{b.name}</span>
             <button
               onClick={e => { e.stopPropagation(); toggleBoardPublic(b.id, !b.public); }}
               title={b.public ? 'Board public — cliquer pour rendre privé' : 'Board privé — cliquer pour rendre public'}
@@ -960,7 +1079,7 @@ export default function App() {
 
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
-      <aside style={{ width: 252, background: '#111', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
+      <aside style={{ width: 278, background: '#111', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
         {sidebarContent}
       </aside>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>

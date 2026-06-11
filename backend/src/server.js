@@ -571,6 +571,33 @@ app.delete('/api/user/favorites/:boardId', requireAuth, (req, res) => {
   res.json({ ok: true });
 });
 
+// ── Personal board favorites ───────────────────────────────────────────────────
+
+app.get('/api/user/personal-favorites', requireAuth, (req, res) => {
+  const users = readUsers();
+  const me = users.find(u => u.id === req.user.id);
+  res.json(me?.personalFavorites || []);
+});
+
+app.post('/api/user/personal-favorites/:boardId', requireAuth, (req, res) => {
+  const users = readUsers();
+  const idx = users.findIndex(u => u.id === req.user.id);
+  if (idx === -1) return res.status(404).json({ error: 'Not found' });
+  if (!users[idx].personalFavorites) users[idx].personalFavorites = [];
+  if (!users[idx].personalFavorites.includes(req.params.boardId)) users[idx].personalFavorites.push(req.params.boardId);
+  writeUsers(users);
+  res.json({ ok: true });
+});
+
+app.delete('/api/user/personal-favorites/:boardId', requireAuth, (req, res) => {
+  const users = readUsers();
+  const idx = users.findIndex(u => u.id === req.user.id);
+  if (idx === -1) return res.status(404).json({ error: 'Not found' });
+  users[idx].personalFavorites = (users[idx].personalFavorites || []).filter(id => id !== req.params.boardId);
+  writeUsers(users);
+  res.json({ ok: true });
+});
+
 
 // ── Collaborative public board routes ─────────────────────────────────────────
 
