@@ -150,17 +150,16 @@ export default function GameInfoPanel({
           width: 26,
           height: tabHeight,
           background: locked
-            ? 'linear-gradient(180deg, rgba(232,129,58,0.25) 0%, rgba(192,80,10,0.25) 100%)'
-            : 'linear-gradient(180deg, rgba(50,55,70,0.55) 0%, rgba(28,31,38,0.55) 100%)',
-          backdropFilter: 'blur(6px)',
-          WebkitBackdropFilter: 'blur(6px)',
-          border: `1px solid ${locked ? 'rgba(232,129,58,0.55)' : 'rgba(255,255,255,0.11)'}`,
+            ? 'rgba(192,80,10,0.2)'
+            : 'rgba(30,34,44,0.35)',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
+          border: `1px solid ${locked ? 'rgba(232,129,58,0.4)' : 'rgba(255,255,255,0.08)'}`,
           ...(isLeft
-            ? { borderLeft: 'none', borderRadius: '0 10px 10px 0', boxShadow: '3px 0 14px rgba(0,0,0,0.55)' }
-            : { borderRight: 'none', borderRadius: '10px 0 0 10px', boxShadow: '-3px 0 14px rgba(0,0,0,0.55)' }),
+            ? { borderLeft: 'none', borderRadius: '0 10px 10px 0', boxShadow: '3px 0 10px rgba(0,0,0,0.35)' }
+            : { borderRight: 'none', borderRadius: '10px 0 0 10px', boxShadow: '-3px 0 10px rgba(0,0,0,0.35)' }),
           gap: 0,
           userSelect: 'none',
-          overflow: 'hidden',
         }}
       >
         {/* Side-switch — always visible, top zone */}
