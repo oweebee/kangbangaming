@@ -148,7 +148,7 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
 
   // Live preview derived values
   const previewTt = customTaskType ? getTaskType(customTaskType) : null;
-  const PreviewIcon = previewTt?.Icon;
+  const PreviewIcon = previewTt?.FallbackIcon;
 
   return (
     <div

@@ -157,7 +157,7 @@ function AssigneeRow({ assignees = [], appUsers = [], borderColor = 'var(--borde
 
 export default function TaskModal({ game, onClose, onEdit, appUsers = [], onPatchGame, isTaskBoard }) {
   const tt        = game.taskType ? getTaskType(game.taskType) : null;
-  const TtIcon    = tt?.Icon;
+  const TtIcon    = tt?.FallbackIcon;
   const dateInfo  = getDateInfo(game);
   const isUrgent  = !!game.urgent;
   const cardBorderColor = isUrgent ? 'rgba(220,60,60,0.6)' : tt ? tt.border : 'var(--border)';
