@@ -1160,76 +1160,61 @@ export default function App() {
                   const reviewColor = gameInfo.reviewScore >= 8 ? '#4cd882' : gameInfo.reviewScore >= 5 ? '#f5c518' : '#f87575';
                   const reviewBg    = gameInfo.reviewScore >= 8 ? 'rgba(60,200,100,.1)' : gameInfo.reviewScore >= 5 ? 'rgba(245,197,24,.1)' : 'rgba(248,117,117,.1)';
                   return (
-                    <div style={{ display: 'flex', flexDirection: 'column', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.3)', fontSize: 12, flexShrink: 0 }}>
-                      {/* ── Ligne stats ── */}
-                      <div style={{ display: 'flex', alignItems: 'stretch' }}>
+                    <div style={{ display: 'flex', alignItems: 'stretch', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.3)', fontSize: 12, flexShrink: 0 }}>
                       {gameInfo.playerCount !== null && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '4px 12px', borderRight: '1px solid rgba(255,255,255,0.08)' }}>
-                          <span style={{ fontSize: 15, lineHeight: 1 }}>🎮</span>
-                          <div><div style={{ fontSize: 9, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', lineHeight: 1.2 }}>Joueurs actifs</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', borderRight: '1px solid rgba(255,255,255,0.08)' }}>
+                          <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#3db86a', boxShadow: '0 0 6px #3db86a88', display: 'inline-block', flexShrink: 0 }} />
+                          <div>
                             <div style={{ fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>{gameInfo.playerCount.toLocaleString('fr-FR')}</div>
+                            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.45)', lineHeight: 1 }}>en jeu</div>
                           </div>
                         </div>
                       )}
                       {gameInfo.reviewScoreDesc && (
-                        <div
-                          style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '4px 12px', background: reviewBg, borderRight: gameInfo.metacritic || gameInfo.price ? '1px solid rgba(255,255,255,0.08)' : undefined, cursor: 'pointer' }}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', background: reviewBg, borderRight: gameInfo.metacritic || gameInfo.price ? '1px solid rgba(255,255,255,0.08)' : undefined, cursor: 'pointer' }}
                           onClick={() => window.open(`https://store.steampowered.com/app/${gameInfo.appid}/#app_reviews_hash`, '_blank')}
+                          title="Voir les avis Steam"
                         >
-                          <span style={{ fontSize: 15, lineHeight: 1 }}>{gameInfo.reviewScore >= 8 ? '👍' : gameInfo.reviewScore >= 5 ? '😐' : '👎'}</span>
-                          <div><div style={{ fontSize: 9, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', lineHeight: 1.2 }}>Avis Steam</div>
+                          <span style={{ fontSize: 14, lineHeight: 1 }}>{gameInfo.reviewScore >= 8 ? '👍' : gameInfo.reviewScore >= 5 ? '😐' : '👎'}</span>
+                          <div>
                             <div style={{ fontWeight: 700, color: reviewColor, lineHeight: 1.2 }}>{gameInfo.reviewScoreDesc}</div>
-                            <div style={{ fontSize: 9, color: 'var(--text-muted)', lineHeight: 1.2 }}>{gameInfo.positivePercent !== null ? `${gameInfo.positivePercent}% positif` : ''}{gameInfo.totalReviews ? ` · ${gameInfo.totalReviews.toLocaleString('fr-FR')} avis` : ''}</div>
+                            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.45)', lineHeight: 1 }}>{gameInfo.positivePercent !== null ? `${gameInfo.positivePercent}% positif` : ''}{gameInfo.totalReviews ? ` · ${gameInfo.totalReviews.toLocaleString('fr-FR')}` : ''}</div>
                           </div>
                         </div>
                       )}
                       {gameInfo.metacritic !== null && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '4px 12px', borderRight: gameInfo.price ? '1px solid rgba(255,255,255,0.08)' : undefined, cursor: gameInfo.metacriticUrl ? 'pointer' : 'default' }}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRight: gameInfo.price ? '1px solid rgba(255,255,255,0.08)' : undefined, cursor: gameInfo.metacriticUrl ? 'pointer' : 'default' }}
                           onClick={() => gameInfo.metacriticUrl && window.open(gameInfo.metacriticUrl, '_blank')}
                           title={gameInfo.metacriticUrl ? 'Voir sur Metacritic' : undefined}
                         >
-                          <div style={{ width: 32, height: 32, borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 14, color: '#fff', background: gameInfo.metacritic >= 75 ? '#6c3' : gameInfo.metacritic >= 50 ? '#fc3' : '#f00', flexShrink: 0 }}>{gameInfo.metacritic}</div>
-                          <div><div style={{ fontSize: 9, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', lineHeight: 1.2 }}>Metacritic</div>
-                            <div style={{ fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>{gameInfo.metacritic}/100</div>
-                          </div>
+                          <div style={{ width: 26, height: 26, borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 13, color: '#000', background: gameInfo.metacritic >= 75 ? '#6c3' : gameInfo.metacritic >= 50 ? '#fc3' : '#f00', flexShrink: 0 }}>{gameInfo.metacritic}</div>
+                          <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.45)', lineHeight: 1.3 }}>Meta<br/>critic</div>
                         </div>
                       )}
                       {gameInfo.price && (
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center', padding: '4px 10px', gap: 1 }}>
-                          {gameInfo.discount > 0 && (<span style={{ background: '#4c6b22', color: '#a4d007', fontWeight: 900, fontSize: 11, padding: '2px 5px', borderRadius: 4, flexShrink: 0 }}>-{gameInfo.discount}%</span>)}
-                          <div style={{ textAlign: 'right' }}>
-                            {gameInfo.discount > 0 && gameInfo.priceInitial && (<div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', textDecoration: 'line-through', lineHeight: 1 }}>{gameInfo.priceInitial}</div>)}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px' }}>
+                          {gameInfo.discount > 0 && <span style={{ background: '#4c6b22', color: '#a4d007', fontWeight: 900, fontSize: 10, padding: '1px 4px', borderRadius: 3, flexShrink: 0 }}>-{gameInfo.discount}%</span>}
+                          <div>
+                            {gameInfo.discount > 0 && gameInfo.priceInitial && <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)', textDecoration: 'line-through', lineHeight: 1 }}>{gameInfo.priceInitial}</div>}
                             <div style={{ fontWeight: 700, color: gameInfo.discount > 0 ? '#a4d007' : '#fff', lineHeight: 1.2 }}>{gameInfo.price}</div>
                           </div>
                         </div>
                       )}
-                      </div>
-                      {/* ── Ligne genres / multijoueur / studio / date ── */}
+                      {/* ── Colonne droite : genres / multijoueur / studio / date ── */}
                       {(gameInfo.genres?.length || gameInfo.multiplayerLabel || gameInfo.earlyAccess || gameInfo.comingSoon || gameInfo.developer || gameInfo.releaseDate) && (
-                        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 4, padding: '4px 10px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-                          {gameInfo.earlyAccess && (
-                            <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 4, background: 'rgba(255,160,30,0.15)', color: '#ffa01e', border: '1px solid rgba(255,160,30,0.35)', whiteSpace: 'nowrap' }}>⚙ Early Access</span>
-                          )}
-                          {gameInfo.comingSoon && !gameInfo.earlyAccess && (
-                            <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 4, background: 'rgba(245,197,24,0.12)', color: '#f5c518', border: '1px solid rgba(245,197,24,0.3)', whiteSpace: 'nowrap' }}>🔜 À venir</span>
-                          )}
-                          {gameInfo.multiplayerLabel && (
-                            <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 4, background: 'rgba(71,167,245,0.15)', color: '#47a7f5', border: '1px solid rgba(71,167,245,0.3)', whiteSpace: 'nowrap' }}>👥 {gameInfo.multiplayerLabel}</span>
-                          )}
-                          {(gameInfo.genres || []).map(g => (
-                            <span key={g} style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.55)', border: '1px solid rgba(255,255,255,0.1)', whiteSpace: 'nowrap' }}>{g}</span>
-                          ))}
-                          {(gameInfo.earlyAccess || gameInfo.comingSoon || gameInfo.multiplayerLabel || gameInfo.genres?.length) && (gameInfo.developer || gameInfo.releaseDate) && (
-                            <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: 11, margin: '0 1px' }}>│</span>
-                          )}
-                          {gameInfo.developer && (
-                            <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', whiteSpace: 'nowrap' }}>🛠 {gameInfo.developer}</span>
-                          )}
-                          {gameInfo.developer && gameInfo.releaseDate && (
-                            <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: 10 }}>·</span>
-                          )}
-                          {gameInfo.releaseDate && (
-                            <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.38)', whiteSpace: 'nowrap' }}>📅 {gameInfo.releaseDate}</span>
+                        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 4, padding: '5px 11px', borderLeft: '1px solid rgba(255,255,255,0.08)' }}>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, alignItems: 'center' }}>
+                            {gameInfo.earlyAccess && <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 4, background: 'rgba(255,160,30,0.15)', color: '#ffa01e', border: '1px solid rgba(255,160,30,0.35)', whiteSpace: 'nowrap' }}>⚙ Early Access</span>}
+                            {gameInfo.comingSoon && !gameInfo.earlyAccess && <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 4, background: 'rgba(245,197,24,0.12)', color: '#f5c518', border: '1px solid rgba(245,197,24,0.3)', whiteSpace: 'nowrap' }}>🔜 À venir</span>}
+                            {gameInfo.multiplayerLabel && <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 4, background: 'rgba(71,167,245,0.15)', color: '#47a7f5', border: '1px solid rgba(71,167,245,0.3)', whiteSpace: 'nowrap' }}>👥 {gameInfo.multiplayerLabel}</span>}
+                            {(gameInfo.genres || []).map(g => <span key={g} style={{ fontSize: 10, padding: '1px 5px', borderRadius: 4, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.55)', border: '1px solid rgba(255,255,255,0.1)', whiteSpace: 'nowrap' }}>{g}</span>)}
+                          </div>
+                          {(gameInfo.developer || gameInfo.releaseDate) && (
+                            <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
+                              {gameInfo.developer && <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', whiteSpace: 'nowrap' }}>🛠 {gameInfo.developer}</span>}
+                              {gameInfo.developer && gameInfo.releaseDate && <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 10 }}>·</span>}
+                              {gameInfo.releaseDate && <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.38)', whiteSpace: 'nowrap' }}>📅 {gameInfo.releaseDate}</span>}
+                            </div>
                           )}
                         </div>
                       )}
@@ -1322,99 +1307,64 @@ export default function App() {
                   const reviewColor = gameInfo.reviewScore >= 8 ? '#4cd882' : gameInfo.reviewScore >= 5 ? '#f5c518' : '#f87575';
                   const reviewBg    = gameInfo.reviewScore >= 8 ? 'rgba(60,200,100,.1)' : gameInfo.reviewScore >= 5 ? 'rgba(245,197,24,.1)' : 'rgba(248,117,117,.1)';
                   return (
-                    <div style={{
-                      display: 'flex', flexDirection: 'column',
-                      background: 'rgba(255,255,255,0.04)',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      borderRadius: 10, overflow: 'hidden',
-                      boxShadow: '0 2px 12px rgba(0,0,0,0.3)',
-                      fontSize: 12, flexShrink: 0,
-                    }}>
-                      {/* ── Ligne stats ── */}
-                      <div style={{ display: 'flex', alignItems: 'stretch' }}>
-                      {/* Joueurs actifs */}
+                    <div style={{ display: 'flex', alignItems: 'stretch', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.3)', fontSize: 12, flexShrink: 0 }}>
                       {gameInfo.playerCount !== null && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '4px 12px', borderRight: '1px solid rgba(255,255,255,0.08)' }}>
-                          <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#3db86a', boxShadow: '0 0 8px #3db86a88', display: 'inline-block', flexShrink: 0 }} />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', borderRight: '1px solid rgba(255,255,255,0.08)' }}>
+                          <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#3db86a', boxShadow: '0 0 6px #3db86a88', display: 'inline-block', flexShrink: 0 }} />
                           <div>
                             <div style={{ fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>{gameInfo.playerCount.toLocaleString('fr-FR')}</div>
-                            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', lineHeight: 1 }}>en jeu</div>
+                            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.45)', lineHeight: 1 }}>en jeu</div>
                           </div>
                         </div>
                       )}
-                      {/* Avis Steam */}
                       {gameInfo.reviewScoreDesc && (
-                        <div
-                          style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '4px 12px', background: reviewBg, borderRight: gameInfo.metacritic || gameInfo.price ? '1px solid rgba(255,255,255,0.08)' : undefined, cursor: 'pointer' }}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', background: reviewBg, borderRight: gameInfo.metacritic || gameInfo.price ? '1px solid rgba(255,255,255,0.08)' : undefined, cursor: 'pointer' }}
                           onClick={() => window.open(`https://store.steampowered.com/app/${gameInfo.appid}/#app_reviews_hash`, '_blank')}
                           title="Voir les avis Steam"
                         >
-                          <span style={{ fontSize: 15, lineHeight: 1 }}>{gameInfo.reviewScore >= 8 ? '👍' : gameInfo.reviewScore >= 5 ? '😐' : '👎'}</span>
+                          <span style={{ fontSize: 14, lineHeight: 1 }}>{gameInfo.reviewScore >= 8 ? '👍' : gameInfo.reviewScore >= 5 ? '😐' : '👎'}</span>
                           <div>
                             <div style={{ fontWeight: 700, color: reviewColor, lineHeight: 1.2 }}>{gameInfo.reviewScoreDesc}</div>
-                            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', lineHeight: 1 }}>
+                            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.45)', lineHeight: 1 }}>
                               {gameInfo.positivePercent !== null ? `${gameInfo.positivePercent}% positif` : ''}
-                              {gameInfo.totalReviews ? ` · ${gameInfo.totalReviews.toLocaleString('fr-FR')} avis` : ''}
+                              {gameInfo.totalReviews ? ` · ${gameInfo.totalReviews.toLocaleString('fr-FR')}` : ''}
                             </div>
                           </div>
                         </div>
                       )}
-                      {/* Métacritique */}
                       {gameInfo.metacritic !== null && (
-                        <div
-                          style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '4px 12px', borderRight: gameInfo.price ? '1px solid rgba(255,255,255,0.08)' : undefined, cursor: gameInfo.metacriticUrl ? 'pointer' : 'default' }}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRight: gameInfo.price ? '1px solid rgba(255,255,255,0.08)' : undefined, cursor: gameInfo.metacriticUrl ? 'pointer' : 'default' }}
                           onClick={() => gameInfo.metacriticUrl && window.open(gameInfo.metacriticUrl, '_blank')}
                           title={gameInfo.metacriticUrl ? 'Voir sur Metacritic' : undefined}
                         >
-                          <div style={{
-                            width: 28, height: 28, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            background: gameInfo.metacritic >= 75 ? '#6c3' : gameInfo.metacritic >= 50 ? '#fc3' : '#f00',
-                            fontWeight: 900, fontSize: 13, color: '#000', flexShrink: 0, lineHeight: 1,
-                          }}>{gameInfo.metacritic}</div>
-                          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', lineHeight: 1.3 }}>Meta<br/>critic</div>
+                          <div style={{ width: 26, height: 26, borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 13, color: '#000', background: gameInfo.metacritic >= 75 ? '#6c3' : gameInfo.metacritic >= 50 ? '#fc3' : '#f00', flexShrink: 0 }}>{gameInfo.metacritic}</div>
+                          <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.45)', lineHeight: 1.3 }}>Meta<br/>critic</div>
                         </div>
                       )}
-                      {/* Prix */}
                       {gameInfo.price && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 12px' }}>
-                          {gameInfo.discount > 0 && (
-                            <span style={{ background: '#4c6b22', color: '#a4d007', fontWeight: 900, fontSize: 11, padding: '2px 5px', borderRadius: 4, flexShrink: 0 }}>-{gameInfo.discount}%</span>
-                          )}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px' }}>
+                          {gameInfo.discount > 0 && <span style={{ background: '#4c6b22', color: '#a4d007', fontWeight: 900, fontSize: 10, padding: '1px 4px', borderRadius: 3, flexShrink: 0 }}>-{gameInfo.discount}%</span>}
                           <div>
-                            {gameInfo.discount > 0 && gameInfo.priceInitial && (
-                              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', textDecoration: 'line-through', lineHeight: 1 }}>{gameInfo.priceInitial}</div>
-                            )}
+                            {gameInfo.discount > 0 && gameInfo.priceInitial && <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)', textDecoration: 'line-through', lineHeight: 1 }}>{gameInfo.priceInitial}</div>}
                             <div style={{ fontWeight: 700, color: gameInfo.discount > 0 ? '#a4d007' : '#fff', lineHeight: 1.2 }}>{gameInfo.price}</div>
                           </div>
                         </div>
                       )}
-                      </div>
-                      {/* ── Ligne genres / multijoueur / studio / date ── */}
+                      {/* ── Colonne droite : genres / multijoueur / studio / date ── */}
                       {(gameInfo.genres?.length || gameInfo.multiplayerLabel || gameInfo.earlyAccess || gameInfo.comingSoon || gameInfo.developer || gameInfo.releaseDate) && (
-                        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 4, padding: '4px 10px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-                          {gameInfo.earlyAccess && (
-                            <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 4, background: 'rgba(255,160,30,0.15)', color: '#ffa01e', border: '1px solid rgba(255,160,30,0.35)', whiteSpace: 'nowrap' }}>⚙ Early Access</span>
-                          )}
-                          {gameInfo.comingSoon && !gameInfo.earlyAccess && (
-                            <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 4, background: 'rgba(245,197,24,0.12)', color: '#f5c518', border: '1px solid rgba(245,197,24,0.3)', whiteSpace: 'nowrap' }}>🔜 À venir</span>
-                          )}
-                          {gameInfo.multiplayerLabel && (
-                            <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 4, background: 'rgba(71,167,245,0.15)', color: '#47a7f5', border: '1px solid rgba(71,167,245,0.3)', whiteSpace: 'nowrap' }}>👥 {gameInfo.multiplayerLabel}</span>
-                          )}
-                          {(gameInfo.genres || []).map(g => (
-                            <span key={g} style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.55)', border: '1px solid rgba(255,255,255,0.1)', whiteSpace: 'nowrap' }}>{g}</span>
-                          ))}
-                          {(gameInfo.earlyAccess || gameInfo.comingSoon || gameInfo.multiplayerLabel || gameInfo.genres?.length) && (gameInfo.developer || gameInfo.releaseDate) && (
-                            <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: 11, margin: '0 1px' }}>│</span>
-                          )}
-                          {gameInfo.developer && (
-                            <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', whiteSpace: 'nowrap' }}>🛠 {gameInfo.developer}</span>
-                          )}
-                          {gameInfo.developer && gameInfo.releaseDate && (
-                            <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: 10 }}>·</span>
-                          )}
-                          {gameInfo.releaseDate && (
-                            <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.38)', whiteSpace: 'nowrap' }}>📅 {gameInfo.releaseDate}</span>
+                        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 4, padding: '5px 11px', borderLeft: '1px solid rgba(255,255,255,0.08)' }}>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, alignItems: 'center' }}>
+                            {gameInfo.earlyAccess && <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 4, background: 'rgba(255,160,30,0.15)', color: '#ffa01e', border: '1px solid rgba(255,160,30,0.35)', whiteSpace: 'nowrap' }}>⚙ Early Access</span>}
+                            {gameInfo.comingSoon && !gameInfo.earlyAccess && <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 4, background: 'rgba(245,197,24,0.12)', color: '#f5c518', border: '1px solid rgba(245,197,24,0.3)', whiteSpace: 'nowrap' }}>🔜 À venir</span>}
+                            {gameInfo.multiplayerLabel && <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 4, background: 'rgba(71,167,245,0.15)', color: '#47a7f5', border: '1px solid rgba(71,167,245,0.3)', whiteSpace: 'nowrap' }}>👥 {gameInfo.multiplayerLabel}</span>}
+                            {(gameInfo.genres || []).map(g => <span key={g} style={{ fontSize: 10, padding: '1px 5px', borderRadius: 4, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.55)', border: '1px solid rgba(255,255,255,0.1)', whiteSpace: 'nowrap' }}>{g}</span>)}
+                          </div>
+                          {(gameInfo.developer || gameInfo.releaseDate) && (
+                            <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
+                              {gameInfo.developer && <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', whiteSpace: 'nowrap' }}>🛠 {gameInfo.developer}</span>}
+                              {gameInfo.developer && gameInfo.releaseDate && <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 10 }}>·</span>}
+                              {gameInfo.releaseDate && <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.38)', whiteSpace: 'nowrap' }}>📅 {gameInfo.releaseDate}</span>}
+                            </div>
                           )}
                         </div>
                       )}
