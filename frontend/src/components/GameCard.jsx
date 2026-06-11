@@ -274,8 +274,8 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
         </div>
 
         {/* Sub-info row */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, minHeight: compact ? 14 : 18 }}>
-          <div style={{ fontSize: 11, color: 'var(--text-muted)', minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, minHeight: compact ? 14 : 18, overflow: 'hidden' }}>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {isCustom
               ? <span style={{ color: tt ? tt.textColor : 'var(--accent)', opacity: 0.8 }}>
                   {tt ? tt.label : (isTaskBoard ? 'Tâche' : 'Carte perso')}

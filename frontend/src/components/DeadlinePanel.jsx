@@ -86,7 +86,7 @@ function Section({ cat, tasks, onOpenTask }) {
       </div>
 
       {!collapsed && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10 }}>
           {tasks.map((task, i) => {
             const game = taskToGame(task);
             const isPublic = task.isPublic;
