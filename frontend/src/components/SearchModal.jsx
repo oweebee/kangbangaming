@@ -265,13 +265,20 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
                 border: previewTt ? `1.5px solid ${previewTt.border}` : '1px solid var(--border)',
                 borderRadius: 9, width: 185, overflow: 'hidden',
               }}>
-                <div style={{
-                  width: '100%', height: 100,
-                  background: previewTt ? previewTt.imgBg : 'linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: previewTt ? 0 : 50, position: 'relative',
-                }}>
-                  {previewTt ? <PreviewIcon /> : customEmoji}
+                <div style={{ width: '100%', position: 'relative' }}>
+                  {previewTt ? (
+                    previewTt.img ? (
+                      <img src={previewTt.img} alt={previewTt.label} style={{ width: '100%', height: 'auto', display: 'block' }} />
+                    ) : (
+                      <div style={{ width: '100%', height: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg,#111,#1a1a1a)' }}>
+                        {PreviewIcon ? <PreviewIcon /> : <span style={{ fontSize: 32 }}>{previewTt.emoji}</span>}
+                      </div>
+                    )
+                  ) : (
+                    <div style={{ width: '100%', height: 100, background: 'linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 50 }}>
+                      {customEmoji}
+                    </div>
+                  )}
                   {previewTt && (
                     <div style={{
                       position: 'absolute', bottom: 5, left: 7,
