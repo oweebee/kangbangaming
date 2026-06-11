@@ -405,7 +405,13 @@ export default function App() {
       || publicBoardMode?.headerImg
       || (publicBoardMode ? games.find(g => g.header_img)?.header_img : null)
       || null;
-    const appId = headerImg?.match(/apps\/(\d+)\//)?.[1] || null;
+    // Extract appId from headerImg first, then fall back to gameIcon URL
+    // (task boards may only have gameIcon stored, not headerImg — both contain /apps/XXXXX/)
+    const activeBoard2 = boards.find(b => b.id === activeBoardId);
+    const appId = headerImg?.match(/apps\/(\d+)\//)?.[1]
+      || publicBoardMode?.gameIcon?.match(/apps\/(\d+)\//)?.[1]
+      || activeBoard2?.gameIcon?.match(/apps\/(\d+)\//)?.[1]
+      || null;
     if (!appId || !token) { setGameInfo(null); return; }
     fetch(`${API}/steam/gameinfo/${appId}`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.ok ? r.json() : null).then(setGameInfo).catch(() => setGameInfo(null));
