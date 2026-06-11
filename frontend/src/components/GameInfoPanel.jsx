@@ -13,11 +13,11 @@ function truncate(str = '', n = 260) {
 
 function tagStyle(tag) {
   const map = {
-    patchnotes: { bg: 'rgba(71,167,245,0.15)', color: '#47a7f5', border: 'rgba(71,167,245,0.3)' },
-    mod:        { bg: 'rgba(100,200,120,0.12)', color: '#4cd882', border: 'rgba(76,216,130,0.3)' },
-    community:  { bg: 'rgba(245,197,24,0.12)', color: '#f5c518', border: 'rgba(245,197,24,0.3)' },
+    patchnotes: { bg: 'rgba(71,167,245,0.15)', color: '#47a7f5', border: 'rgba(71,167,245,0.75)' },
+    mod:        { bg: 'rgba(100,200,120,0.12)', color: '#4cd882', border: 'rgba(76,216,130,0.75)' },
+    community:  { bg: 'rgba(245,197,24,0.12)', color: '#f5c518', border: 'rgba(245,197,24,0.75)' },
   };
-  return map[tag?.toLowerCase()] || { bg: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.45)', border: 'rgba(255,255,255,0.1)' };
+  return map[tag?.toLowerCase()] || { bg: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.45)', border: 'rgba(255,255,255,0.3)' };
 }
 
 function LockIcon({ locked, size = 14 }) {
@@ -308,10 +308,10 @@ export default function GameInfoPanel({
             )}
             {/* Badges */}
             <div style={{ width: '100%', display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-              {gameInfo.earlyAccess && <span style={{ fontSize: 13, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: 'rgba(220,50,50,0.18)', color: '#ff5555', border: '1.5px solid rgba(220,50,50,0.5)' }}>⚠ Accès Anticipé</span>}
-              {gameInfo.comingSoon && !gameInfo.earlyAccess && <span style={{ fontSize: 13, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: 'rgba(245,197,24,0.12)', color: '#f5c518', border: '1.5px solid rgba(245,197,24,0.3)' }}>🔜 À venir</span>}
-              {gameInfo.multiplayerLabel && <span style={{ fontSize: 13, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: 'rgba(71,167,245,0.15)', color: '#47a7f5', border: '1.5px solid rgba(71,167,245,0.3)' }}>👥 {gameInfo.multiplayerLabel}</span>}
-              {(gameInfo.genres || []).map(g => <span key={g} style={{ fontSize: 13, padding: '2px 7px', borderRadius: 4, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)', border: '1.5px solid rgba(255,255,255,0.1)' }}>{g}</span>)}
+              {gameInfo.earlyAccess && <span style={{ fontSize: 13, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: 'rgba(220,50,50,0.18)', color: '#ff5555', border: '1.5px solid rgba(220,50,50,0.85)' }}>⚠ Accès Anticipé</span>}
+              {gameInfo.comingSoon && !gameInfo.earlyAccess && <span style={{ fontSize: 13, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: 'rgba(245,197,24,0.12)', color: '#f5c518', border: '1.5px solid rgba(245,197,24,0.75)' }}>🔜 À venir</span>}
+              {gameInfo.multiplayerLabel && <span style={{ fontSize: 13, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: 'rgba(71,167,245,0.15)', color: '#47a7f5', border: '1.5px solid rgba(71,167,245,0.75)' }}>👥 {gameInfo.multiplayerLabel}</span>}
+              {(gameInfo.genres || []).map(g => <span key={g} style={{ fontSize: 13, padding: '2px 7px', borderRadius: 4, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)', border: '1.5px solid rgba(255,255,255,0.25)' }}>{g}</span>)}
             </div>
             {/* Developer + date */}
             {(gameInfo.developer || gameInfo.releaseDate) && (
