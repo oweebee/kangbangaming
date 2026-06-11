@@ -66,6 +66,7 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
 
   // Extra fields
   const [urgent,    setUrgent]    = useState(!!initialGame?.urgent);
+  const [done,      setDone]      = useState(!!initialGame?.done);
   const [assignees, setAssignees] = useState(initialGame?.assignees || []);
   const [notes,     setNotes]     = useState(initialGame?.notes     || []);
   const [notesDraft, setNotesDraft] = useState('');
@@ -121,6 +122,7 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
       startDate: dateMode === 'period' ? (startDate || null) : null,
       endDate:   dateMode === 'period' ? (endDate || null) : null,
       urgent,
+      done,
       assignees,
       notes: finalNotes,
       progress,
@@ -462,12 +464,13 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
             </div>
 
             {/* ── URGENT toggle ── */}
-            <div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              {/* Urgent */}
               <button
                 type="button"
                 onClick={() => setUrgent(v => !v)}
                 style={{
-                  display: 'flex', alignItems: 'center', gap: 8,
+                  flex: 1, display: 'flex', alignItems: 'center', gap: 8,
                   padding: '10px 16px', borderRadius: 9, cursor: 'pointer',
                   background: urgent ? 'rgba(220,40,40,0.14)' : 'var(--surface2)',
                   border: urgent ? '2px solid rgba(220,60,60,0.7)' : '2px solid var(--border)',
@@ -475,12 +478,32 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
                   fontWeight: urgent ? 700 : 500, fontSize: 14,
                   transition: 'all .15s',
                   boxShadow: urgent ? '0 0 10px rgba(220,40,40,0.25)' : 'none',
-                  width: '100%',
                 }}
               >
                 <span style={{ fontSize: 18, lineHeight: 1 }}>⚠</span>
                 <span>URGENT</span>
                 {urgent && <span style={{ marginLeft: 'auto', fontSize: 11, opacity: 0.7 }}>Activé</span>}
+              </button>
+              {/* Terminée */}
+              <button
+                type="button"
+                onClick={() => setDone(v => !v)}
+                style={{
+                  flex: 1, display: 'flex', alignItems: 'center', gap: 8,
+                  padding: '10px 16px', borderRadius: 9, cursor: 'pointer',
+                  background: done ? 'rgba(61,184,106,0.14)' : 'var(--surface2)',
+                  border: done ? '2px solid rgba(61,184,106,0.7)' : '2px solid var(--border)',
+                  color: done ? '#3db86a' : 'var(--text-muted)',
+                  fontWeight: done ? 700 : 500, fontSize: 14,
+                  transition: 'all .15s',
+                  boxShadow: done ? '0 0 10px rgba(61,184,106,0.2)' : 'none',
+                }}
+              >
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                <span>TERMINÉE</span>
+                {done && <span style={{ marginLeft: 'auto', fontSize: 11, opacity: 0.7 }}>Activé</span>}
               </button>
             </div>
 

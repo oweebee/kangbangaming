@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { getTaskType } from '../taskTypes.jsx';
 import NotesSection from './NotesSection.jsx';
@@ -166,6 +166,16 @@ export default function TaskModal({ game, onClose, onEdit, appUsers = [], onPatc
   const notesCount = (game.notes || []).length;
   const cardBorderColor = isDone ? 'rgba(61,184,106,0.6)' : isUrgent ? 'rgba(220,60,60,0.6)' : tt ? tt.border : 'var(--border)';
 
+  const [showAssigneeMenu, setShowAssigneeMenu] = useState(false);
+  const assigneeMenuRef = useRef(null);
+
+  useEffect(() => {
+    if (!showAssigneeMenu) return;
+    const handler = e => { if (assigneeMenuRef.current && !assigneeMenuRef.current.contains(e.target)) setShowAssigneeMenu(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showAssigneeMenu]);
+
   const handleSaveNotes    = (notes)    => { if (onPatchGame) onPatchGame(game.appid, { notes }); };
   const handleSaveProgress = (progress) => {
     if (onPatchGame) {
@@ -174,7 +184,9 @@ export default function TaskModal({ game, onClose, onEdit, appUsers = [], onPatc
       onPatchGame(game.appid, updates);
     }
   };
-  const handleToggleDone = () => { if (onPatchGame) onPatchGame(game.appid, { done: !isDone }); };
+  const handleToggleDone   = () => { if (onPatchGame) onPatchGame(game.appid, { done: !isDone }); };
+  const handleToggleUrgent = () => { if (onPatchGame) onPatchGame(game.appid, { urgent: !isUrgent }); };
+  const handleUpdateAssignees = (assignees) => { if (onPatchGame) onPatchGame(game.appid, { assignees }); };
 
   return (
     <div
@@ -288,21 +300,31 @@ export default function TaskModal({ game, onClose, onEdit, appUsers = [], onPatc
           {/* ══ ONGLET INFOS ══ */}
           {activeTab === 'infos' && (<>
 
-            {/* URGENT banner */}
-            {isUrgent && (
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: 10,
-                background: 'rgba(200,30,30,0.12)',
-                border: '1.5px solid rgba(220,60,60,0.5)',
-                borderRadius: 9, padding: '10px 14px',
-              }}>
-                <span style={{ fontSize: 20, lineHeight: 1 }}>⚠</span>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 900, color: '#ff6060', letterSpacing: '0.06em', textTransform: 'uppercase' }}>URGENT</div>
-                  <div style={{ fontSize: 11, color: 'rgba(255,100,100,0.7)', marginTop: 1 }}>Cette tâche est marquée comme urgente</div>
+            {/* URGENT banner — cliquable pour toggle */}
+            <button
+              onClick={handleToggleUrgent}
+              title={isUrgent ? 'Retirer l\'urgence' : 'Marquer comme urgent'}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+                background: isUrgent ? 'rgba(200,30,30,0.12)' : 'var(--surface2)',
+                border: `1.5px solid ${isUrgent ? 'rgba(220,60,60,0.5)' : 'var(--border)'}`,
+                borderRadius: 9, padding: '10px 14px', cursor: 'pointer',
+                transition: 'all .15s', textAlign: 'left',
+              }}
+            >
+              <span style={{ fontSize: 20, lineHeight: 1 }}>⚠</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 13, fontWeight: 900, color: isUrgent ? '#ff6060' : 'var(--text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                  {isUrgent ? 'URGENT' : 'Marquer urgent'}
                 </div>
+                {isUrgent && <div style={{ fontSize: 11, color: 'rgba(255,100,100,0.7)', marginTop: 1 }}>Cliquer pour retirer l'urgence</div>}
               </div>
-            )}
+              {isUrgent && (
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#ff6060" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              )}
+            </button>
 
             {/* Date block */}
             {dateInfo && (
@@ -328,10 +350,83 @@ export default function TaskModal({ game, onClose, onEdit, appUsers = [], onPatc
               </div>
             )}
 
-            {/* Assignees (Steam boards only) */}
-            {isTaskBoard && appUsers.length > 0 && (game.assignees?.length > 0) && (
-              <div style={{ background: 'var(--surface2)', border: `1px solid ${cardBorderColor}`, borderRadius: 9, padding: '10px 14px' }}>
-                <AssigneeRow assignees={game.assignees} appUsers={appUsers} borderColor={cardBorderColor} />
+            {/* Assignees — éditable */}
+            {isTaskBoard && appUsers.length > 0 && (
+              <div style={{ background: 'var(--surface2)', border: `1px solid ${cardBorderColor}`, borderRadius: 9, padding: '10px 14px', position: 'relative' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: 8 }}>
+                  👥 Assignés
+                </div>
+                {/* Chips */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: (game.assignees?.length > 0) ? 8 : 0 }}>
+                  {(game.assignees || []).map(uid => {
+                    const u = appUsers.find(x => x.id === uid);
+                    if (!u) return null;
+                    return (
+                      <div key={uid} style={{
+                        display: 'flex', alignItems: 'center', gap: 5,
+                        background: 'var(--surface3)', border: '1px solid var(--border)',
+                        borderRadius: 20, padding: '4px 10px 4px 5px', fontSize: 13,
+                      }}>
+                        {u.steamAvatar
+                          ? <img src={u.steamAvatar} alt="" style={{ width: 20, height: 20, borderRadius: '50%', flexShrink: 0 }} />
+                          : <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, color: '#fff', flexShrink: 0 }}>{u.username?.[0]?.toUpperCase()}</div>
+                        }
+                        <span style={{ color: 'var(--text)' }}>{u.steamPersonaName || u.username}</span>
+                        <button
+                          onClick={() => handleUpdateAssignees((game.assignees || []).filter(id => id !== uid))}
+                          style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', padding: '0 0 0 2px', lineHeight: 1 }}
+                        >✕</button>
+                      </div>
+                    );
+                  })}
+                </div>
+                {/* Add button */}
+                {appUsers.filter(u => u.role !== 'admin' && !(game.assignees || []).includes(u.id)).length > 0 && (
+                  <button
+                    onClick={() => setShowAssigneeMenu(v => !v)}
+                    style={{
+                      width: '100%', padding: '8px 12px', textAlign: 'left',
+                      background: 'var(--surface3)', border: '1px solid var(--border)',
+                      borderRadius: 8, color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', gap: 6,
+                    }}
+                  >
+                    <span>+ Ajouter un assigné</span>
+                    <span style={{ marginLeft: 'auto', opacity: 0.4 }}>{showAssigneeMenu ? '▲' : '▼'}</span>
+                  </button>
+                )}
+                {/* Dropdown */}
+                {showAssigneeMenu && (
+                  <div ref={assigneeMenuRef} style={{
+                    position: 'absolute', left: 14, right: 14, zIndex: 50,
+                    background: 'var(--surface2)', border: '1px solid var(--border)',
+                    borderRadius: 8, marginTop: 4, maxHeight: 180, overflowY: 'auto',
+                    boxShadow: '0 6px 20px rgba(0,0,0,0.5)',
+                  }}>
+                    {appUsers
+                      .filter(u => u.role !== 'admin' && !(game.assignees || []).includes(u.id))
+                      .map(u => (
+                        <div key={u.id}
+                          onClick={() => { handleUpdateAssignees([...(game.assignees || []), u.id]); setShowAssigneeMenu(false); }}
+                          style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.05)' }}
+                          onMouseEnter={e => e.currentTarget.style.background = 'var(--surface3)'}
+                          onMouseLeave={e => e.currentTarget.style.background = ''}
+                        >
+                          {u.steamAvatar
+                            ? <img src={u.steamAvatar} alt="" style={{ width: 26, height: 26, borderRadius: '50%', flexShrink: 0, border: '1px solid var(--border)' }} />
+                            : <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#fff', flexShrink: 0 }}>{u.username?.[0]?.toUpperCase()}</div>
+                          }
+                          <div>
+                            <div style={{ fontSize: 13, color: 'var(--text)', fontWeight: 600 }}>{u.username}</div>
+                            {u.steamPersonaName && u.steamPersonaName !== u.username && (
+                              <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{u.steamPersonaName}</div>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    }
+                  </div>
+                )}
               </div>
             )}
 
