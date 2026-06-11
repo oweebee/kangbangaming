@@ -290,6 +290,11 @@ export default function App() {
       ]);
       setColumns(cols);
       setGames(gms);
+      // Resolve headerImg from games if the board object didn't have it (e.g. stale cache)
+      const firstSteamGame = gms.find(g => g.header_img);
+      if (!board.headerImg && firstSteamGame?.header_img) {
+        setPublicBoardMode(prev => prev ? { ...prev, headerImg: firstSteamGame.header_img, gameIcon: prev.gameIcon || firstSteamGame.game_icon } : prev);
+      }
     } catch {} finally { setLoading(false); }
   };
 
@@ -1144,7 +1149,57 @@ export default function App() {
               <span style={{ fontSize: 12, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 180 }}>{publicBoardMode.name}</span>
               <button onClick={addColumn} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>+ Colonne</button>
               <button onClick={refreshPublicBoard} style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 11px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ fontSize: 15, lineHeight: 1 }}>↻</span> Rafraîchir</button>
-              <div style={{ flex: 1 }} />
+              {/* ── Steam game info — encart centre du header (public board) ── */}
+              <div style={{ flex: '1 1 0', display: 'flex', justifyContent: 'center', minWidth: gameInfo ? 200 : 0, overflow: 'hidden' }}>
+                {gameInfo && (() => {
+                  const reviewColor = gameInfo.reviewScore >= 8 ? '#4cd882' : gameInfo.reviewScore >= 5 ? '#f5c518' : '#f87575';
+                  const reviewBg    = gameInfo.reviewScore >= 8 ? 'rgba(60,200,100,.1)' : gameInfo.reviewScore >= 5 ? 'rgba(245,197,24,.1)' : 'rgba(248,117,117,.1)';
+                  return (
+                    <div style={{ display: 'flex', alignItems: 'stretch', gap: 0, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.3)', fontSize: 12, flexShrink: 0, maxWidth: 520 }}>
+                      {gameInfo.playerCount !== null && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '6px 14px', borderRight: '1px solid rgba(255,255,255,0.08)' }}>
+                          <span style={{ fontSize: 15, lineHeight: 1 }}>🎮</span>
+                          <div><div style={{ fontSize: 9, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', lineHeight: 1.2 }}>Joueurs actifs</div>
+                            <div style={{ fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>{gameInfo.playerCount.toLocaleString('fr-FR')}</div>
+                          </div>
+                        </div>
+                      )}
+                      {gameInfo.reviewScoreDesc && (
+                        <div
+                          style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '6px 14px', background: reviewBg, borderRight: gameInfo.metacritic || gameInfo.price ? '1px solid rgba(255,255,255,0.08)' : undefined, cursor: 'pointer' }}
+                          onClick={() => window.open(`https://store.steampowered.com/app/${gameInfo.appid}/#app_reviews_hash`, '_blank')}
+                        >
+                          <span style={{ fontSize: 15, lineHeight: 1 }}>{gameInfo.reviewScore >= 8 ? '👍' : gameInfo.reviewScore >= 5 ? '😐' : '👎'}</span>
+                          <div><div style={{ fontSize: 9, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', lineHeight: 1.2 }}>Avis Steam</div>
+                            <div style={{ fontWeight: 700, color: reviewColor, lineHeight: 1.2 }}>{gameInfo.reviewScoreDesc}</div>
+                            <div style={{ fontSize: 9, color: 'var(--text-muted)', lineHeight: 1.2 }}>{gameInfo.positivePercent !== null ? `${gameInfo.positivePercent}% positif` : ''}{gameInfo.totalReviews ? ` · ${gameInfo.totalReviews.toLocaleString('fr-FR')} avis` : ''}</div>
+                          </div>
+                        </div>
+                      )}
+                      {gameInfo.metacritic !== null && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '6px 14px', borderRight: gameInfo.price ? '1px solid rgba(255,255,255,0.08)' : undefined, cursor: gameInfo.metacriticUrl ? 'pointer' : 'default' }}
+                          onClick={() => gameInfo.metacriticUrl && window.open(gameInfo.metacriticUrl, '_blank')}
+                          title={gameInfo.metacriticUrl ? 'Voir sur Metacritic' : undefined}
+                        >
+                          <div style={{ width: 32, height: 32, borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 14, color: '#fff', background: gameInfo.metacritic >= 75 ? '#6c3' : gameInfo.metacritic >= 50 ? '#fc3' : '#f00', flexShrink: 0 }}>{gameInfo.metacritic}</div>
+                          <div><div style={{ fontSize: 9, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', lineHeight: 1.2 }}>Metacritic</div>
+                            <div style={{ fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>{gameInfo.metacritic}/100</div>
+                          </div>
+                        </div>
+                      )}
+                      {gameInfo.price && (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center', padding: '4px 12px', gap: 1 }}>
+                          {gameInfo.discount > 0 && (<span style={{ background: '#4c6b22', color: '#a4d007', fontWeight: 900, fontSize: 11, padding: '2px 5px', borderRadius: 4, flexShrink: 0 }}>-{gameInfo.discount}%</span>)}
+                          <div style={{ textAlign: 'right' }}>
+                            {gameInfo.discount > 0 && gameInfo.priceInitial && (<div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', textDecoration: 'line-through', lineHeight: 1 }}>{gameInfo.priceInitial}</div>)}
+                            <div style={{ fontWeight: 700, color: gameInfo.discount > 0 ? '#a4d007' : '#fff', lineHeight: 1.2 }}>{gameInfo.price}</div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
               <input type="search" placeholder="Filtrer..." value={search} onChange={e => setSearch(e.target.value)}
                 style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 10px', color: 'var(--text)', fontSize: 12, outline: 'none', maxWidth: 180 }} />
               <button onClick={closePublicBoard} style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>✕ Quitter</button>
