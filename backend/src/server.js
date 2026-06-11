@@ -386,7 +386,7 @@ app.get('/api/steam/gameinfo/:appid', requireAuth, async (req, res) => {
         ? fetch(`https://api.steampowered.com/ISteamUserStats/GetNumberOfCurrentPlayers/v1/?appid=${appid}&key=${GLOBAL_STEAM_API_KEY}`).then(r => r.json())
         : Promise.reject('no key'),
       fetch(`https://store.steampowered.com/appreviews/${appid}?json=1&language=all&num_per_page=0`).then(r => r.json()),
-      fetch(`https://store.steampowered.com/api/appdetails?appids=${appid}&filters=basic,price_overview,metacritic,categories,genres&cc=FR&l=french`).then(r => r.json()),
+      fetch(`https://store.steampowered.com/api/appdetails?appids=${appid}&filters=price_overview,metacritic,categories,genres,developers,release_date&cc=FR&l=french`).then(r => r.json()),
     ]);
 
     const playerCount = playersRes.status === 'fulfilled'
