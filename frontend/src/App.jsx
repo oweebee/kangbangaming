@@ -76,7 +76,7 @@ function HomeBoardCard({ board, isPublic, isFav, onToggleFav, onClick }) {
     <div
       style={{
         background: 'var(--surface1)',
-        border: `1px solid ${isFav ? 'rgba(245,197,24,0.35)' : 'var(--border)'}`,
+        border: `2px solid ${isFav ? '#f5c518' : 'var(--border)'}`,
         borderRadius: 12, overflow: 'hidden',
         display: 'flex', flexDirection: 'column',
       }}

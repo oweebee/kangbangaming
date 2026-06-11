@@ -55,7 +55,7 @@ export default function PublicBoards({ token, currentUser, favBoardIds = new Set
 
             return (
               <div key={board.id} style={{
-                background: 'var(--surface1)', border: isFav ? '1px solid rgba(232,129,58,.4)' : '1px solid var(--border)',
+                background: 'var(--surface1)', border: isFav ? '2px solid #e8813a' : '2px solid var(--border)',
                 borderRadius: 12, overflow: 'hidden',
               }}>
                 {/* Board header */}
@@ -64,7 +64,7 @@ export default function PublicBoards({ token, currentUser, favBoardIds = new Set
                   style={{ padding: '12px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10 }}
                 >
                   {board.gameIcon ? (
-                    <img src={board.gameIcon} alt="" style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border)', flexShrink: 0 }} />
+                    <img src={board.gameIcon} alt="" style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--border)', flexShrink: 0 }} />
                   ) : (
                     <span style={{ fontSize: 20, flexShrink: 0 }}>{board.emoji || '🎮'}</span>
                   )}
@@ -93,7 +93,7 @@ export default function PublicBoards({ token, currentUser, favBoardIds = new Set
                         disabled={toggling.has(board.id)}
                         style={{
                           background: favHover === board.id ? 'rgba(220,50,50,.15)' : 'rgba(232,129,58,.12)',
-                          border: favHover === board.id ? '1px solid rgba(220,50,50,.6)' : '1px solid rgba(232,129,58,.5)',
+                          border: favHover === board.id ? '2px solid #dc3232' : '2px solid #e8813a',
                           borderRadius: 6, padding: '5px 10px', cursor: 'pointer',
                           color: favHover === board.id ? '#e05555' : 'var(--accent)',
                           fontSize: 11, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4,
