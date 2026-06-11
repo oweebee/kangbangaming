@@ -956,6 +956,7 @@ app.patch('/api/public/boards/:boardId/games/:appid', requireAuth, (req, res) =>
   if (req.body.urgent !== undefined) game.urgent = req.body.urgent;
   if (req.body.assignees !== undefined) game.assignees = req.body.assignees;
   if (req.body.progress !== undefined) game.progress = req.body.progress;
+  if (req.body.done !== undefined) game.done = req.body.done;
   f.userBoards[req.params.boardId] = f.board;
   f.all[f.userId] = f.userBoards;
   writeBoards(f.all);

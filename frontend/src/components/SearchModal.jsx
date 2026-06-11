@@ -254,7 +254,8 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
         {tab === 'custom' && (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
-          {/* ── Sous-onglets Fiche / Notes ── */}
+          {/* ── Sous-onglets Fiche / Notes (édition seulement) ── */}
+          {isEditMode && (
           <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', padding: '0 22px', flexShrink: 0 }}>
             {[
               { id: 'fiche', label: 'Fiche' },
@@ -269,6 +270,7 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
               }}>{t.label}</button>
             ))}
           </div>
+          )}
 
           {customSubTab === 'fiche' && (
           <div style={{ flex: 1, overflowY: 'auto', padding: '20px 22px 0', display: 'flex', flexDirection: 'column', gap: 18 }}>

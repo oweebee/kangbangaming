@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { getTaskType } from '../taskTypes.jsx';
 import { getDateInfo } from './TaskModal.jsx';
 import { progressColor } from './ProgressSlider.jsx';
@@ -14,9 +14,18 @@ function formatPlaytime(minutes) {
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 
-export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArchive, onUnarchive, onDelete, onEdit, isDragging, readOnly, isTaskBoard, compact = false, assignees = [], appUsers = [], onToggleDone, onClickNotes }) {
+export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArchive, onUnarchive, onDelete, onEdit, isDragging, readOnly, isTaskBoard, compact = false, assignees = [], appUsers = [], onToggleDone, onToggleUrgent, onUpdateAssignees, onClickNotes }) {
   const [imgError, setImgError] = useState(false);
   const [ttImgError, setTtImgError] = useState(false);
+  const [showAssigneeMenu, setShowAssigneeMenu] = useState(false);
+  const assigneeMenuRef = useRef(null);
+
+  useEffect(() => {
+    if (!showAssigneeMenu) return;
+    const handler = e => { if (assigneeMenuRef.current && !assigneeMenuRef.current.contains(e.target)) setShowAssigneeMenu(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showAssigneeMenu]);
   const isCustom   = game.type === 'custom';
   const isArchived = !!game.archived;
   const isUrgent   = !!game.urgent;
@@ -207,10 +216,34 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
             </button>
           )}
 
+          {/* Bouton "urgent" */}
+          {!isArchived && onToggleUrgent && (
+            <button
+              onClick={e => { e.stopPropagation(); onToggleUrgent(!isUrgent); }}
+              title={isUrgent ? 'Retirer urgence' : 'Marquer urgent'}
+              style={{
+                background: isUrgent ? 'rgba(220,60,60,0.22)' : 'rgba(255,255,255,0.10)',
+                border: `1px solid ${isUrgent ? '#dc3c3c' : 'rgba(255,255,255,0.28)'}`,
+                borderRadius: 4, width: 20, height: 20, padding: 0,
+                cursor: 'pointer', flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: isUrgent ? '#ff6060' : 'rgba(255,255,255,0.65)',
+                transition: 'all .15s',
+                ...(compact ? { position: 'absolute', top: 4, right: onToggleDone ? 27 : 4, zIndex: 3 } : {}),
+              }}
+            >
+              <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+              </svg>
+            </button>
+          )}
+
           {/* Action buttons — absolute en compact, inline sinon */}
           {!readOnly && (
             <div style={compact ? {
-              position: 'absolute', top: 4, right: compact && onToggleDone ? 27 : 4, zIndex: 2,
+              position: 'absolute', top: 4,
+              right: compact && onToggleDone && onToggleUrgent ? 50 : compact && (onToggleDone || onToggleUrgent) ? 27 : 4,
+              zIndex: 2,
               display: 'flex', gap: 3, alignItems: 'center',
             } : {
               display: 'flex', gap: 3, flexShrink: 0, alignItems: 'center',
@@ -314,6 +347,82 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
             </div>
           )}
         </div>
+
+        {/* ── Assignee picker ── */}
+        {isTaskBoard && appUsers.length > 0 && onUpdateAssignees && !isArchived && (
+          <div
+            style={{ marginTop: 6, position: 'relative' }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Chips + bouton + */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' }}>
+              {(game.assignees || []).map(uid => {
+                const u = appUsers.find(x => x.id === uid);
+                if (!u) return null;
+                return (
+                  <div key={uid} style={{
+                    display: 'flex', alignItems: 'center', gap: 3,
+                    background: 'var(--surface3)', border: '1px solid var(--border)',
+                    borderRadius: 20, padding: '2px 6px 2px 3px', fontSize: 11,
+                  }}>
+                    {u.steamAvatar
+                      ? <img src={u.steamAvatar} alt="" style={{ width: 14, height: 14, borderRadius: '50%', flexShrink: 0 }} />
+                      : <div style={{ width: 14, height: 14, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 7, fontWeight: 700, color: '#fff', flexShrink: 0 }}>{u.username?.[0]?.toUpperCase()}</div>
+                    }
+                    <span style={{ color: 'var(--text)', maxWidth: 60, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.steamPersonaName || u.username}</span>
+                    <button
+                      onClick={e => { e.stopPropagation(); onUpdateAssignees((game.assignees || []).filter(id => id !== uid)); }}
+                      style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 9, cursor: 'pointer', padding: '0 0 0 1px', lineHeight: 1 }}
+                    >✕</button>
+                  </div>
+                );
+              })}
+              {appUsers.filter(u => u.role !== 'admin' && !(game.assignees || []).includes(u.id)).length > 0 && (
+                <button
+                  onClick={e => { e.stopPropagation(); setShowAssigneeMenu(v => !v); }}
+                  style={{
+                    background: 'var(--surface3)', border: '1px dashed var(--border)',
+                    borderRadius: 20, padding: '2px 7px', fontSize: 11,
+                    color: 'var(--text-muted)', cursor: 'pointer',
+                  }}
+                >+ assigné</button>
+              )}
+            </div>
+
+            {/* Dropdown */}
+            {showAssigneeMenu && (
+              <div ref={assigneeMenuRef} style={{
+                position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50,
+                background: 'var(--surface2)', border: '1px solid var(--border)',
+                borderRadius: 8, marginTop: 3, maxHeight: 160, overflowY: 'auto',
+                boxShadow: '0 6px 20px rgba(0,0,0,0.5)',
+              }}>
+                {appUsers
+                  .filter(u => u.role !== 'admin' && !(game.assignees || []).includes(u.id))
+                  .map(u => (
+                    <div key={u.id}
+                      onClick={e => { e.stopPropagation(); onUpdateAssignees([...(game.assignees || []), u.id]); setShowAssigneeMenu(false); }}
+                      style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '7px 10px', cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.05)' }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'var(--surface3)'}
+                      onMouseLeave={e => e.currentTarget.style.background = ''}
+                    >
+                      {u.steamAvatar
+                        ? <img src={u.steamAvatar} alt="" style={{ width: 22, height: 22, borderRadius: '50%', flexShrink: 0, border: '1px solid var(--border)' }} />
+                        : <div style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, color: '#fff', flexShrink: 0 }}>{u.username?.[0]?.toUpperCase()}</div>
+                      }
+                      <div>
+                        <div style={{ fontSize: 12, color: 'var(--text)', fontWeight: 600 }}>{u.username}</div>
+                        {u.steamPersonaName && u.steamPersonaName !== u.username && (
+                          <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>{u.steamPersonaName}</div>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                }
+              </div>
+            )}
+          </div>
+        )}
       </div>
       {/* ── Compact mode: icône bas-droite + avatars ── */}
       {compact && (
