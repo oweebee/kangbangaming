@@ -601,7 +601,7 @@ const STEAM_CLAN_IMG = 'https://clan.akamai.steamstatic.com/images/';
 // Strip BBCode and basic HTML tags from Steam news content
 function stripMarkup(str = '') {
   return str
-    .replace(/\[img\][^\[]*\[\/img\]/gi, '')          // remove images
+    .replace(/\[img[^\]]*\][^\[]*\[\/img\]/gi, '')     // remove images (all formats)
     .replace(/\[previewyoutube[^\]]*\]\[\/previewyoutube\]/gi, '') // remove yt embeds
     .replace(/\[url=[^\]]*\](.*?)\[\/url\]/gi, '$1')  // url → text
     .replace(/\[[^\]]+\]/g, '')                        // remaining BBCode tags
@@ -612,13 +612,16 @@ function stripMarkup(str = '') {
 }
 
 function extractImage(raw = '') {
-  // [img]{STEAM_CLAN_IMAGE}/path[/img] or [img]https://...[/img]
+  // [img src="{STEAM_CLAN_IMAGE}/path.jpg"][/img]  ← format réel Steam
+  const bbSrcMatch = raw.match(/\[img\s+src="((?:\{STEAM_CLAN_IMAGE\}|https?:\/\/)[^"]+)"\]/i);
+  if (bbSrcMatch) return bbSrcMatch[1].replace(/\{STEAM_CLAN_IMAGE\}/g, STEAM_CLAN_IMG);
+  // [img]{STEAM_CLAN_IMAGE}/path[/img]  ← ancien format
   const bbMatch = raw.match(/\[img\]\s*((?:\{STEAM_CLAN_IMAGE\}|https?:\/\/)[^\s\[\]]*)\s*\[\/img\]/i);
   if (bbMatch) return bbMatch[1].replace(/\{STEAM_CLAN_IMAGE\}/g, STEAM_CLAN_IMG);
   // HTML <img src="...">
   const htmlMatch = raw.match(/<img[^>]+src=["']([^"']+)["']/i);
   if (htmlMatch) return htmlMatch[1];
-  // Any CDN image URL with known extension
+  // URL directe avec extension image
   const urlMatch = raw.match(/https?:\/\/[^\s\[\]"'<>]+\.(?:jpe?g|png|gif|webp)(?:[?#][^\s\[\]"'<>]*)?/i);
   if (urlMatch) return urlMatch[0];
   return null;
