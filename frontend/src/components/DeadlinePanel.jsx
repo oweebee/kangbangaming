@@ -25,27 +25,36 @@ function parseD(s) {
 function categorize(task) {
   const now   = new Date(); now.setHours(0, 0, 0, 0);
   const today = now.getTime();
+  const tomorrow = new Date(now); tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowt = tomorrow.getTime();
   const in3   = new Date(now); in3.setDate(in3.getDate() + 3);
   const in3t  = in3.getTime();
 
   if (task.done) return null;
+
+  function classifyFuture(refDate) {
+    const t = refDate.getTime();
+    if (t === tomorrowt) return 'tomorrow';
+    if (t <= in3t)       return 'upcoming';
+    return null;
+  }
 
   if (task.startDate && task.endDate) {
     const start = parseD(task.startDate), end = parseD(task.endDate);
     if (!start || !end) return null;
     if (today > end.getTime())    return { cat: 'overdue',  refDate: end };
     if (today >= start.getTime()) return { cat: 'active',   refDate: end };
-    if (start.getTime() <= in3t)  return { cat: 'upcoming', refDate: start };
-    return null;
+    const cat = classifyFuture(start);
+    return cat ? { cat, refDate: start } : null;
   }
   if (task.dueDate) {
     const due = parseD(task.dueDate);
     if (!due) return null;
     const duet = due.getTime();
-    if (today > duet)    return { cat: 'overdue',  refDate: due };
-    if (today === duet)  return { cat: 'active',   refDate: due };
-    if (duet <= in3t)    return { cat: 'upcoming', refDate: due };
-    return null;
+    if (today > duet)   return { cat: 'overdue',  refDate: due };
+    if (today === duet) return { cat: 'active',   refDate: due };
+    const cat = classifyFuture(due);
+    return cat ? { cat, refDate: due } : null;
   }
   if (task.startDate) {
     const start = parseD(task.startDate);
@@ -53,8 +62,8 @@ function categorize(task) {
     const st = start.getTime();
     if (today > st)   return { cat: 'overdue',  refDate: start };
     if (today === st) return { cat: 'active',   refDate: start };
-    if (st <= in3t)   return { cat: 'upcoming', refDate: start };
-    return null;
+    const cat = classifyFuture(start);
+    return cat ? { cat, refDate: start } : null;
   }
   return null;
 }
@@ -62,7 +71,8 @@ function categorize(task) {
 const CAT_META = {
   overdue:  { label: 'Échues',                 color: '#e05555', icon: '⚠'  },
   active:   { label: "Aujourd'hui / En cours", color: '#3db86a', icon: '📍' },
-  upcoming: { label: 'Dans 3 jours',           color: '#c9a010', icon: '🕐' },
+  tomorrow: { label: 'Demain',                 color: '#e09020', icon: '📅' },
+  upcoming: { label: 'Dans moins de 3 jours',  color: '#c9a010', icon: '🕐' },
 };
 
 // ── Convertit un task API → objet game attendu par GameCard ───────────────────
@@ -173,7 +183,7 @@ export default function DeadlinePanel({ token, onOpenTask, refreshKey = 0 }) {
       .catch(() => { setApiCount(0); setLoading(false); });
   }, [token, refreshKey, manualKey]);
 
-  const categorized = { overdue: [], active: [], upcoming: [] };
+  const categorized = { overdue: [], active: [], tomorrow: [], upcoming: [] };
   for (const task of tasks) {
     const c = categorize(task);
     if (c && categorized[c.cat]) categorized[c.cat].push({ ...task, _refDate: c.refDate });
@@ -182,7 +192,7 @@ export default function DeadlinePanel({ token, onOpenTask, refreshKey = 0 }) {
     categorized[cat].sort((a, b) => a._refDate - b._refDate);
   }
 
-  const total = categorized.overdue.length + categorized.active.length + categorized.upcoming.length;
+  const total = categorized.overdue.length + categorized.active.length + categorized.tomorrow.length + categorized.upcoming.length;
 
   return (
     <>
@@ -232,9 +242,10 @@ export default function DeadlinePanel({ token, onOpenTask, refreshKey = 0 }) {
         </div>
       ) : (
         <>
-          <Section cat="overdue"  tasks={categorized.overdue}  onOpenTask={onOpenTask} />
-          <Section cat="active"   tasks={categorized.active}   onOpenTask={onOpenTask} />
-          <Section cat="upcoming" tasks={categorized.upcoming} onOpenTask={onOpenTask} />
+          <Section cat="overdue"  tasks={categorized.overdue}   onOpenTask={onOpenTask} />
+          <Section cat="active"   tasks={categorized.active}    onOpenTask={onOpenTask} />
+          <Section cat="tomorrow" tasks={categorized.tomorrow}  onOpenTask={onOpenTask} />
+          <Section cat="upcoming" tasks={categorized.upcoming}  onOpenTask={onOpenTask} />
         </>
       )}
     </>
