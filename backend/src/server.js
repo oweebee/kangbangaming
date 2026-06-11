@@ -551,6 +551,34 @@ app.get('/api/steam/gamestats/:appid', requireAuth, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+app.get('/api/steam/profile', requireAuth, async (req, res) => {
+  const creds = getUserSteamCreds(req.user.id);
+  if (!creds.apiKey || !creds.steamId) return res.status(400).json({ error: 'No Steam credentials' });
+  try {
+    const [summaryData, levelData, libData] = await Promise.all([
+      steamFetch(`https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=${creds.apiKey}&steamids=${creds.steamId}`),
+      steamFetch(`https://api.steampowered.com/IPlayerService/GetSteamLevel/v1/?key=${creds.apiKey}&steamid=${creds.steamId}`).catch(() => null),
+      steamFetch(`https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key=${creds.apiKey}&steamid=${creds.steamId}&format=json`).catch(() => null),
+    ]);
+    const player = summaryData.response?.players?.[0];
+    if (!player) return res.status(404).json({ error: 'Player not found' });
+    const level = levelData?.response?.player_level ?? null;
+    const gameCount = libData?.response?.game_count ?? null;
+    const statusMap = { 0: 'Hors ligne', 1: 'En ligne', 2: 'Occupé', 3: 'Absent', 4: 'Parti', 5: 'Cherche à jouer', 6: 'Cherche à échanger' };
+    res.json({
+      steamId: creds.steamId,
+      personaName: player.personaname || null,
+      avatar: player.avatarfull || player.avatarmedium || player.avatar || null,
+      profileUrl: player.profileurl || null,
+      personaState: player.personastate ?? 0,
+      statusLabel: statusMap[player.personastate ?? 0] || 'Hors ligne',
+      countryCode: player.loccountrycode || null,
+      level,
+      gameCount,
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // ── Public boards ─────────────────────────────────────────────────────────────
 
 app.get('/api/public/boards', requireAuth, (req, res) => {
