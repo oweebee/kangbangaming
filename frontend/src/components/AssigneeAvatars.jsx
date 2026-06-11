@@ -26,7 +26,7 @@ function AvatarPopup({ user, anchorRect }) {
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
         {user?.steamAvatar ? (
-          <img src={user.steamAvatar} alt="" style={{ width: 38, height: 38, borderRadius: '50%', border: '1px solid var(--border)', flexShrink: 0 }} />
+          <img src={user.steamAvatar} alt="" style={{ width: 38, height: 38, borderRadius: '50%', border: '1.5px solid var(--border)', flexShrink: 0 }} />
         ) : (
           <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: 16, flexShrink: 0 }}>
             {initials}
@@ -95,7 +95,7 @@ export default function AssigneeAvatars({ assignees = [], appUsers = [], size = 
                 title={user.username}
                 style={{
                   width: size, height: size, borderRadius: '50%',
-                  border: `2px solid ${borderColor}`,
+                  border: `1.5px solid ${borderColor}`,
                   objectFit: 'cover', display: 'block',
                   cursor: user.steamId ? 'pointer' : 'default',
                   boxShadow: isHovered ? `0 0 0 2px var(--accent)` : 'none',
@@ -108,7 +108,7 @@ export default function AssigneeAvatars({ assignees = [], appUsers = [], size = 
                 background: 'var(--accent)', color: '#fff',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: size * 0.4, fontWeight: 700,
-                border: `2px solid ${borderColor}`,
+                border: `1.5px solid ${borderColor}`,
                 cursor: 'default',
                 boxShadow: isHovered ? '0 0 0 2px #fff' : 'none',
                 transition: 'box-shadow .15s',

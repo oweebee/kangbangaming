@@ -308,10 +308,10 @@ export default function GameInfoPanel({
             )}
             {/* Badges */}
             <div style={{ width: '100%', display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-              {gameInfo.earlyAccess && <span style={{ fontSize: 13, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: 'rgba(220,50,50,0.18)', color: '#ff5555', border: '1px solid rgba(220,50,50,0.5)' }}>⚠ Accès Anticipé</span>}
-              {gameInfo.comingSoon && !gameInfo.earlyAccess && <span style={{ fontSize: 13, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: 'rgba(245,197,24,0.12)', color: '#f5c518', border: '1px solid rgba(245,197,24,0.3)' }}>🔜 À venir</span>}
-              {gameInfo.multiplayerLabel && <span style={{ fontSize: 13, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: 'rgba(71,167,245,0.15)', color: '#47a7f5', border: '1px solid rgba(71,167,245,0.3)' }}>👥 {gameInfo.multiplayerLabel}</span>}
-              {(gameInfo.genres || []).map(g => <span key={g} style={{ fontSize: 13, padding: '2px 7px', borderRadius: 4, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.1)' }}>{g}</span>)}
+              {gameInfo.earlyAccess && <span style={{ fontSize: 13, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: 'rgba(220,50,50,0.18)', color: '#ff5555', border: '1.5px solid rgba(220,50,50,0.5)' }}>⚠ Accès Anticipé</span>}
+              {gameInfo.comingSoon && !gameInfo.earlyAccess && <span style={{ fontSize: 13, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: 'rgba(245,197,24,0.12)', color: '#f5c518', border: '1.5px solid rgba(245,197,24,0.3)' }}>🔜 À venir</span>}
+              {gameInfo.multiplayerLabel && <span style={{ fontSize: 13, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: 'rgba(71,167,245,0.15)', color: '#47a7f5', border: '1.5px solid rgba(71,167,245,0.3)' }}>👥 {gameInfo.multiplayerLabel}</span>}
+              {(gameInfo.genres || []).map(g => <span key={g} style={{ fontSize: 13, padding: '2px 7px', borderRadius: 4, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)', border: '1.5px solid rgba(255,255,255,0.1)' }}>{g}</span>)}
             </div>
             {/* Developer + date */}
             {(gameInfo.developer || gameInfo.releaseDate) && (
@@ -360,7 +360,7 @@ export default function GameInfoPanel({
                   <div style={{ display: 'flex', gap: 4, marginBottom: 5, flexWrap: 'wrap' }}>
                     {ts.map(tag => {
                       const s = tagStyle(tag);
-                      return <span key={tag} style={{ fontSize: 10, padding: '2px 7px', borderRadius: 3, background: s.bg, color: s.color, border: `1px solid ${s.border}`, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{tag}</span>;
+                      return <span key={tag} style={{ fontSize: 10, padding: '2px 7px', borderRadius: 3, background: s.bg, color: s.color, border: `1.5px solid ${s.border}`, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{tag}</span>;
                     })}
                   </div>
                 )}

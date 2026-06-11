@@ -228,7 +228,7 @@ export default function AdminPanel({ token, currentUser, onClose }) {
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
                             <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 180 }}>{b.name}</span>
-                            <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 4, flexShrink: 0, color: b.public ? '#3db86a' : 'var(--text-muted)', border: `1px solid ${b.public ? '#3db86a' : 'var(--border)'}` }}>
+                            <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 4, flexShrink: 0, color: b.public ? '#3db86a' : 'var(--text-muted)', border: `1.5px solid ${b.public ? '#3db86a' : 'var(--border)'}` }}>
                               {b.public ? 'Public' : 'Privé'}
                             </span>
                           </div>

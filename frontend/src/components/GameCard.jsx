@@ -33,7 +33,7 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
       style={{
         position: 'relative',
         background: isArchived ? 'var(--surface2)' : tt ? tt.bg : 'var(--surface2)',
-        border: isArchived ? '1px solid rgba(120,120,120,0.3)' : isUrgent ? '1.5px solid rgba(220,60,60,0.6)' : tt ? `1.5px solid ${tt.border}` : '1px solid var(--border)',
+        border: isArchived ? '1.5px solid rgba(120,120,120,0.3)' : isUrgent ? '1.5px solid rgba(220,60,60,0.6)' : tt ? `1.5px solid ${tt.border}` : '1.5px solid var(--border)',
         borderRadius: 8,
         overflow: 'hidden',
         cursor: readOnly || isArchived ? 'default' : 'grab',
@@ -252,7 +252,7 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
             <div style={{
               background: 'rgba(200,30,30,0.15)',
               color: '#ff6060',
-              border: '1px solid rgba(220,60,60,0.5)',
+              border: '1.5px solid rgba(220,60,60,0.5)',
               borderRadius: 4, padding: '1px 6px',
               fontSize: 9, fontWeight: 900,
               whiteSpace: 'nowrap', flexShrink: 0,
@@ -265,7 +265,7 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
             <div style={{
               background: dateInfo.bg,
               color: dateInfo.color,
-              border: `1px solid ${dateInfo.border}`,
+              border: `1.5px solid ${dateInfo.border}`,
               borderRadius: 4, padding: '1px 6px',
               fontSize: 9, fontWeight: 700,
               whiteSpace: 'nowrap', flexShrink: 0,

@@ -20,11 +20,11 @@ const DISCORD_ICON_URL = 'https://cdn.discordapp.com/icons/983316258302877747/eb
 function DiscordServerIcon({ size = 22, borderColor = 'var(--surface1)' }) {
   const [err, setErr] = useState(false);
   if (err) return (
-    <div style={{ width: size, height: size, borderRadius: '50%', background: '#5865f2', marginLeft: -(size * 0.2), position: 'relative', zIndex: 2, border: `2px solid ${borderColor}`, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
+    <div style={{ width: size, height: size, borderRadius: '50%', background: '#5865f2', marginLeft: -(size * 0.2), position: 'relative', zIndex: 2, border: `1.5px solid ${borderColor}`, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
       <svg viewBox="0 0 127.14 96.36" xmlns="http://www.w3.org/2000/svg" style={{ width: '70%', height: '70%', fill: '#fff' }}><path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22h0C129.24,52.84,122.09,29.11,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,46,53.89,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,46,96.12,53,91.08,65.69,84.69,65.69Z"/></svg>
     </div>
   );
-  return <img src={DISCORD_ICON_URL} alt="" onError={() => setErr(true)} style={{ width: size, height: size, borderRadius: '50%', marginLeft: -(size * 0.2), position: 'relative', zIndex: 2, border: `2px solid ${borderColor}`, flexShrink: 0 }} />;
+  return <img src={DISCORD_ICON_URL} alt="" onError={() => setErr(true)} style={{ width: size, height: size, borderRadius: '50%', marginLeft: -(size * 0.2), position: 'relative', zIndex: 2, border: `1.5px solid ${borderColor}`, flexShrink: 0 }} />;
 }
 
 const EMOJIS = [
@@ -99,7 +99,7 @@ function HomeBoardCard({ board, isPublic, isFav, onToggleFav, onClick }) {
       >
         {isFav && <svg viewBox="0 0 24 24" width="10" height="10" fill="#f5c518" stroke="#f5c518" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>}
         <span style={{ flex: 1, fontWeight: 700, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text)' }}>{board.name}</span>
-        <span style={{ fontSize: 10, fontWeight: 700, color: (isPublic || board.public) ? '#3db86a' : '#f5a500', border: `1px solid ${(isPublic || board.public) ? '#3db86a' : '#f5a500'}`, borderRadius: 4, padding: '1px 5px', flexShrink: 0 }}>
+        <span style={{ fontSize: 10, fontWeight: 700, color: (isPublic || board.public) ? '#3db86a' : '#f5a500', border: `1.5px solid ${(isPublic || board.public) ? '#3db86a' : '#f5a500'}`, borderRadius: 4, padding: '1px 5px', flexShrink: 0 }}>
           {(isPublic || board.public) ? 'Public' : 'Privé'}
         </span>
       </div>
@@ -1088,7 +1088,7 @@ export default function App() {
                 <span style={{ fontSize: 20, flexShrink: 0 }}>{publicBoardMode.emoji || '🎮'}</span>
               )}
               <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{publicBoardMode.name}</span>
-              <span style={{ fontSize: 10, fontWeight: 700, color: '#3db86a', border: '1px solid #3db86a', borderRadius: 4, padding: '1px 5px', flexShrink: 0 }}>Public</span>
+              <span style={{ fontSize: 10, fontWeight: 700, color: '#3db86a', border: '1.5px solid #3db86a', borderRadius: 4, padding: '1px 5px', flexShrink: 0 }}>Public</span>
               <button onClick={toggleCompact} title="Compact" style={{ background: compactView ? 'rgba(192,87,10,0.15)' : 'rgba(255,255,255,.06)', border: compactView ? '1px solid var(--accent)' : '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', color: compactView ? 'var(--accent)' : 'var(--text-muted)', fontSize: 11, cursor: 'pointer', flexShrink: 0 }}>⊟</button>
               <button onClick={() => setShowSearch(true)} style={{ background: 'var(--accent)', border: 'none', borderRadius: 7, padding: '7px 10px', color: '#fff', fontWeight: 700, fontSize: 12, flexShrink: 0 }}>+ {isTaskBoard ? 'Tâche' : 'Jeu'}</button>
               <button onClick={refreshPublicBoard} title="Rafraîchir" style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', color: 'var(--text-muted)', fontSize: 14, cursor: 'pointer', flexShrink: 0, lineHeight: 1 }}>↻</button>
@@ -1103,7 +1103,7 @@ export default function App() {
               ) : null}
               <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{activeBoard?.name || 'KangBanGaming'}</span>
               {activeBoard && (
-                <span style={{ fontSize: 10, fontWeight: 700, color: activeBoard.public ? '#3db86a' : '#f5a500', border: `1px solid ${activeBoard.public ? '#3db86a' : '#f5a500'}`, borderRadius: 4, padding: '1px 5px', flexShrink: 0 }}>
+                <span style={{ fontSize: 10, fontWeight: 700, color: activeBoard.public ? '#3db86a' : '#f5a500', border: `1.5px solid ${activeBoard.public ? '#3db86a' : '#f5a500'}`, borderRadius: 4, padding: '1px 5px', flexShrink: 0 }}>
                   {activeBoard.public ? 'Public' : 'Privé'}
                 </span>
               )}
@@ -1206,7 +1206,7 @@ export default function App() {
               {/* Board name — big, same as personal board */}
               <span style={{ fontWeight: 700, fontSize: 24, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flexShrink: 1 }}>{publicBoardMode.name}</span>
               {/* "Board Public" badge — same style as Public badge on personal boards */}
-              <span style={{ fontSize: 11, fontWeight: 700, color: '#3db86a', display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0, border: '1px solid #3db86a', borderRadius: 5, padding: '2px 7px' }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#3db86a', display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0, border: '1.5px solid #3db86a', borderRadius: 5, padding: '2px 7px' }}>
                 <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="10" cy="7" r="4"/><path d="M4 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M15 3.13a4 4 0 0 1 0 7.75"/><path d="M20 21v-2a4 4 0 0 0-3-3.85"/>
                 </svg> Public
@@ -1281,7 +1281,7 @@ export default function App() {
                 <span
                   onClick={() => toggleBoardPublic(activeBoard.id, !activeBoard.public)}
                   title={activeBoard.public ? 'Public — cliquer pour rendre privé' : 'Privé — cliquer pour rendre public'}
-                  style={{ fontSize: 11, fontWeight: 700, color: activeBoard.public ? '#3db86a' : '#f5a500', cursor: 'pointer', userSelect: 'none', display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0, border: `1px solid ${activeBoard.public ? '#3db86a' : '#f5a500'}`, borderRadius: 5, padding: '2px 7px' }}
+                  style={{ fontSize: 11, fontWeight: 700, color: activeBoard.public ? '#3db86a' : '#f5a500', cursor: 'pointer', userSelect: 'none', display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0, border: `1.5px solid ${activeBoard.public ? '#3db86a' : '#f5a500'}`, borderRadius: 5, padding: '2px 7px' }}
                 >
                   {activeBoard.public ? (
                     <><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">

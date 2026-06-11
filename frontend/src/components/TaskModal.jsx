@@ -84,7 +84,7 @@ function AssigneeRow({ assignees = [], appUsers = [], borderColor = 'var(--borde
               onMouseLeave={() => { timerRef.current = setTimeout(() => setPopup(null), 80); }}
               onClick={() => user.steamId && window.open(`https://steamcommunity.com/profiles/${user.steamId}`, '_blank')}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 20, padding: '4px 10px 4px 5px', cursor: user.steamId ? 'pointer' : 'default' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--surface2)', border: '1.5px solid var(--border)', borderRadius: 20, padding: '4px 10px 4px 5px', cursor: user.steamId ? 'pointer' : 'default' }}>
                 {user.steamAvatar ? (
                   <img src={user.steamAvatar} alt="" style={{ width: 22, height: 22, borderRadius: '50%', flexShrink: 0, border: `1.5px solid ${borderColor}` }} />
                 ) : (
