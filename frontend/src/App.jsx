@@ -384,19 +384,28 @@ export default function App() {
     if (game) { setSelectedGame(game); setPendingOpenGameId(null); }
   }, [games, pendingOpenGameId]);
 
-  const handleSearchGoToBoard = (boardId) => {
-    setActiveBoardId(boardId);
-    setShowHome(false);
-    setPublicBoardMode(null);
-    setShowPublicBoards(false);
+  const handleSearchGoToBoard = (boardId, result) => {
+    if (result?.isPublic) {
+      openPublicBoard({ id: boardId, name: result.boardName, ownerUsername: result.ownerUsername, gameIcon: result.boardIcon, headerImg: result.boardHeaderImg });
+    } else {
+      setActiveBoardId(boardId);
+      setShowHome(false);
+      setPublicBoardMode(null);
+      setShowPublicBoards(false);
+    }
   };
 
-  const handleSearchOpenGame = (boardId, gameId) => {
-    setActiveBoardId(boardId);
-    setShowHome(false);
-    setPublicBoardMode(null);
-    setShowPublicBoards(false);
-    setPendingOpenGameId(gameId);
+  const handleSearchOpenGame = (boardId, gameId, result) => {
+    if (result?.isPublic) {
+      openPublicBoard({ id: boardId, name: result.boardName, ownerUsername: result.ownerUsername, gameIcon: result.boardIcon, headerImg: result.boardHeaderImg });
+      setPendingOpenGameId(gameId);
+    } else {
+      setActiveBoardId(boardId);
+      setShowHome(false);
+      setPublicBoardMode(null);
+      setShowPublicBoards(false);
+      setPendingOpenGameId(gameId);
+    }
   };
 
   useEffect(() => {
@@ -1330,7 +1339,7 @@ export default function App() {
           loading ? (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Chargement...</div>
           ) : (
-            <KanbanBoard columns={columns} byColumn={byColumn} dragging={dragging} setDragging={setDragging} moveGame={moveGame} onCardClick={setSelectedGame} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} onRenameColumn={renameColumn} onDeleteColumn={deleteColumn} onSetEmoji={setColumnEmoji} onReorderColumns={reorderColumns} onAddToColumn={colId => { setSearchTargetCol(colId); setShowSearch(true); }} onReorderGames={reorderGamesInColumn} isTaskBoard={isTaskBoard} appUsers={appUsers} compactView={compactView} />
+            <KanbanBoard columns={columns} byColumn={byColumn} dragging={dragging} setDragging={setDragging} moveGame={moveGame} onCardClick={setSelectedGame} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} onRenameColumn={renameColumn} onDeleteColumn={deleteColumn} onSetEmoji={setColumnEmoji} onReorderColumns={reorderColumns} onAddToColumn={colId => { setSearchTargetCol(colId); setShowSearch(true); }} onReorderGames={reorderGamesInColumn} isTaskBoard={isTaskBoard} appUsers={appUsers} compactView={compactView} leftOffset={infoPanelLocked && infoPanelSide === 'left' ? GAME_INFO_PANEL_WIDTH : 0} rightOffset={infoPanelLocked && infoPanelSide === 'right' ? GAME_INFO_PANEL_WIDTH : 0} />
           )
         ) : !activeBoardId ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Crée un board pour commencer</div>

@@ -184,46 +184,69 @@ app.get('/api/search', requireAuth, (req, res) => {
   const q = (req.query.q || '').toLowerCase().trim();
   if (!q || q.length < 2) return res.json([]);
 
-  const userBoards = getUserBoards(req.user.id);
   const results = [];
+  const seenBoardIds = new Set(); // avoid duplicates if user owns a public board
 
-  for (const [boardId, board] of Object.entries(userBoards)) {
+  // Helper: search inside a board and push results
+  function searchBoard(boardId, board, extra = {}) {
+    if (seenBoardIds.has(boardId)) return;
+    seenBoardIds.add(boardId);
+
     const boardName = board.name || '';
     const boardIcon = board.gameIcon || null;
     const boardHeaderImg = board.headerImg || null;
 
-    // Match board name
     if (boardName.toLowerCase().includes(q)) {
-      results.push({ type: 'board', boardId, boardName, boardIcon, boardHeaderImg, matchedIn: 'board' });
+      results.push({ type: 'board', boardId, boardName, boardIcon, boardHeaderImg, matchedIn: 'board', ...extra });
     }
 
     for (const [gameId, game] of Object.entries(board.games || {})) {
       const gameName = game.name || '';
       const gameImg = game.header_img || game.icon_img || null;
 
-      // Match game/task name
       if (gameName.toLowerCase().includes(q)) {
-        results.push({ type: 'game', boardId, boardName, boardIcon, gameId, gameName, gameImg, matchedIn: 'name' });
+        results.push({ type: 'game', boardId, boardName, boardIcon, gameId, gameName, gameImg, matchedIn: 'name', ...extra });
         continue;
       }
 
-      // Match notes
       const notes = game.notes || [];
       for (const note of notes) {
         const noteText = typeof note === 'string' ? note : (note.text || '');
         if (noteText.toLowerCase().includes(q)) {
-          // Trim preview around the match
           const idx = noteText.toLowerCase().indexOf(q);
           const start = Math.max(0, idx - 30);
           const preview = (start > 0 ? '…' : '') + noteText.slice(start, idx + q.length + 60);
-          results.push({ type: 'game', boardId, boardName, boardIcon, gameId, gameName, gameImg, matchedIn: 'note', notePreview: preview });
+          results.push({ type: 'game', boardId, boardName, boardIcon, gameId, gameName, gameImg, matchedIn: 'note', notePreview: preview, ...extra });
           break;
         }
       }
     }
   }
 
-  res.json(results.slice(0, 25));
+  // 1. User's own boards (always included)
+  const userBoards = getUserBoards(req.user.id);
+  for (const [boardId, board] of Object.entries(userBoards)) {
+    searchBoard(boardId, board);
+  }
+
+  // 2. All public boards from all users + followed public boards
+  const allBoards = readBoards();
+  const me = readUsers().find(u => u.id === req.user.id);
+  const favIds = new Set(me?.favorites || []);
+  const userMap = new Map();
+  for (const u of readUsers()) userMap.set(u.id, u.username);
+
+  for (const [userId, boards] of Object.entries(allBoards)) {
+    if (userId === req.user.id) continue; // already searched above
+    for (const [boardId, board] of Object.entries(boards)) {
+      if (!board.public) continue;
+      const ownerUsername = userMap.get(userId) || 'unknown';
+      const isFollowed = favIds.has(boardId);
+      searchBoard(boardId, board, { isPublic: true, ownerUsername, isFollowed });
+    }
+  }
+
+  res.json(results.slice(0, 40));
 });
 
 // ── User profile + settings ───────────────────────────────────────────────────

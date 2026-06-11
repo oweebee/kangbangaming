@@ -103,7 +103,7 @@ function ColumnHeader({ col, onRename, onDelete, onSetEmoji, onColDragStart, onC
   );
 }
 
-export default function KanbanBoard({ columns, byColumn, dragging, setDragging, moveGame, onCardClick, onArchiveGame, onUnarchiveGame, onDeleteGame, onEditGame, onRenameColumn, onDeleteColumn, onSetEmoji, onReorderColumns, onAddToColumn, onReorderGames, isTaskBoard, appUsers = [], compactView = false }) {
+export default function KanbanBoard({ columns, byColumn, dragging, setDragging, moveGame, onCardClick, onArchiveGame, onUnarchiveGame, onDeleteGame, onEditGame, onRenameColumn, onDeleteColumn, onSetEmoji, onReorderColumns, onAddToColumn, onReorderGames, isTaskBoard, appUsers = [], compactView = false, leftOffset = 0, rightOffset = 0 }) {
   const [draggingColId, setDraggingColId] = useState(null);
   const [dragOverColId, setDragOverColId] = useState(null);
   const [dragInsert, setDragInsert] = useState(null); // { colId, beforeAppid: string|null }
@@ -123,7 +123,7 @@ export default function KanbanBoard({ columns, byColumn, dragging, setDragging, 
   };
 
   return (
-    <div style={{ display: 'flex', flex: 1, gap: '10px', padding: '14px', overflowX: 'auto', overflowY: 'hidden' }}>
+    <div style={{ display: 'flex', flex: 1, gap: '10px', padding: '14px', paddingLeft: 14 + leftOffset, paddingRight: 14 + rightOffset, overflowX: 'auto', overflowY: 'hidden', transition: 'padding-left 0.32s cubic-bezier(0.4,0,0.2,1), padding-right 0.32s cubic-bezier(0.4,0,0.2,1)' }}>
       {columns.length === 0 && (
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
           Ajoute une colonne pour commencer

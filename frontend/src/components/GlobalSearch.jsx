@@ -22,12 +22,14 @@ const BADGE = {
   name:  { label: 'Tâche',  color: '#4cd882' },
   note:  { label: 'Note',   color: '#a78bfa' },
 };
+const PUBLIC_COLOR = '#47a7f5';
 
 export default function GlobalSearch({ token, onGoToBoard, onOpenGame }) {
   const [query, setQuery]       = useState('');
   const [results, setResults]   = useState([]);
   const [loading, setLoading]   = useState(false);
   const [open, setOpen]         = useState(false);
+  const [expanded, setExpanded] = useState(false); // whether input is visible
   const [activeIdx, setActiveIdx] = useState(-1);
 
   const debounceRef  = useRef(null);
@@ -56,59 +58,95 @@ export default function GlobalSearch({ token, onGoToBoard, onOpenGame }) {
   };
 
   const handleSelect = (r) => {
-    setQuery(''); setResults([]); setOpen(false);
-    if (r.type === 'board') onGoToBoard(r.boardId);
-    else onOpenGame(r.boardId, r.gameId);
+    setQuery(''); setResults([]); setOpen(false); setExpanded(false);
+    if (r.type === 'board') onGoToBoard(r.boardId, r);
+    else onOpenGame(r.boardId, r.gameId, r);
   };
 
   const handleKeyDown = (e) => {
+    if (e.key === 'Escape') { setOpen(false); setQuery(''); setResults([]); setExpanded(false); return; }
     if (!open) return;
     if (e.key === 'ArrowDown') { e.preventDefault(); setActiveIdx(i => Math.min(i + 1, results.length - 1)); }
     else if (e.key === 'ArrowUp') { e.preventDefault(); setActiveIdx(i => Math.max(i - 1, 0)); }
     else if (e.key === 'Enter' && activeIdx >= 0) { e.preventDefault(); handleSelect(results[activeIdx]); }
-    else if (e.key === 'Escape') { setOpen(false); setQuery(''); setResults([]); }
+  };
+
+  const handleIconClick = () => {
+    setExpanded(true);
+    setTimeout(() => inputRef.current?.focus(), 50);
   };
 
   // Close on outside click
   useEffect(() => {
-    const fn = (e) => { if (containerRef.current && !containerRef.current.contains(e.target)) setOpen(false); };
+    const fn = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setOpen(false);
+        if (!query) setExpanded(false);
+      }
+    };
     document.addEventListener('mousedown', fn);
     return () => document.removeEventListener('mousedown', fn);
-  }, []);
+  }, [query]);
 
   return (
-    <div ref={containerRef} style={{ position: 'relative', flexShrink: 0 }}>
-      {/* Input */}
-      <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="var(--text-muted)"
-          strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-          style={{ position: 'absolute', left: 8, pointerEvents: 'none', opacity: 0.55, flexShrink: 0 }}>
+    <div ref={containerRef} style={{ position: 'relative', flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+      {/* Loupe icon (always visible) */}
+      <button
+        onClick={handleIconClick}
+        title="Rechercher"
+        style={{
+          background: expanded ? 'var(--surface2)' : 'none',
+          border: expanded ? `1px solid var(--accent)` : '1px solid transparent',
+          borderRadius: expanded ? '8px 0 0 8px' : 8,
+          borderRight: expanded ? 'none' : undefined,
+          width: 30, height: 30,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          cursor: 'pointer', flexShrink: 0,
+          transition: 'background .15s, border-color .15s',
+        }}
+      >
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke={expanded ? 'var(--accent)' : 'var(--text-muted)'}
+          strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
         </svg>
-        <input
-          ref={inputRef}
-          type="search"
-          placeholder="Rechercher boards, tâches, notes…"
-          value={query}
-          onChange={e => handleInput(e.target.value)}
-          onFocus={() => query && results.length > 0 && setOpen(true)}
-          onKeyDown={handleKeyDown}
-          style={{
-            background: 'var(--surface2)', border: `1px solid ${open ? 'var(--accent)' : 'var(--border)'}`,
-            borderRadius: 8, padding: '6px 28px 6px 28px',
-            color: 'var(--text)', fontSize: 12, outline: 'none',
-            width: open ? 260 : 190,
-            transition: 'width .18s, border-color .15s',
-          }}
-        />
-        {loading && (
-          <div style={{
-            position: 'absolute', right: 9,
-            width: 10, height: 10,
-            border: '2px solid var(--accent)', borderTopColor: 'transparent',
-            borderRadius: '50%', animation: 'gspin .55s linear infinite',
-          }} />
-        )}
+      </button>
+
+      {/* Expandable input */}
+      <div style={{
+        overflow: 'hidden',
+        width: expanded ? 230 : 0,
+        transition: 'width .2s cubic-bezier(0.4,0,0.2,1)',
+        flexShrink: 0,
+      }}>
+        <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+          <input
+            ref={inputRef}
+            type="search"
+            placeholder="Boards, tâches, notes…"
+            value={query}
+            onChange={e => handleInput(e.target.value)}
+            onFocus={() => query && results.length > 0 && setOpen(true)}
+            onKeyDown={handleKeyDown}
+            style={{
+              background: 'var(--surface2)',
+              border: '1px solid var(--accent)',
+              borderLeft: 'none',
+              borderRadius: '0 8px 8px 0',
+              padding: '6px 28px 6px 10px',
+              color: 'var(--text)', fontSize: 12, outline: 'none',
+              width: '100%',
+            }}
+          />
+          {loading && (
+            <div style={{
+              position: 'absolute', right: 9,
+              width: 10, height: 10,
+              border: '2px solid var(--accent)', borderTopColor: 'transparent',
+              borderRadius: '50%', animation: 'gspin .55s linear infinite',
+              flexShrink: 0,
+            }} />
+          )}
+        </div>
       </div>
 
       {/* Dropdown */}
@@ -172,6 +210,11 @@ export default function GlobalSearch({ token, onGoToBoard, onOpenGame }) {
                   )}
                   {r.matchedIn === 'note' && (
                     <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 1, lineHeight: 1.3 }}>📋 {r.boardName}</div>
+                  )}
+                  {r.isPublic && r.ownerUsername && (
+                    <div style={{ fontSize: 10, color: PUBLIC_COLOR, marginTop: 1, lineHeight: 1.3, opacity: 0.8 }}>
+                      🌐 {r.isFollowed ? 'Suivi · ' : ''}{r.ownerUsername}
+                    </div>
                   )}
                 </div>
 
