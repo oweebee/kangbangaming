@@ -116,6 +116,13 @@ export default function GameStatsWidget({ api, token, board }) {
         boxShadow: '0 8px 28px rgba(0,0,0,.6)',
       }}>
 
+        {/* ── Banner du jeu ── */}
+        <div style={{ position: 'relative', height: 90, background: 'var(--surface2)', overflow: 'hidden' }}>
+          {bannerUrl && (
+            <img src={bannerUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+          )}
+        </div>
+
         {/* ── Mini fiche profil joueur ── */}
         {profile && (
           <a
@@ -197,13 +204,6 @@ export default function GameStatsWidget({ api, token, board }) {
             </div>
           </a>
         )}
-
-        {/* ── Banner du jeu ── */}
-        <div style={{ position: 'relative', height: 90, background: 'var(--surface2)', overflow: 'hidden' }}>
-          {bannerUrl && (
-            <img src={bannerUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-          )}
-        </div>
 
         {/* ── Stats jeu ── */}
         <div style={{ padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 6 }}>
