@@ -27,22 +27,34 @@ const BOARDS_FILE = path.join(DATA_DIR, 'boards.json');
 function ensureDataDir() {
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 }
+
+// In-memory cache — avoids JSON disk reads on every request.
+// Invalidated (updated) on each write. Node.js is single-threaded so no race.
+let _usersCache = null;
+let _boardsCache = null;
+
 function readUsers() {
   ensureDataDir();
-  if (!fs.existsSync(USERS_FILE)) fs.writeFileSync(USERS_FILE, '[]');
-  try { return JSON.parse(fs.readFileSync(USERS_FILE, 'utf8')); } catch { return []; }
+  if (_usersCache !== null) return _usersCache;
+  if (!fs.existsSync(USERS_FILE)) { fs.writeFileSync(USERS_FILE, '[]'); _usersCache = []; return _usersCache; }
+  try { _usersCache = JSON.parse(fs.readFileSync(USERS_FILE, 'utf8')); } catch { _usersCache = []; }
+  return _usersCache;
 }
 function writeUsers(users) {
   ensureDataDir();
+  _usersCache = users;
   fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
 }
 function readBoards() {
   ensureDataDir();
-  if (!fs.existsSync(BOARDS_FILE)) fs.writeFileSync(BOARDS_FILE, '{}');
-  try { return JSON.parse(fs.readFileSync(BOARDS_FILE, 'utf8')); } catch { return {}; }
+  if (_boardsCache !== null) return _boardsCache;
+  if (!fs.existsSync(BOARDS_FILE)) { fs.writeFileSync(BOARDS_FILE, '{}'); _boardsCache = {}; return _boardsCache; }
+  try { _boardsCache = JSON.parse(fs.readFileSync(BOARDS_FILE, 'utf8')); } catch { _boardsCache = {}; }
+  return _boardsCache;
 }
 function writeBoards(boards) {
   ensureDataDir();
+  _boardsCache = boards;
   fs.writeFileSync(BOARDS_FILE, JSON.stringify(boards, null, 2));
 }
 function getUserBoards(userId) { return readBoards()[userId] || {}; }
@@ -555,15 +567,16 @@ app.get('/api/steam/profile', requireAuth, async (req, res) => {
   const creds = getUserSteamCreds(req.user.id);
   if (!creds.apiKey || !creds.steamId) return res.status(400).json({ error: 'No Steam credentials' });
   try {
-    const [summaryData, levelData, libData] = await Promise.all([
+    // Use getLibraryMap (TTL-cached) instead of a raw steamFetch to avoid redundant API calls
+    const [summaryData, levelData, lib] = await Promise.all([
       steamFetch(`https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=${creds.apiKey}&steamids=${creds.steamId}`),
       steamFetch(`https://api.steampowered.com/IPlayerService/GetSteamLevel/v1/?key=${creds.apiKey}&steamid=${creds.steamId}`).catch(() => null),
-      steamFetch(`https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key=${creds.apiKey}&steamid=${creds.steamId}&format=json`).catch(() => null),
+      getLibraryMap(req.user.id),
     ]);
     const player = summaryData.response?.players?.[0];
     if (!player) return res.status(404).json({ error: 'Player not found' });
     const level = levelData?.response?.player_level ?? null;
-    const gameCount = libData?.response?.game_count ?? null;
+    const gameCount = lib.size || null; // Map size = number of owned games
     const statusMap = { 0: 'Hors ligne', 1: 'En ligne', 2: 'Occupé', 3: 'Absent', 4: 'Parti', 5: 'Cherche à jouer', 6: 'Cherche à échanger' };
     res.json({
       steamId: creds.steamId,
@@ -583,13 +596,25 @@ app.get('/api/steam/profile', requireAuth, async (req, res) => {
 
 app.get('/api/public/boards', requireAuth, (req, res) => {
   const all = readBoards();
-  const userMap = new Map(readUsers().map(u => [u.id, u.username]));
+  const users = readUsers();
+  const userMap = new Map(users.map(u => [u.id, u.username]));
+  // Compute current user's favourite IDs once, outside the loop
+  const me = users.find(u => u.id === req.user.id);
+  const favIds = new Set(me?.favorites || []);
   const result = [];
   for (const [userId, userBoards] of Object.entries(all)) {
     for (const [boardId, board] of Object.entries(userBoards || {})) {
-      if (board.public) {
-        const user = readUsers().find(u => u.id === req.user.id); const favIds = new Set(user?.favorites || []); const firstGame = Object.values(board.games || {}).find(g => g.header_img); const headerImg = board.headerImg || firstGame?.header_img || null; result.push({ id: boardId, name: board.name, emoji: board.emoji || '', gameIcon: board.gameIcon || null, headerImg, columns: board.columns || [], games: Object.values(board.games || {}), gameCount: Object.keys(board.games || {}).length, ownerUsername: userMap.get(userId) || 'unknown', ownerId: userId, isOwner: userId === req.user.id, isFavorite: favIds.has(boardId) });
-      }
+      if (!board.public) continue;
+      const firstGame = Object.values(board.games || {}).find(g => g.header_img);
+      const headerImg = board.headerImg || firstGame?.header_img || null;
+      result.push({
+        id: boardId, name: board.name, emoji: board.emoji || '',
+        gameIcon: board.gameIcon || null, headerImg,
+        columns: board.columns || [], games: Object.values(board.games || {}),
+        gameCount: Object.keys(board.games || {}).length,
+        ownerUsername: userMap.get(userId) || 'unknown', ownerId: userId,
+        isOwner: userId === req.user.id, isFavorite: favIds.has(boardId),
+      });
     }
   }
   res.json(result);

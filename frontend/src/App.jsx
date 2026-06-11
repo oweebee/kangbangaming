@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import KanbanBoard from './components/KanbanBoard.jsx';
 import MobileBoard from './components/MobileBoard.jsx';
 import GameModal from './components/GameModal.jsx';
@@ -12,11 +12,12 @@ import PublicBoards from './components/PublicBoards.jsx';
 import ProfilePage from './components/ProfilePage.jsx';
 import GameStatsWidget from './components/GameStatsWidget.jsx';
 import GlobalSearch from './components/GlobalSearch.jsx';
+import SteamEncart from './components/SteamEncart.jsx';
 
 const DISCORD_ICON_URL = 'https://cdn.discordapp.com/icons/983316258302877747/ebcf20448ef8818f93e8f31afad9f8d9.webp?size=64';
 
 function DiscordServerIcon({ size = 22, borderColor = 'var(--surface1)' }) {
-  const [err, setErr] = React.useState(false);
+  const [err, setErr] = useState(false);
   if (err) return (
     <div style={{ width: size, height: size, borderRadius: '50%', background: '#5865f2', marginLeft: -(size * 0.2), position: 'relative', zIndex: 2, border: `2px solid ${borderColor}`, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
       <svg viewBox="0 0 127.14 96.36" xmlns="http://www.w3.org/2000/svg" style={{ width: '70%', height: '70%', fill: '#fff' }}><path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22h0C129.24,52.84,122.09,29.11,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,46,53.89,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,46,96.12,53,91.08,65.69,84.69,65.69Z"/></svg>
@@ -69,7 +70,7 @@ function BoardEmojiPicker({ current, onSelect, onClose }) {
 const API = import.meta.env.VITE_API_URL || '/api';
 
 function HomeBoardCard({ board, isPublic, isFav, onToggleFav, onClick }) {
-  const [favHover, setFavHover] = React.useState(false);
+  const [favHover, setFavHover] = useState(false);
   return (
     <div
       style={{
@@ -241,7 +242,10 @@ export default function App() {
   };
   const handleLogout = () => {
     localStorage.removeItem('token'); localStorage.removeItem('user');
-    setCurrentUser(null); setToken(null); setBoards([]); setActiveBoardId(null); setColumns([]); setGames([]); setShowHome(true);
+    setCurrentUser(null); setToken(null); setBoards([]); setActiveBoardId(null);
+    setColumns([]); setGames([]); setGameInfo(null); setSearch('');
+    setFavBoards([]); setPersonalFavIds([]); setPublicBoardMode(null);
+    setShowHome(true);
   };
 
   const fetchFavorites = useCallback(async () => {
@@ -329,7 +333,7 @@ export default function App() {
     if (res.status === 401) { handleLogout(); return; }
     const data = await res.json();
     setBoards(data);
-  }, [token, activeBoardId]);
+  }, [token]);
 
   const saveBoardName = async () => {
     const name = boardNameInput.trim();
@@ -403,28 +407,26 @@ export default function App() {
     fetchGames(activeBoardId);
   }, [activeBoardId]);
 
-  // Fetch Steam game info when board changes
-  // NOTE: activeSteamAppId is computed after the early return, so we derive it here from state
-  // Use same fallback as the render path: board.headerImg OR first game with header_img
-  useEffect(() => {
+  // Memoize Steam appId — only changes when board identity/image changes, NOT on every card update.
+  // Having games in a useMemo (vs useEffect) means the effect only re-fires when the *string value* changes.
+  const activeSteamAppIdForFetch = useMemo(() => {
     const board = boards.find(b => b.id === activeBoardId);
-    // Personal boards: only board.headerImg (explicitly stored — never computed from game cards)
-    // Public boards: publicBoardMode.headerImg first, then fallback to loaded games (safe: games are cleared on openPublicBoard)
     const headerImg = board?.headerImg
       || publicBoardMode?.headerImg
       || (publicBoardMode ? games.find(g => g.header_img)?.header_img : null)
       || null;
-    // Extract appId from headerImg first, then fall back to gameIcon URL
-    // (task boards may only have gameIcon stored, not headerImg — both contain /apps/XXXXX/)
-    const activeBoard2 = boards.find(b => b.id === activeBoardId);
-    const appId = headerImg?.match(/apps\/(\d+)\//)?.[1]
+    return headerImg?.match(/apps\/(\d+)\//)?.[1]
       || publicBoardMode?.gameIcon?.match(/apps\/(\d+)\//)?.[1]
-      || activeBoard2?.gameIcon?.match(/apps\/(\d+)\//)?.[1]
+      || board?.gameIcon?.match(/apps\/(\d+)\//)?.[1]
       || null;
-    if (!appId || !token) { setGameInfo(null); return; }
-    fetch(`${API}/steam/gameinfo/${appId}`, { headers: { Authorization: `Bearer ${token}` } })
+  }, [activeBoardId, boards, publicBoardMode, games]);
+
+  // Fetch Steam game info — only re-runs when the appId string actually changes
+  useEffect(() => {
+    if (!activeSteamAppIdForFetch || !token) { setGameInfo(null); return; }
+    fetch(`${API}/steam/gameinfo/${activeSteamAppIdForFetch}`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.ok ? r.json() : null).then(setGameInfo).catch(() => setGameInfo(null));
-  }, [activeBoardId, boards, token, publicBoardMode, games]);
+  }, [activeSteamAppIdForFetch, token]);
 
   // Board game search
   const searchBoardGames = useCallback(async (q) => {
@@ -480,10 +482,16 @@ export default function App() {
     if (activeBoardId === boardId) { setActiveBoardId(remaining[0]?.id || null); setColumns(remaining[0]?.columns || []); setGames([]); }
   };
 
+  // Helper: returns the correct board API base URL (public vs personal)
+  const getBoardApi = useCallback(
+    () => publicBoardMode ? `${API}/public/boards/${publicBoardMode.id}` : `${API}/boards/${activeBoardId}`,
+    [publicBoardMode, activeBoardId],
+  );
+
   // Columns CRUD
   const addColumn = async () => {
     try {
-      const boardApi = publicBoardMode ? `${API}/public/boards/${publicBoardMode.id}` : `${API}/boards/${activeBoardId}`;
+      const boardApi = getBoardApi();
       const res = await fetch(`${boardApi}/columns`, { method: 'POST', headers: authHeaders(token), body: JSON.stringify({ label: 'Nouvelle colonne' }) });
       if (!res.ok) { const e = await res.json().catch(() => ({})); alert('Erreur colonne: ' + (e.error || res.status)); return; }
       const col = await res.json();
@@ -492,14 +500,14 @@ export default function App() {
     } catch (err) { alert('Erreur réseau: ' + err.message); }
   };
   const renameColumn = async (colId, label) => {
-    const boardApi = publicBoardMode ? `${API}/public/boards/${publicBoardMode.id}` : `${API}/boards/${activeBoardId}`;
+    const boardApi = getBoardApi();
     await fetch(`${boardApi}/columns/${colId}`, { method: 'PATCH', headers: authHeaders(token), body: JSON.stringify({ label }) });
     const updated = columns.map(c => c.id === colId ? { ...c, label } : c);
     setColumns(updated);
     if (!publicBoardMode) setBoards(prev => prev.map(b => b.id === activeBoardId ? { ...b, columns: updated } : b));
   };
   const setColumnEmoji = async (colId, emoji) => {
-    const boardApi = publicBoardMode ? `${API}/public/boards/${publicBoardMode.id}` : `${API}/boards/${activeBoardId}`;
+    const boardApi = getBoardApi();
     await fetch(`${boardApi}/columns/${colId}`, { method: 'PATCH', headers: authHeaders(token), body: JSON.stringify({ emoji }) });
     const updated = columns.map(c => c.id === colId ? { ...c, emoji } : c);
     setColumns(updated);
@@ -507,7 +515,7 @@ export default function App() {
   };
   const deleteColumn = async (colId) => {
     if (!confirm('Supprimer cette colonne ? Les jeux seront déplacés dans la première colonne.')) return;
-    const boardApi = publicBoardMode ? `${API}/public/boards/${publicBoardMode.id}` : `${API}/boards/${activeBoardId}`;
+    const boardApi = getBoardApi();
     await fetch(`${boardApi}/columns/${colId}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
     const updated = columns.filter(c => c.id !== colId);
     setColumns(updated);
@@ -523,7 +531,7 @@ export default function App() {
   // Games CRUD
   const addGame = async (game, targetColId) => {
     const colId = targetColId || columns[0]?.id;
-    const boardApi = publicBoardMode ? `${API}/public/boards/${publicBoardMode.id}` : `${API}/boards/${activeBoardId}`;
+    const boardApi = getBoardApi();
     await fetch(`${boardApi}/games`, {
       method: 'POST', headers: authHeaders(token),
       body: JSON.stringify({ appid: game.appid, name: game.name, header_img: game.header_img, icon_img: game.icon_img, column: colId, type: game.type || 'steam', emoji: game.emoji || null, taskType: game.taskType || null, urgent: game.urgent ?? false, assignees: game.assignees ?? [], notes: game.notes ?? [], progress: game.progress ?? null }),
@@ -536,19 +544,19 @@ export default function App() {
     }
   };
   const removeGame = async (appid) => {
-    const boardApi = publicBoardMode ? `${API}/public/boards/${publicBoardMode.id}` : `${API}/boards/${activeBoardId}`;
+    const boardApi = getBoardApi();
     await fetch(`${boardApi}/games/${appid}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
     setGames(prev => prev.filter(g => g.appid !== appid));
   };
 
   const archiveGame = async (appid) => {
-    const boardApi = publicBoardMode ? `${API}/public/boards/${publicBoardMode.id}` : `${API}/boards/${activeBoardId}`;
+    const boardApi = getBoardApi();
     await fetch(`${boardApi}/games/${appid}`, { method: 'PATCH', headers: authHeaders(token), body: JSON.stringify({ archived: true }) });
     setGames(prev => prev.map(g => g.appid === appid ? { ...g, archived: true } : g));
   };
 
   const unarchiveGame = async (appid) => {
-    const boardApi = publicBoardMode ? `${API}/public/boards/${publicBoardMode.id}` : `${API}/boards/${activeBoardId}`;
+    const boardApi = getBoardApi();
     await fetch(`${boardApi}/games/${appid}`, { method: 'PATCH', headers: authHeaders(token), body: JSON.stringify({ archived: false }) });
     setGames(prev => prev.map(g => g.appid === appid ? { ...g, archived: false } : g));
   };
@@ -559,7 +567,7 @@ export default function App() {
       if (idx !== -1) return { ...g, sortOrder: idx, column: colId };
       return g;
     }));
-    const boardApi = publicBoardMode ? `${API}/public/boards/${publicBoardMode.id}` : `${API}/boards/${activeBoardId}`;
+    const boardApi = getBoardApi();
     await fetch(`${boardApi}/columns/${colId}/games/reorder`, {
       method: 'PATCH', headers: authHeaders(token),
       body: JSON.stringify({ order: orderedAppids }),
@@ -567,7 +575,7 @@ export default function App() {
   }, [activeBoardId, token, publicBoardMode]);
 
   const updateGame = async (updatedGame) => {
-    const boardApi = publicBoardMode ? `${API}/public/boards/${publicBoardMode.id}` : `${API}/boards/${activeBoardId}`;
+    const boardApi = getBoardApi();
     const { appid, name, emoji, taskType, dueDate, startDate, endDate, urgent, assignees, notes, progress } = updatedGame;
     await fetch(`${boardApi}/games/${appid}`, {
       method: 'PATCH', headers: authHeaders(token),
@@ -578,7 +586,7 @@ export default function App() {
 
   // Generic field patch — used by TaskModal for immediate note/urgent/assignee saves
   const patchGame = async (appid, fields) => {
-    const boardApi = publicBoardMode ? `${API}/public/boards/${publicBoardMode.id}` : `${API}/boards/${activeBoardId}`;
+    const boardApi = getBoardApi();
     await fetch(`${boardApi}/games/${appid}`, {
       method: 'PATCH', headers: authHeaders(token),
       body: JSON.stringify(fields),
@@ -587,7 +595,7 @@ export default function App() {
   };
   const moveGame = useCallback(async (appid, column) => {
     setGames(prev => prev.map(g => g.appid === appid ? { ...g, column } : g));
-    const boardApi = publicBoardMode ? `${API}/public/boards/${publicBoardMode.id}` : `${API}/boards/${activeBoardId}`;
+    const boardApi = getBoardApi();
     await fetch(`${boardApi}/games/${appid}`, { method: 'PATCH', headers: authHeaders(token), body: JSON.stringify({ column }) });
   }, [activeBoardId, token, publicBoardMode]);
 
@@ -596,7 +604,7 @@ export default function App() {
     const reordered = orderedIds.map(id => columns.find(c => c.id === id)).filter(Boolean);
     setColumns(reordered);
     if (!publicBoardMode) setBoards(prev => prev.map(b => b.id === activeBoardId ? { ...b, columns: reordered } : b));
-    const boardApi = publicBoardMode ? `${API}/public/boards/${publicBoardMode.id}` : `${API}/boards/${activeBoardId}`;
+    const boardApi = getBoardApi();
     await fetch(`${boardApi}/columns/reorder`, { method: 'PATCH', headers: authHeaders(token), body: JSON.stringify({ order: orderedIds }) });
   };
 
@@ -1055,10 +1063,10 @@ export default function App() {
               ) : (
                 <span style={{ fontSize: 20, flexShrink: 0 }}>{publicBoardMode.emoji || '🎮'}</span>
               )}
-              {/* Board name — same size/weight as personal board mobile */}
               <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{publicBoardMode.name}</span>
-              {/* "Public" badge — same style as personal board mobile */}
               <span style={{ fontSize: 10, fontWeight: 700, color: '#3db86a', border: '1px solid #3db86a', borderRadius: 4, padding: '1px 5px', flexShrink: 0 }}>Public</span>
+              <button onClick={toggleCompact} title="Compact" style={{ background: compactView ? 'rgba(192,87,10,0.15)' : 'rgba(255,255,255,.06)', border: compactView ? '1px solid var(--accent)' : '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', color: compactView ? 'var(--accent)' : 'var(--text-muted)', fontSize: 11, cursor: 'pointer', flexShrink: 0 }}>⊟</button>
+              <button onClick={() => setShowSearch(true)} style={{ background: 'var(--accent)', border: 'none', borderRadius: 7, padding: '7px 10px', color: '#fff', fontWeight: 700, fontSize: 12, flexShrink: 0 }}>+ {isTaskBoard ? 'Tâche' : 'Jeu'}</button>
               <button onClick={refreshPublicBoard} title="Rafraîchir" style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', color: 'var(--text-muted)', fontSize: 14, cursor: 'pointer', flexShrink: 0, lineHeight: 1 }}>↻</button>
               <button onClick={closePublicBoard} style={{ background: 'rgba(255,255,255,.08)', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 10px', color: 'var(--text-muted)', fontSize: 11, cursor: 'pointer', flexShrink: 0 }}>✕</button>
             </>
@@ -1165,71 +1173,7 @@ export default function App() {
               <button onClick={refreshPublicBoard} style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 11px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ fontSize: 15, lineHeight: 1 }}>↻</span> Rafraîchir</button>
               {/* ── Steam game info — encart centre du header (public board) ── */}
               <div style={{ flex: '1 1 0', display: 'flex', justifyContent: 'center', minWidth: gameInfo ? 200 : 0, minHeight: 0 }}>
-                {gameInfo && (() => {
-                  const reviewColor = gameInfo.reviewScore >= 8 ? '#4cd882' : gameInfo.reviewScore >= 5 ? '#f5c518' : '#f87575';
-                  const reviewBg    = gameInfo.reviewScore >= 8 ? 'rgba(60,200,100,.1)' : gameInfo.reviewScore >= 5 ? 'rgba(245,197,24,.1)' : 'rgba(248,117,117,.1)';
-                  return (
-                    <div style={{ display: 'flex', alignItems: 'stretch', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.3)', fontSize: 12, flexShrink: 0 }}>
-                      {gameInfo.playerCount !== null && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', borderRight: '1px solid rgba(255,255,255,0.08)' }}>
-                          <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#3db86a', boxShadow: '0 0 6px #3db86a88', display: 'inline-block', flexShrink: 0 }} />
-                          <div>
-                            <div style={{ fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>{gameInfo.playerCount.toLocaleString('fr-FR')}</div>
-                            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.45)', lineHeight: 1 }}>en jeu</div>
-                          </div>
-                        </div>
-                      )}
-                      {gameInfo.reviewScoreDesc && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', background: reviewBg, borderRight: gameInfo.metacritic || gameInfo.price ? '1px solid rgba(255,255,255,0.08)' : undefined, cursor: 'pointer' }}
-                          onClick={() => window.open(`https://store.steampowered.com/app/${gameInfo.appid}/#app_reviews_hash`, '_blank')}
-                          title="Voir les avis Steam"
-                        >
-                          <span style={{ fontSize: 14, lineHeight: 1 }}>{gameInfo.reviewScore >= 8 ? '👍' : gameInfo.reviewScore >= 5 ? '😐' : '👎'}</span>
-                          <div>
-                            <div style={{ fontWeight: 700, color: reviewColor, lineHeight: 1.2 }}>{gameInfo.reviewScoreDesc}</div>
-                            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.45)', lineHeight: 1 }}>{gameInfo.positivePercent !== null ? `${gameInfo.positivePercent}% positif` : ''}{gameInfo.totalReviews ? ` · ${gameInfo.totalReviews.toLocaleString('fr-FR')}` : ''}</div>
-                          </div>
-                        </div>
-                      )}
-                      {gameInfo.metacritic !== null && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRight: gameInfo.price ? '1px solid rgba(255,255,255,0.08)' : undefined, cursor: gameInfo.metacriticUrl ? 'pointer' : 'default' }}
-                          onClick={() => gameInfo.metacriticUrl && window.open(gameInfo.metacriticUrl, '_blank')}
-                          title={gameInfo.metacriticUrl ? 'Voir sur Metacritic' : undefined}
-                        >
-                          <div style={{ width: 26, height: 26, borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 13, color: '#000', background: gameInfo.metacritic >= 75 ? '#6c3' : gameInfo.metacritic >= 50 ? '#fc3' : '#f00', flexShrink: 0 }}>{gameInfo.metacritic}</div>
-                          <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.45)', lineHeight: 1.3 }}>Meta<br/>critic</div>
-                        </div>
-                      )}
-                      {gameInfo.price && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px' }}>
-                          {gameInfo.discount > 0 && <span style={{ background: '#4c6b22', color: '#a4d007', fontWeight: 900, fontSize: 10, padding: '1px 4px', borderRadius: 3, flexShrink: 0 }}>-{gameInfo.discount}%</span>}
-                          <div>
-                            {gameInfo.discount > 0 && gameInfo.priceInitial && <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)', textDecoration: 'line-through', lineHeight: 1 }}>{gameInfo.priceInitial}</div>}
-                            <div style={{ fontWeight: 700, color: gameInfo.discount > 0 ? '#a4d007' : '#fff', lineHeight: 1.2 }}>{gameInfo.price}</div>
-                          </div>
-                        </div>
-                      )}
-                      {/* ── Colonne droite : genres / multijoueur / studio / date ── */}
-                      {(gameInfo.genres?.length || gameInfo.multiplayerLabel || gameInfo.earlyAccess || gameInfo.comingSoon || gameInfo.developer || gameInfo.releaseDate) && (
-                        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 4, padding: '5px 11px', borderLeft: '1px solid rgba(255,255,255,0.08)' }}>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, alignItems: 'center' }}>
-                            {gameInfo.earlyAccess && <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 4, background: 'rgba(220,50,50,0.18)', color: '#ff5555', border: '1px solid rgba(220,50,50,0.5)', whiteSpace: 'nowrap' }}>⚠ Accès Anticipé</span>}
-                            {gameInfo.comingSoon && !gameInfo.earlyAccess && <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 4, background: 'rgba(245,197,24,0.12)', color: '#f5c518', border: '1px solid rgba(245,197,24,0.3)', whiteSpace: 'nowrap' }}>🔜 À venir</span>}
-                            {gameInfo.multiplayerLabel && <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 4, background: 'rgba(71,167,245,0.15)', color: '#47a7f5', border: '1px solid rgba(71,167,245,0.3)', whiteSpace: 'nowrap' }}>👥 {gameInfo.multiplayerLabel}</span>}
-                            {(gameInfo.genres || []).map(g => <span key={g} style={{ fontSize: 10, padding: '1px 5px', borderRadius: 4, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.55)', border: '1px solid rgba(255,255,255,0.1)', whiteSpace: 'nowrap' }}>{g}</span>)}
-                          </div>
-                          {(gameInfo.developer || gameInfo.releaseDate) && (
-                            <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
-                              {gameInfo.developer && <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', whiteSpace: 'nowrap' }}>🛠 {gameInfo.developer}</span>}
-                              {gameInfo.developer && gameInfo.releaseDate && <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 10 }}>·</span>}
-                              {gameInfo.releaseDate && <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.38)', whiteSpace: 'nowrap' }}>📅 {gameInfo.releaseDate}</span>}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()}
+                <SteamEncart gameInfo={gameInfo} />
               </div>
               <input type="search" placeholder="Filtrer..." value={search} onChange={e => setSearch(e.target.value)}
                 style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 10px', color: 'var(--text)', fontSize: 12, outline: 'none', maxWidth: 180 }} />
@@ -1312,74 +1256,7 @@ export default function App() {
               )}
               {/* ── Steam game info — encart centre du header ── */}
               <div style={{ flex: '1 1 0', display: 'flex', justifyContent: 'center', minWidth: gameInfo ? 200 : 0, minHeight: 0 }}>
-                {gameInfo && (() => {
-                  const reviewColor = gameInfo.reviewScore >= 8 ? '#4cd882' : gameInfo.reviewScore >= 5 ? '#f5c518' : '#f87575';
-                  const reviewBg    = gameInfo.reviewScore >= 8 ? 'rgba(60,200,100,.1)' : gameInfo.reviewScore >= 5 ? 'rgba(245,197,24,.1)' : 'rgba(248,117,117,.1)';
-                  return (
-                    <div style={{ display: 'flex', alignItems: 'stretch', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.3)', fontSize: 12, flexShrink: 0 }}>
-                      {gameInfo.playerCount !== null && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', borderRight: '1px solid rgba(255,255,255,0.08)' }}>
-                          <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#3db86a', boxShadow: '0 0 6px #3db86a88', display: 'inline-block', flexShrink: 0 }} />
-                          <div>
-                            <div style={{ fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>{gameInfo.playerCount.toLocaleString('fr-FR')}</div>
-                            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.45)', lineHeight: 1 }}>en jeu</div>
-                          </div>
-                        </div>
-                      )}
-                      {gameInfo.reviewScoreDesc && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', background: reviewBg, borderRight: gameInfo.metacritic || gameInfo.price ? '1px solid rgba(255,255,255,0.08)' : undefined, cursor: 'pointer' }}
-                          onClick={() => window.open(`https://store.steampowered.com/app/${gameInfo.appid}/#app_reviews_hash`, '_blank')}
-                          title="Voir les avis Steam"
-                        >
-                          <span style={{ fontSize: 14, lineHeight: 1 }}>{gameInfo.reviewScore >= 8 ? '👍' : gameInfo.reviewScore >= 5 ? '😐' : '👎'}</span>
-                          <div>
-                            <div style={{ fontWeight: 700, color: reviewColor, lineHeight: 1.2 }}>{gameInfo.reviewScoreDesc}</div>
-                            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.45)', lineHeight: 1 }}>
-                              {gameInfo.positivePercent !== null ? `${gameInfo.positivePercent}% positif` : ''}
-                              {gameInfo.totalReviews ? ` · ${gameInfo.totalReviews.toLocaleString('fr-FR')}` : ''}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                      {gameInfo.metacritic !== null && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRight: gameInfo.price ? '1px solid rgba(255,255,255,0.08)' : undefined, cursor: gameInfo.metacriticUrl ? 'pointer' : 'default' }}
-                          onClick={() => gameInfo.metacriticUrl && window.open(gameInfo.metacriticUrl, '_blank')}
-                          title={gameInfo.metacriticUrl ? 'Voir sur Metacritic' : undefined}
-                        >
-                          <div style={{ width: 26, height: 26, borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 13, color: '#000', background: gameInfo.metacritic >= 75 ? '#6c3' : gameInfo.metacritic >= 50 ? '#fc3' : '#f00', flexShrink: 0 }}>{gameInfo.metacritic}</div>
-                          <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.45)', lineHeight: 1.3 }}>Meta<br/>critic</div>
-                        </div>
-                      )}
-                      {gameInfo.price && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px' }}>
-                          {gameInfo.discount > 0 && <span style={{ background: '#4c6b22', color: '#a4d007', fontWeight: 900, fontSize: 10, padding: '1px 4px', borderRadius: 3, flexShrink: 0 }}>-{gameInfo.discount}%</span>}
-                          <div>
-                            {gameInfo.discount > 0 && gameInfo.priceInitial && <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)', textDecoration: 'line-through', lineHeight: 1 }}>{gameInfo.priceInitial}</div>}
-                            <div style={{ fontWeight: 700, color: gameInfo.discount > 0 ? '#a4d007' : '#fff', lineHeight: 1.2 }}>{gameInfo.price}</div>
-                          </div>
-                        </div>
-                      )}
-                      {/* ── Colonne droite : genres / multijoueur / studio / date ── */}
-                      {(gameInfo.genres?.length || gameInfo.multiplayerLabel || gameInfo.earlyAccess || gameInfo.comingSoon || gameInfo.developer || gameInfo.releaseDate) && (
-                        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 4, padding: '5px 11px', borderLeft: '1px solid rgba(255,255,255,0.08)' }}>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, alignItems: 'center' }}>
-                            {gameInfo.earlyAccess && <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 4, background: 'rgba(220,50,50,0.18)', color: '#ff5555', border: '1px solid rgba(220,50,50,0.5)', whiteSpace: 'nowrap' }}>⚠ Accès Anticipé</span>}
-                            {gameInfo.comingSoon && !gameInfo.earlyAccess && <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 4, background: 'rgba(245,197,24,0.12)', color: '#f5c518', border: '1px solid rgba(245,197,24,0.3)', whiteSpace: 'nowrap' }}>🔜 À venir</span>}
-                            {gameInfo.multiplayerLabel && <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 4, background: 'rgba(71,167,245,0.15)', color: '#47a7f5', border: '1px solid rgba(71,167,245,0.3)', whiteSpace: 'nowrap' }}>👥 {gameInfo.multiplayerLabel}</span>}
-                            {(gameInfo.genres || []).map(g => <span key={g} style={{ fontSize: 10, padding: '1px 5px', borderRadius: 4, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.55)', border: '1px solid rgba(255,255,255,0.1)', whiteSpace: 'nowrap' }}>{g}</span>)}
-                          </div>
-                          {(gameInfo.developer || gameInfo.releaseDate) && (
-                            <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
-                              {gameInfo.developer && <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', whiteSpace: 'nowrap' }}>🛠 {gameInfo.developer}</span>}
-                              {gameInfo.developer && gameInfo.releaseDate && <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 10 }}>·</span>}
-                              {gameInfo.releaseDate && <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.38)', whiteSpace: 'nowrap' }}>📅 {gameInfo.releaseDate}</span>}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()}
+                <SteamEncart gameInfo={gameInfo} />
               </div>
               {(activeBoardId || publicBoardMode) && archiveCount > 0 && (
                 <button
@@ -1435,7 +1312,7 @@ export default function App() {
       {showSteamSettings && <SteamSettings token={token} onSave={handleSteamSave} onClose={() => setShowSteamSettings(false)} />}
       {showProfile && <ProfilePage token={token} currentUser={currentUser} onClose={() => setShowProfile(false)} />}
       {/* Game stats widget — shown only when viewing a Steam-based board */}
-      {isTaskBoard && !showHome && !showPublicBoards && (
+      {isTaskBoard && !showHome && !showPublicBoards && !isMobile && (
         <GameStatsWidget
           api={API}
           token={token}

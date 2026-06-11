@@ -19,13 +19,12 @@ export default function MobileBoard({ columns, byColumn, onCardClick, onArchiveG
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
-      {/* Tabs colonnes */}
-      <div style={{
-        display: 'flex', gap: 6, padding: '10px 12px',
-        overflowX: 'auto', flexShrink: 0,
-        borderBottom: '1px solid var(--border)',
-        scrollbarWidth: 'none',
-      }}>
+      {/* Tabs colonnes — fade gradient aux bords pour indiquer le scroll */}
+      <div style={{ position: 'relative', flexShrink: 0, borderBottom: '1px solid var(--border)' }}>
+        <div style={{
+          display: 'flex', gap: 6, padding: '10px 12px',
+          overflowX: 'auto', scrollbarWidth: 'none',
+        }}>
         {columns.map(col => {
           const active = col.id === currentColId;
           const count = (byColumn[col.id] || []).length;
@@ -55,6 +54,11 @@ export default function MobileBoard({ columns, byColumn, onCardClick, onArchiveG
             </button>
           );
         })}
+        </div>
+        {/* Fade gauche */}
+        <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 20, background: 'linear-gradient(to right, var(--surface), transparent)', pointerEvents: 'none' }} />
+        {/* Fade droite */}
+        <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 20, background: 'linear-gradient(to left, var(--surface), transparent)', pointerEvents: 'none' }} />
       </div>
 
       {/* Liste de jeux */}
