@@ -198,7 +198,7 @@ export default function GameInfoPanel({
             background: 'linear-gradient(transparent, rgba(0,0,0,0.88))',
             padding: '30px 14px 10px',
           }}>
-            <div style={{ fontSize: 18, fontWeight: 700, color: '#fff', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{gameName}</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: '#fff', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{gameName}</div>
           </div>
           {/* Steam link button */}
           {appId && (
@@ -226,48 +226,48 @@ export default function GameInfoPanel({
           }}>
             {/* Players */}
             {gameInfo.playerCount !== null && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 15 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 14 }}>
                 <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#3db86a', boxShadow: '0 0 5px #3db86a88', display: 'inline-block', flexShrink: 0 }} />
                 <span style={{ fontWeight: 700, color: '#fff' }}>{gameInfo.playerCount.toLocaleString('fr-FR')}</span>
-                <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>en jeu</span>
+                <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>en jeu</span>
               </div>
             )}
             {/* Review */}
             {gameInfo.reviewScoreDesc && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 15 }}>
-                <span style={{ fontSize: 18 }}>{reviewEmoji}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 14 }}>
+                <span style={{ fontSize: 16 }}>{reviewEmoji}</span>
                 <span style={{ fontWeight: 700, color: reviewColor }}>{gameInfo.reviewScoreDesc}</span>
-                {gameInfo.positivePercent !== null && <span style={{ color: 'rgba(255,255,255,0.38)', fontSize: 13 }}>({gameInfo.positivePercent}%)</span>}
+                {gameInfo.positivePercent !== null && <span style={{ color: 'rgba(255,255,255,0.38)', fontSize: 12 }}>({gameInfo.positivePercent}%)</span>}
               </div>
             )}
             {/* Price */}
             {gameInfo.price && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 15, marginLeft: 'auto' }}>
-                {gameInfo.discount > 0 && <span style={{ background: '#4c6b22', color: '#a4d007', fontWeight: 900, fontSize: 13, padding: '1px 5px', borderRadius: 3 }}>-{gameInfo.discount}%</span>}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 14, marginLeft: 'auto' }}>
+                {gameInfo.discount > 0 && <span style={{ background: '#4c6b22', color: '#a4d007', fontWeight: 900, fontSize: 12, padding: '1px 5px', borderRadius: 3 }}>-{gameInfo.discount}%</span>}
                 <span style={{ fontWeight: 700, color: gameInfo.discount > 0 ? '#a4d007' : '#fff' }}>{gameInfo.price}</span>
               </div>
             )}
             {/* Metacritic */}
             {gameInfo.metacritic !== null && (
               <div
-                style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontSize: 15 }}
+                style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontSize: 14 }}
                 onClick={() => gameInfo.metacriticUrl && window.open(gameInfo.metacriticUrl, '_blank')}
               >
-                <div style={{ width: 28, height: 28, borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 14, color: '#000', background: gameInfo.metacritic >= 75 ? '#6c3' : gameInfo.metacritic >= 50 ? '#fc3' : '#f00' }}>
+                <div style={{ width: 25, height: 25, borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 13, color: '#000', background: gameInfo.metacritic >= 75 ? '#6c3' : gameInfo.metacritic >= 50 ? '#fc3' : '#f00' }}>
                   {gameInfo.metacritic}
                 </div>
               </div>
             )}
             {/* Badges */}
             <div style={{ width: '100%', display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-              {gameInfo.earlyAccess && <span style={{ fontSize: 14, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: 'rgba(220,50,50,0.18)', color: '#ff5555', border: '1px solid rgba(220,50,50,0.5)' }}>⚠ Accès Anticipé</span>}
-              {gameInfo.comingSoon && !gameInfo.earlyAccess && <span style={{ fontSize: 14, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: 'rgba(245,197,24,0.12)', color: '#f5c518', border: '1px solid rgba(245,197,24,0.3)' }}>🔜 À venir</span>}
-              {gameInfo.multiplayerLabel && <span style={{ fontSize: 14, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: 'rgba(71,167,245,0.15)', color: '#47a7f5', border: '1px solid rgba(71,167,245,0.3)' }}>👥 {gameInfo.multiplayerLabel}</span>}
-              {(gameInfo.genres || []).map(g => <span key={g} style={{ fontSize: 14, padding: '2px 7px', borderRadius: 4, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.1)' }}>{g}</span>)}
+              {gameInfo.earlyAccess && <span style={{ fontSize: 13, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: 'rgba(220,50,50,0.18)', color: '#ff5555', border: '1px solid rgba(220,50,50,0.5)' }}>⚠ Accès Anticipé</span>}
+              {gameInfo.comingSoon && !gameInfo.earlyAccess && <span style={{ fontSize: 13, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: 'rgba(245,197,24,0.12)', color: '#f5c518', border: '1px solid rgba(245,197,24,0.3)' }}>🔜 À venir</span>}
+              {gameInfo.multiplayerLabel && <span style={{ fontSize: 13, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: 'rgba(71,167,245,0.15)', color: '#47a7f5', border: '1px solid rgba(71,167,245,0.3)' }}>👥 {gameInfo.multiplayerLabel}</span>}
+              {(gameInfo.genres || []).map(g => <span key={g} style={{ fontSize: 13, padding: '2px 7px', borderRadius: 4, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.1)' }}>{g}</span>)}
             </div>
             {/* Developer + date */}
             {(gameInfo.developer || gameInfo.releaseDate) && (
-              <div style={{ width: '100%', display: 'flex', gap: 6, alignItems: 'center', fontSize: 14 }}>
+              <div style={{ width: '100%', display: 'flex', gap: 6, alignItems: 'center', fontSize: 13 }}>
                 {gameInfo.developer && <span style={{ color: 'rgba(255,255,255,0.42)' }}>🛠 {gameInfo.developer}</span>}
                 {gameInfo.developer && gameInfo.releaseDate && <span style={{ color: 'rgba(255,255,255,0.15)' }}>·</span>}
                 {gameInfo.releaseDate && <span style={{ color: 'rgba(255,255,255,0.35)' }}>📅 {gameInfo.releaseDate}</span>}
@@ -284,13 +284,13 @@ export default function GameInfoPanel({
               <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/>
               <path d="M18 14h-8M15 18h-5M10 6h8v4h-8z"/>
             </svg>
-            <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Actualités Steam</span>
-            {newsLoading && <span style={{ fontSize: 13, color: 'var(--text-muted)', marginLeft: 'auto' }}>Chargement…</span>}
-            {!newsLoading && news.length > 0 && <span style={{ fontSize: 13, color: 'var(--text-muted)', marginLeft: 'auto' }}>{news.length} articles</span>}
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Actualités Steam</span>
+            {newsLoading && <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 'auto' }}>Chargement…</span>}
+            {!newsLoading && news.length > 0 && <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 'auto' }}>{news.length} articles</span>}
           </div>
 
           {!newsLoading && news.length === 0 && (
-            <div style={{ padding: '28px 14px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 15 }}>
+            <div style={{ padding: '28px 14px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
               {appId ? 'Aucune actualité disponible' : 'Aucun jeu Steam sélectionné'}
             </div>
           )}
@@ -312,38 +312,38 @@ export default function GameInfoPanel({
                   <div style={{ display: 'flex', gap: 4, marginBottom: 5, flexWrap: 'wrap' }}>
                     {ts.map(tag => {
                       const s = tagStyle(tag);
-                      return <span key={tag} style={{ fontSize: 11, padding: '2px 7px', borderRadius: 3, background: s.bg, color: s.color, border: `1px solid ${s.border}`, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{tag}</span>;
+                      return <span key={tag} style={{ fontSize: 10, padding: '2px 7px', borderRadius: 3, background: s.bg, color: s.color, border: `1px solid ${s.border}`, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{tag}</span>;
                     })}
                   </div>
                 )}
                 {/* Title */}
                 <a href={item.url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', display: 'block', marginBottom: 5 }}>
                   <div
-                    style={{ fontSize: 17, fontWeight: 700, color: '#c6d4df', lineHeight: 1.3, transition: 'color .12s' }}
+                    style={{ fontSize: 15, fontWeight: 700, color: '#c6d4df', lineHeight: 1.3, transition: 'color .12s' }}
                     onMouseEnter={e => e.target.style.color = '#fff'}
                     onMouseLeave={e => e.target.style.color = '#c6d4df'}
                   >{item.title}</div>
                 </a>
                 {/* Content */}
                 {item.contents && (
-                  <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.48)', lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                  <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.48)', lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                     {isExpanded ? item.contents : shortContent}
                   </div>
                 )}
                 {/* Footer */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 6 }}>
-                  <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.25)' }}>{fmtDate(item.date)}</span>
-                  {item.author && <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.2)' }}>· {item.author}</span>}
+                  <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)' }}>{fmtDate(item.date)}</span>
+                  {item.author && <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.2)' }}>· {item.author}</span>}
                   <div style={{ flex: 1 }} />
                   {hasMore && (
                     <button
                       onClick={() => setExpanded(prev => ({ ...prev, [item.gid]: !prev[item.gid] }))}
-                      style={{ fontSize: 13, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontWeight: 700 }}
+                      style={{ fontSize: 12, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontWeight: 700 }}
                     >
                       {isExpanded ? 'Réduire ↑' : 'Lire ↓'}
                     </button>
                   )}
-                  <a href={item.url} target="_blank" rel="noreferrer" style={{ fontSize: 13, color: 'rgba(71,167,245,0.7)', textDecoration: 'none', fontWeight: 700 }}>↗</a>
+                  <a href={item.url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: 'rgba(71,167,245,0.7)', textDecoration: 'none', fontWeight: 700 }}>↗</a>
                 </div>
               </div>
             );

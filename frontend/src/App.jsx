@@ -236,7 +236,7 @@ export default function App() {
   const [showBoardSearch, setShowBoardSearch] = useState(false);
   const boardDebounce = useRef(null);
   const headerRef = useRef(null);
-  const [headerHeight, setHeaderHeight] = useState(0);
+  const [headerHeight, setHeaderHeight] = useState(64);
   useEffect(() => {
     if (!headerRef.current) return;
     const obs = new ResizeObserver(entries => setHeaderHeight(entries[0].contentRect.height));
