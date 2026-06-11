@@ -27,7 +27,7 @@ function StatusDot({ state }) {
   );
 }
 
-export default function GameStatsWidget({ api, token, board }) {
+export default function GameStatsWidget({ api, token, board, rightOffset = 0 }) {
   const [stats, setStats]       = useState(null);
   const [profile, setProfile]   = useState(null);
   const [loading, setLoading]   = useState(true);
@@ -75,13 +75,13 @@ export default function GameStatsWidget({ api, token, board }) {
     <div style={{
       position: 'fixed',
       bottom: '25vh',
-      right: 0,
+      right: rightOffset,
       zIndex: 40,
       width: 258,
       display: 'flex',
       alignItems: 'stretch',
       transform: slideIn ? 'translateX(-18px)' : 'translateX(calc(100% - 28px))',
-      transition: 'transform 0.3s cubic-bezier(0.34, 1.2, 0.64, 1)',
+      transition: 'transform 0.3s cubic-bezier(0.34, 1.2, 0.64, 1), right 0.32s cubic-bezier(0.4,0,0.2,1)',
     }}>
       {/* Pull tab */}
       <div

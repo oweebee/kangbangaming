@@ -205,6 +205,13 @@ export default function App() {
     setInfoPanelLockedRaw(val);
     try { localStorage.setItem('infoPanelLocked', JSON.stringify(val)); } catch {}
   };
+  const [infoPanelSide, setInfoPanelSideRaw] = useState(() => {
+    try { return localStorage.getItem('infoPanelSide') || 'left'; } catch { return 'left'; }
+  });
+  const setInfoPanelSide = (val) => {
+    setInfoPanelSideRaw(val);
+    try { localStorage.setItem('infoPanelSide', val); } catch {}
+  };
   const [searchTargetCol, setSearchTargetCol] = useState(null);
   const [appUsers, setAppUsers] = useState([]);
   const [showSearch, setShowSearch] = useState(false);
@@ -1172,6 +1179,8 @@ export default function App() {
           appId={activeSteamAppIdForFetch}
           locked={infoPanelLocked}
           onLockChange={setInfoPanelLocked}
+          side={infoPanelSide}
+          onSideChange={setInfoPanelSide}
           sidebarWidth={278}
           topOffset={headerHeight}
         />
@@ -1312,12 +1321,7 @@ export default function App() {
             </>
           )}
         </header>
-        {/* When GameInfoPanel is locked open, shift board content right to make room */}
-        <div style={{
-          flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column',
-          paddingLeft: (!isMobile && isTaskBoard && infoPanelLocked) ? GAME_INFO_PANEL_WIDTH : 0,
-          transition: 'padding-left 0.32s cubic-bezier(0.4,0,0.2,1)',
-        }}>
+        <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         {showPublicBoards ? (
           <PublicBoards key={publicBoardsKey} token={token} currentUser={currentUser} favBoardIds={new Set(favBoards.map(b => b.id))} onToggleFavorite={toggleFavorite} onOpenBoard={openPublicBoard} onClose={() => setShowPublicBoards(false)} />
         ) : showHome && !publicBoardMode ? (
@@ -1357,6 +1361,7 @@ export default function App() {
           api={API}
           token={token}
           board={publicBoardMode || activeBoard}
+          rightOffset={infoPanelLocked && infoPanelSide === 'right' ? GAME_INFO_PANEL_WIDTH + 30 : 0}
         />
       )}
     </div>

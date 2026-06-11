@@ -20,7 +20,6 @@ function tagStyle(tag) {
   return map[tag?.toLowerCase()] || { bg: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.45)', border: 'rgba(255,255,255,0.1)' };
 }
 
-// Padlock icon
 function LockIcon({ locked, size = 14 }) {
   return locked ? (
     <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -44,19 +43,23 @@ function LockIcon({ locked, size = 14 }) {
  *   appId            — Steam appid string
  *   locked           — contrôlé par le parent
  *   onLockChange     — callback(bool)
+ *   side             — 'left' | 'right' (contrôlé par le parent)
+ *   onSideChange     — callback('left' | 'right')
  *   sidebarWidth     — largeur sidebar (défaut 278)
  *   topOffset        — hauteur du header (panneau démarre en-dessous)
  */
 export default function GameInfoPanel({
   api, token, gameInfo, board, appId,
   locked, onLockChange,
+  side = 'left',
+  onSideChange,
   sidebarWidth = 278,
   topOffset = 0,
 }) {
-  const [open, setOpen]           = useState(false);
-  const [news, setNews]           = useState([]);
+  const [open, setOpen]               = useState(false);
+  const [news, setNews]               = useState([]);
   const [newsLoading, setNewsLoading] = useState(false);
-  const [expanded, setExpanded]   = useState({});
+  const [expanded, setExpanded]       = useState({});
 
   // Fetch news when appId changes
   useEffect(() => {
@@ -76,10 +79,7 @@ export default function GameInfoPanel({
   // Reset expanded items when game changes
   useEffect(() => { setExpanded({}); }, [appId]);
 
-  const handleTabClick = () => {
-    if (locked) return;
-    setOpen(v => !v);
-  };
+  const handleTabClick = () => { if (locked) return; setOpen(v => !v); };
 
   const handleLockToggle = (e) => {
     e.stopPropagation();
@@ -88,7 +88,13 @@ export default function GameInfoPanel({
     if (next) setOpen(true);
   };
 
+  const handleSideToggle = (e) => {
+    e.stopPropagation();
+    onSideChange?.(side === 'left' ? 'right' : 'left');
+  };
+
   const isOpen = open || locked;
+  const isLeft = side === 'left';
 
   const bannerUrl = board?.headerImg || (appId ? `https://cdn.cloudflare.steamstatic.com/steam/apps/${appId}/header.jpg` : null);
   const gameName  = gameInfo?.name || board?.name || '';
@@ -97,43 +103,86 @@ export default function GameInfoPanel({
   const reviewColor = reviewScore >= 8 ? '#4cd882' : reviewScore >= 5 ? '#f5c518' : '#f87575';
   const reviewEmoji = reviewScore >= 8 ? '👍' : reviewScore >= 5 ? '😐' : '👎';
 
-  // Center of the panel area (below header)
+  // Vertical center of panel area (below header)
   const tabTop = `calc(${topOffset}px + (100vh - ${topOffset}px) / 2)`;
+
+  // Tab positioning: left side sticks out from sidebar right edge; right side from viewport right edge
+  const tabTransform = isLeft
+    ? `translateY(-50%) translateX(${isOpen ? GAME_INFO_PANEL_WIDTH : 0}px)`
+    : `translateY(-50%) translateX(${isOpen ? -GAME_INFO_PANEL_WIDTH : 0}px)`;
+
+  // Panel slide: left side slides from left, right side from right
+  const panelTransform = isLeft
+    ? (isOpen ? 'translateX(0)' : 'translateX(-100%)')
+    : (isOpen ? 'translateX(0)' : 'translateX(100%)');
+
+  // Chevron: points toward panel interior
+  // Left+open → ← | Left+closed → → | Right+open → → | Right+closed → ←
+  const chevronPoints = (isOpen && isLeft) || (!isOpen && !isLeft)
+    ? '15 18 9 12 15 6'  // ←
+    : '9 18 15 12 9 6';  // →
+
+  const tabHeight = isOpen ? 108 : 80;
+
+  const accentColor = locked ? '#e8813a' : 'rgba(255,255,255,0.65)';
+  const dimColor    = locked ? '#e8813a' : 'rgba(255,255,255,0.4)';
 
   return (
     <>
+      {/* ── Backdrop — click outside to close (open + not locked) ── */}
+      {isOpen && !locked && (
+        <div
+          onClick={() => setOpen(false)}
+          style={{ position: 'fixed', inset: 0, zIndex: 19, background: 'transparent' }}
+        />
+      )}
+
       {/* ── Pull tab ── */}
       <div
         style={{
           position: 'fixed',
-          left: sidebarWidth,
           top: tabTop,
-          transform: `translateY(-50%) translateX(${isOpen ? GAME_INFO_PANEL_WIDTH : 0}px)`,
-          transition: 'transform 0.32s cubic-bezier(0.4,0,0.2,1)',
+          ...(isLeft ? { left: sidebarWidth } : { right: 0 }),
+          transform: tabTransform,
+          transition: 'transform 0.32s cubic-bezier(0.4,0,0.2,1), height 0.2s ease, background 0.2s',
           zIndex: 26,
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
           width: 22,
-          height: isOpen ? 88 : 64,
+          height: tabHeight,
           background: locked
             ? 'linear-gradient(180deg, rgba(232,129,58,0.3) 0%, rgba(192,80,10,0.3) 100%)'
             : 'linear-gradient(180deg, rgba(50,55,70,0.97) 0%, rgba(28,31,38,0.97) 100%)',
           border: `1px solid ${locked ? 'rgba(232,129,58,0.55)' : 'rgba(255,255,255,0.11)'}`,
-          borderLeft: 'none',
-          borderRadius: '0 10px 10px 0',
-          boxShadow: '3px 0 14px rgba(0,0,0,0.55)',
+          ...(isLeft
+            ? { borderLeft: 'none', borderRadius: '0 10px 10px 0', boxShadow: '3px 0 14px rgba(0,0,0,0.55)' }
+            : { borderRight: 'none', borderRadius: '10px 0 0 10px', boxShadow: '-3px 0 14px rgba(0,0,0,0.55)' }),
           gap: 0,
           userSelect: 'none',
           overflow: 'hidden',
-          transition: 'transform 0.32s cubic-bezier(0.4,0,0.2,1), height 0.2s ease, background 0.2s',
         }}
       >
-        {/* Newspaper icon — top, always visible */}
+        {/* Side-switch — always visible, top zone */}
+        <div
+          onClick={handleSideToggle}
+          title={isLeft ? 'Déplacer le panneau à droite' : 'Déplacer le panneau à gauche'}
+          style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', flex: 1, paddingTop: 6 }}
+        >
+          <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke={dimColor} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            {isLeft ? (
+              <g><line x1="5" y1="12" x2="19" y2="12"/><polyline points="13 6 19 12 13 18"/></g>
+            ) : (
+              <g><line x1="19" y1="12" x2="5" y2="12"/><polyline points="11 6 5 12 11 18"/></g>
+            )}
+          </svg>
+        </div>
+
+        {/* Newspaper icon — always visible */}
         <div
           onClick={handleTabClick}
           title={isOpen ? (locked ? 'Panneau verrouillé ouvert' : 'Fermer') : 'Infos & Actualités du jeu'}
-          style={{ cursor: locked ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', flex: 1, paddingTop: 8 }}
+          style={{ cursor: locked ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', flex: 1 }}
         >
-          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke={locked ? '#e8813a' : 'rgba(255,255,255,0.65)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke={accentColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/>
             <path d="M18 14h-8M15 18h-5M10 6h8v4h-8z"/>
           </svg>
@@ -142,7 +191,7 @@ export default function GameInfoPanel({
         {/* Lock toggle — only visible when open */}
         <div
           onClick={isOpen ? handleLockToggle : undefined}
-          title={locked ? 'Déverrouiller' : 'Verrouiller ouvert (pousse les colonnes)'}
+          title={locked ? 'Déverrouiller' : 'Verrouiller ouvert (panneau fixe)'}
           style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%',
             height: isOpen ? 24 : 0,
@@ -156,32 +205,37 @@ export default function GameInfoPanel({
           <LockIcon locked={locked} size={12} />
         </div>
 
-        {/* Chevron — bottom, clickable to toggle */}
+        {/* Chevron — bottom, click to open/close */}
         <div
           onClick={handleTabClick}
-          style={{ cursor: locked ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', flex: 1, paddingBottom: 8 }}
+          style={{ cursor: locked ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', flex: 1, paddingBottom: 6 }}
         >
-          <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke={locked ? '#e8813a' : 'rgba(255,255,255,0.45)'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points={isOpen ? '15 18 9 12 15 6' : '9 18 15 12 9 6'} />
+          <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke={dimColor} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points={chevronPoints} />
           </svg>
         </div>
       </div>
 
       {/* ── Sliding panel ── */}
       <div
+        onClick={e => e.stopPropagation()}
         style={{
           position: 'fixed',
-          left: sidebarWidth,
+          ...(isLeft ? { left: sidebarWidth } : { right: 0 }),
           top: topOffset,
           bottom: 0,
           width: GAME_INFO_PANEL_WIDTH,
-          transform: isOpen ? 'translateX(0)' : 'translateX(-100%)',
+          transform: panelTransform,
           transition: 'transform 0.32s cubic-bezier(0.4,0,0.2,1)',
           zIndex: 20,
           display: 'flex', flexDirection: 'column',
           background: 'var(--surface)',
-          borderRight: '1px solid var(--border)',
-          boxShadow: isOpen ? '6px 0 28px rgba(0,0,0,0.55)' : 'none',
+          ...(isLeft
+            ? { borderRight: '1px solid var(--border)' }
+            : { borderLeft: '1px solid var(--border)' }),
+          boxShadow: isOpen
+            ? (isLeft ? '6px 0 28px rgba(0,0,0,0.55)' : '-6px 0 28px rgba(0,0,0,0.55)')
+            : 'none',
           overflow: 'hidden',
         }}
       >
