@@ -373,8 +373,8 @@ export default function GameInfoPanel({
             const shortContent = truncate(item.contents, 260);
             const hasMore = item.contents.length > 260;
             const ts = item.tags || [];
-            const ytId = extractYoutubeId(item.contents);
-            const imgUrl = !ytId ? extractNewsImage(item.contents) : null;
+            const ytId = item.youtube || null;
+            const imgUrl = !ytId ? (item.image || null) : null;
             return (
               <div
                 key={item.gid}

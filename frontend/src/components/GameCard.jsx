@@ -33,7 +33,7 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
       style={{
         position: 'relative',
         background: isArchived ? 'var(--surface2)' : tt ? tt.bg : 'var(--surface2)',
-        border: isArchived ? '1.5px solid rgba(120,120,120,0.3)' : isUrgent ? '1.5px solid rgba(220,60,60,0.6)' : tt ? `1.5px solid ${tt.border}` : '1.5px solid var(--border)',
+        border: isArchived ? '2px solid rgba(120,120,120,0.3)' : isUrgent ? '2px solid rgba(220,60,60,0.6)' : tt ? `2px solid ${tt.border}` : '2px solid var(--border)',
         borderRadius: 8,
         overflow: 'hidden',
         cursor: readOnly || isArchived ? 'default' : 'grab',

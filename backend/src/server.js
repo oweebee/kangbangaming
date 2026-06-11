@@ -596,10 +596,13 @@ app.get('/api/steam/profile', requireAuth, async (req, res) => {
 const NEWS_TTL = 30 * 60 * 1000; // 30 min
 const newsCaches = new Map(); // appid → { data, cacheAt }
 
+const STEAM_CLAN_IMG = 'https://clan.akamai.steamstatic.com/images/';
+
 // Strip BBCode and basic HTML tags from Steam news content
 function stripMarkup(str = '') {
   return str
     .replace(/\[img\][^\[]*\[\/img\]/gi, '')          // remove images
+    .replace(/\[previewyoutube[^\]]*\]\[\/previewyoutube\]/gi, '') // remove yt embeds
     .replace(/\[url=[^\]]*\](.*?)\[\/url\]/gi, '$1')  // url → text
     .replace(/\[[^\]]+\]/g, '')                        // remaining BBCode tags
     .replace(/<[^>]+>/g, '')                           // HTML tags
@@ -608,13 +611,31 @@ function stripMarkup(str = '') {
     .trim();
 }
 
+function extractImage(raw = '') {
+  const bbMatch = raw.match(/\[img\]\s*(\{STEAM_CLAN_IMAGE\}[^\s[\]]+|\bhttps?:\/\/[^\s[\]]+\.(?:jpe?g|png|gif|webp))\s*\[\/img\]/i);
+  if (bbMatch) return bbMatch[1].replace(/\{STEAM_CLAN_IMAGE\}/g, STEAM_CLAN_IMG);
+  const htmlMatch = raw.match(/<img[^>]+src=["']([^"']+)["']/i);
+  if (htmlMatch) return htmlMatch[1];
+  const urlMatch = raw.match(/https?:\/\/[^\s[\]"'<>]+\.(?:jpe?g|png|gif|webp)/i);
+  if (urlMatch) return urlMatch[0];
+  return null;
+}
+
+function extractYoutubeId(raw = '') {
+  const bbMatch = raw.match(/\[previewyoutube=([A-Za-z0-9_-]{8,15})[;\]]/i);
+  if (bbMatch) return bbMatch[1];
+  const urlMatch = raw.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]{8,15})/i);
+  if (urlMatch) return urlMatch[1];
+  return null;
+}
+
 app.get('/api/steam/news/:appid', requireAuth, async (req, res) => {
   const { appid } = req.params;
   const entry = newsCaches.get(appid);
   if (entry && Date.now() - entry.cacheAt < NEWS_TTL) return res.json(entry.data);
   try {
     const data = await steamFetch(
-      `https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=${appid}&count=15&maxlength=800&format=json`
+      `https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=${appid}&count=15&maxlength=3000&format=json`
     );
     const items = (data.appnews?.newsitems || []).map(n => ({
       gid: n.gid,
@@ -622,6 +643,8 @@ app.get('/api/steam/news/:appid', requireAuth, async (req, res) => {
       url: n.url,
       author: n.author || null,
       contents: stripMarkup(n.contents),
+      image: extractImage(n.contents),
+      youtube: extractYoutubeId(n.contents),
       feedlabel: n.feedlabel || null,
       date: n.date,
       tags: n.tags || [],
