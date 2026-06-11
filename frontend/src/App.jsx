@@ -1164,7 +1164,7 @@ export default function App() {
                       {/* ── Ligne stats ── */}
                       <div style={{ display: 'flex', alignItems: 'stretch' }}>
                       {gameInfo.playerCount !== null && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '6px 14px', borderRight: '1px solid rgba(255,255,255,0.08)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '4px 12px', borderRight: '1px solid rgba(255,255,255,0.08)' }}>
                           <span style={{ fontSize: 15, lineHeight: 1 }}>🎮</span>
                           <div><div style={{ fontSize: 9, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', lineHeight: 1.2 }}>Joueurs actifs</div>
                             <div style={{ fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>{gameInfo.playerCount.toLocaleString('fr-FR')}</div>
@@ -1173,7 +1173,7 @@ export default function App() {
                       )}
                       {gameInfo.reviewScoreDesc && (
                         <div
-                          style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '6px 14px', background: reviewBg, borderRight: gameInfo.metacritic || gameInfo.price ? '1px solid rgba(255,255,255,0.08)' : undefined, cursor: 'pointer' }}
+                          style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '4px 12px', background: reviewBg, borderRight: gameInfo.metacritic || gameInfo.price ? '1px solid rgba(255,255,255,0.08)' : undefined, cursor: 'pointer' }}
                           onClick={() => window.open(`https://store.steampowered.com/app/${gameInfo.appid}/#app_reviews_hash`, '_blank')}
                         >
                           <span style={{ fontSize: 15, lineHeight: 1 }}>{gameInfo.reviewScore >= 8 ? '👍' : gameInfo.reviewScore >= 5 ? '😐' : '👎'}</span>
@@ -1184,7 +1184,7 @@ export default function App() {
                         </div>
                       )}
                       {gameInfo.metacritic !== null && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '6px 14px', borderRight: gameInfo.price ? '1px solid rgba(255,255,255,0.08)' : undefined, cursor: gameInfo.metacriticUrl ? 'pointer' : 'default' }}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '4px 12px', borderRight: gameInfo.price ? '1px solid rgba(255,255,255,0.08)' : undefined, cursor: gameInfo.metacriticUrl ? 'pointer' : 'default' }}
                           onClick={() => gameInfo.metacriticUrl && window.open(gameInfo.metacriticUrl, '_blank')}
                           title={gameInfo.metacriticUrl ? 'Voir sur Metacritic' : undefined}
                         >
@@ -1195,7 +1195,7 @@ export default function App() {
                         </div>
                       )}
                       {gameInfo.price && (
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center', padding: '4px 12px', gap: 1 }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center', padding: '4px 10px', gap: 1 }}>
                           {gameInfo.discount > 0 && (<span style={{ background: '#4c6b22', color: '#a4d007', fontWeight: 900, fontSize: 11, padding: '2px 5px', borderRadius: 4, flexShrink: 0 }}>-{gameInfo.discount}%</span>)}
                           <div style={{ textAlign: 'right' }}>
                             {gameInfo.discount > 0 && gameInfo.priceInitial && (<div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', textDecoration: 'line-through', lineHeight: 1 }}>{gameInfo.priceInitial}</div>)}
@@ -1205,25 +1205,31 @@ export default function App() {
                       )}
                       </div>
                       {/* ── Ligne genres / multijoueur / studio / date ── */}
-                      {(gameInfo.genres?.length || gameInfo.multiplayerLabel || gameInfo.developer || gameInfo.releaseDate) && (
-                        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 5, padding: '5px 12px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                      {(gameInfo.genres?.length || gameInfo.multiplayerLabel || gameInfo.earlyAccess || gameInfo.comingSoon || gameInfo.developer || gameInfo.releaseDate) && (
+                        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 4, padding: '4px 10px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                          {gameInfo.earlyAccess && (
+                            <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 4, background: 'rgba(255,160,30,0.15)', color: '#ffa01e', border: '1px solid rgba(255,160,30,0.35)', whiteSpace: 'nowrap' }}>⚙ Early Access</span>
+                          )}
+                          {gameInfo.comingSoon && !gameInfo.earlyAccess && (
+                            <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 4, background: 'rgba(245,197,24,0.12)', color: '#f5c518', border: '1px solid rgba(245,197,24,0.3)', whiteSpace: 'nowrap' }}>🔜 À venir</span>
+                          )}
                           {gameInfo.multiplayerLabel && (
-                            <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: 'rgba(71,167,245,0.15)', color: '#47a7f5', border: '1px solid rgba(71,167,245,0.3)', whiteSpace: 'nowrap' }}>👥 {gameInfo.multiplayerLabel}</span>
+                            <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 4, background: 'rgba(71,167,245,0.15)', color: '#47a7f5', border: '1px solid rgba(71,167,245,0.3)', whiteSpace: 'nowrap' }}>👥 {gameInfo.multiplayerLabel}</span>
                           )}
                           {(gameInfo.genres || []).map(g => (
-                            <span key={g} style={{ fontSize: 10, padding: '2px 7px', borderRadius: 4, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.55)', border: '1px solid rgba(255,255,255,0.1)', whiteSpace: 'nowrap' }}>{g}</span>
+                            <span key={g} style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.55)', border: '1px solid rgba(255,255,255,0.1)', whiteSpace: 'nowrap' }}>{g}</span>
                           ))}
-                          {(gameInfo.multiplayerLabel || gameInfo.genres?.length) && (gameInfo.developer || gameInfo.releaseDate) && (
-                            <span style={{ color: 'rgba(255,255,255,0.18)', fontSize: 11, margin: '0 2px' }}>│</span>
+                          {(gameInfo.earlyAccess || gameInfo.comingSoon || gameInfo.multiplayerLabel || gameInfo.genres?.length) && (gameInfo.developer || gameInfo.releaseDate) && (
+                            <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: 11, margin: '0 1px' }}>│</span>
                           )}
                           {gameInfo.developer && (
-                            <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', whiteSpace: 'nowrap' }}>🛠 {gameInfo.developer}</span>
+                            <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', whiteSpace: 'nowrap' }}>🛠 {gameInfo.developer}</span>
                           )}
                           {gameInfo.developer && gameInfo.releaseDate && (
-                            <span style={{ color: 'rgba(255,255,255,0.18)', fontSize: 10 }}>·</span>
+                            <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: 10 }}>·</span>
                           )}
                           {gameInfo.releaseDate && (
-                            <span style={{ fontSize: 10, color: gameInfo.comingSoon ? '#f5c518' : 'rgba(255,255,255,0.4)', whiteSpace: 'nowrap' }}>📅 {gameInfo.comingSoon ? 'À venir · ' : ''}{gameInfo.releaseDate}</span>
+                            <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.38)', whiteSpace: 'nowrap' }}>📅 {gameInfo.releaseDate}</span>
                           )}
                         </div>
                       )}
@@ -1328,7 +1334,7 @@ export default function App() {
                       <div style={{ display: 'flex', alignItems: 'stretch' }}>
                       {/* Joueurs actifs */}
                       {gameInfo.playerCount !== null && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '6px 14px', borderRight: '1px solid rgba(255,255,255,0.08)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '4px 12px', borderRight: '1px solid rgba(255,255,255,0.08)' }}>
                           <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#3db86a', boxShadow: '0 0 8px #3db86a88', display: 'inline-block', flexShrink: 0 }} />
                           <div>
                             <div style={{ fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>{gameInfo.playerCount.toLocaleString('fr-FR')}</div>
@@ -1339,7 +1345,7 @@ export default function App() {
                       {/* Avis Steam */}
                       {gameInfo.reviewScoreDesc && (
                         <div
-                          style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '6px 14px', background: reviewBg, borderRight: gameInfo.metacritic || gameInfo.price ? '1px solid rgba(255,255,255,0.08)' : undefined, cursor: 'pointer' }}
+                          style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '4px 12px', background: reviewBg, borderRight: gameInfo.metacritic || gameInfo.price ? '1px solid rgba(255,255,255,0.08)' : undefined, cursor: 'pointer' }}
                           onClick={() => window.open(`https://store.steampowered.com/app/${gameInfo.appid}/#app_reviews_hash`, '_blank')}
                           title="Voir les avis Steam"
                         >
@@ -1356,7 +1362,7 @@ export default function App() {
                       {/* Métacritique */}
                       {gameInfo.metacritic !== null && (
                         <div
-                          style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '6px 14px', borderRight: gameInfo.price ? '1px solid rgba(255,255,255,0.08)' : undefined, cursor: gameInfo.metacriticUrl ? 'pointer' : 'default' }}
+                          style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '4px 12px', borderRight: gameInfo.price ? '1px solid rgba(255,255,255,0.08)' : undefined, cursor: gameInfo.metacriticUrl ? 'pointer' : 'default' }}
                           onClick={() => gameInfo.metacriticUrl && window.open(gameInfo.metacriticUrl, '_blank')}
                           title={gameInfo.metacriticUrl ? 'Voir sur Metacritic' : undefined}
                         >
@@ -1370,7 +1376,7 @@ export default function App() {
                       )}
                       {/* Prix */}
                       {gameInfo.price && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 12px' }}>
                           {gameInfo.discount > 0 && (
                             <span style={{ background: '#4c6b22', color: '#a4d007', fontWeight: 900, fontSize: 11, padding: '2px 5px', borderRadius: 4, flexShrink: 0 }}>-{gameInfo.discount}%</span>
                           )}
@@ -1384,25 +1390,31 @@ export default function App() {
                       )}
                       </div>
                       {/* ── Ligne genres / multijoueur / studio / date ── */}
-                      {(gameInfo.genres?.length || gameInfo.multiplayerLabel || gameInfo.developer || gameInfo.releaseDate) && (
-                        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 5, padding: '5px 12px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                      {(gameInfo.genres?.length || gameInfo.multiplayerLabel || gameInfo.earlyAccess || gameInfo.comingSoon || gameInfo.developer || gameInfo.releaseDate) && (
+                        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 4, padding: '4px 10px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                          {gameInfo.earlyAccess && (
+                            <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 4, background: 'rgba(255,160,30,0.15)', color: '#ffa01e', border: '1px solid rgba(255,160,30,0.35)', whiteSpace: 'nowrap' }}>⚙ Early Access</span>
+                          )}
+                          {gameInfo.comingSoon && !gameInfo.earlyAccess && (
+                            <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 4, background: 'rgba(245,197,24,0.12)', color: '#f5c518', border: '1px solid rgba(245,197,24,0.3)', whiteSpace: 'nowrap' }}>🔜 À venir</span>
+                          )}
                           {gameInfo.multiplayerLabel && (
-                            <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: 'rgba(71,167,245,0.15)', color: '#47a7f5', border: '1px solid rgba(71,167,245,0.3)', whiteSpace: 'nowrap' }}>👥 {gameInfo.multiplayerLabel}</span>
+                            <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 4, background: 'rgba(71,167,245,0.15)', color: '#47a7f5', border: '1px solid rgba(71,167,245,0.3)', whiteSpace: 'nowrap' }}>👥 {gameInfo.multiplayerLabel}</span>
                           )}
                           {(gameInfo.genres || []).map(g => (
-                            <span key={g} style={{ fontSize: 10, padding: '2px 7px', borderRadius: 4, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.55)', border: '1px solid rgba(255,255,255,0.1)', whiteSpace: 'nowrap' }}>{g}</span>
+                            <span key={g} style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.55)', border: '1px solid rgba(255,255,255,0.1)', whiteSpace: 'nowrap' }}>{g}</span>
                           ))}
-                          {(gameInfo.multiplayerLabel || gameInfo.genres?.length) && (gameInfo.developer || gameInfo.releaseDate) && (
-                            <span style={{ color: 'rgba(255,255,255,0.18)', fontSize: 11, margin: '0 2px' }}>│</span>
+                          {(gameInfo.earlyAccess || gameInfo.comingSoon || gameInfo.multiplayerLabel || gameInfo.genres?.length) && (gameInfo.developer || gameInfo.releaseDate) && (
+                            <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: 11, margin: '0 1px' }}>│</span>
                           )}
                           {gameInfo.developer && (
-                            <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', whiteSpace: 'nowrap' }}>🛠 {gameInfo.developer}</span>
+                            <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', whiteSpace: 'nowrap' }}>🛠 {gameInfo.developer}</span>
                           )}
                           {gameInfo.developer && gameInfo.releaseDate && (
-                            <span style={{ color: 'rgba(255,255,255,0.18)', fontSize: 10 }}>·</span>
+                            <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: 10 }}>·</span>
                           )}
                           {gameInfo.releaseDate && (
-                            <span style={{ fontSize: 10, color: gameInfo.comingSoon ? '#f5c518' : 'rgba(255,255,255,0.4)', whiteSpace: 'nowrap' }}>📅 {gameInfo.comingSoon ? 'À venir · ' : ''}{gameInfo.releaseDate}</span>
+                            <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.38)', whiteSpace: 'nowrap' }}>📅 {gameInfo.releaseDate}</span>
                           )}
                         </div>
                       )}

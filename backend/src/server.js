@@ -405,8 +405,10 @@ app.get('/api/steam/gameinfo/:appid', requireAuth, async (req, res) => {
       ? Math.round((reviewSummary.total_positive / reviewSummary.total_reviews) * 100)
       : null;
 
-    // Genres — max 3
-    const genres = (appDetails?.genres || []).slice(0, 3).map(g => g.description);
+    // Genres — max 3, excluant Early Access (affiché séparément)
+    const allGenres = appDetails?.genres || [];
+    const isEarlyAccess = allGenres.some(g => g.id === '70');
+    const genres = allGenres.filter(g => g.id !== '70').slice(0, 3).map(g => g.description);
 
     // Developer
     const developer = appDetails?.developers?.[0] ?? null;
@@ -429,6 +431,9 @@ app.get('/api/steam/gameinfo/:appid', requireAuth, async (req, res) => {
     // Refine with local co-op categories
     if (catIds.has(24) || catIds.has(37)) multiplayerLabel = (multiplayerLabel ? multiplayerLabel + ' / ' : '') + 'Local co-op';
 
+    // Early Access (category 70)
+    const earlyAccess = catIds.has(70);
+
     const data = {
       appid,
       playerCount,
@@ -447,6 +452,7 @@ app.get('/api/steam/gameinfo/:appid', requireAuth, async (req, res) => {
       releaseDate: releaseDateStr,
       comingSoon,
       multiplayerLabel,
+      earlyAccess,
     };
 
     gameInfoCache.set(appid, { data, fetchedAt: Date.now() });
