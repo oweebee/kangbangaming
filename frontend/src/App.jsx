@@ -198,7 +198,13 @@ export default function App() {
   const [selectedGame, setSelectedGame] = useState(null);
   const [editingGame,  setEditingGame]  = useState(null);
   const [showArchived, setShowArchived] = useState(false);
-  const [infoPanelLocked, setInfoPanelLocked] = useState(false);
+  const [infoPanelLocked, setInfoPanelLockedRaw] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('infoPanelLocked') || 'false'); } catch { return false; }
+  });
+  const setInfoPanelLocked = (val) => {
+    setInfoPanelLockedRaw(val);
+    try { localStorage.setItem('infoPanelLocked', JSON.stringify(val)); } catch {}
+  };
   const [searchTargetCol, setSearchTargetCol] = useState(null);
   const [appUsers, setAppUsers] = useState([]);
   const [showSearch, setShowSearch] = useState(false);
@@ -229,6 +235,14 @@ export default function App() {
   const [selectedBoardGame, setSelectedBoardGame] = useState(null);
   const [showBoardSearch, setShowBoardSearch] = useState(false);
   const boardDebounce = useRef(null);
+  const headerRef = useRef(null);
+  const [headerHeight, setHeaderHeight] = useState(0);
+  useEffect(() => {
+    if (!headerRef.current) return;
+    const obs = new ResizeObserver(entries => setHeaderHeight(entries[0].contentRect.height));
+    obs.observe(headerRef.current);
+    return () => obs.disconnect();
+  }, []);
 
   useEffect(() => {
     const saved = getSavedAuth();
@@ -1159,10 +1173,12 @@ export default function App() {
           locked={infoPanelLocked}
           onLockChange={setInfoPanelLocked}
           sidebarWidth={278}
+          topOffset={headerHeight}
         />
       )}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <header style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+        {/* position:relative + zIndex:24 so header appears above the GameInfoPanel (z-index 20) */}
+        <header ref={headerRef} style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0, position: 'relative', zIndex: 24 }}>
           {publicBoardMode ? (
             <>
               {/* Board icon — clickable if Steam game, same as personal board */}
