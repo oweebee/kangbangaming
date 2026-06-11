@@ -1053,15 +1053,14 @@ export default function App() {
               {(publicBoardMode.headerImg || publicBoardMode.gameIcon) ? (
                 <img src={publicBoardMode.headerImg || publicBoardMode.gameIcon} alt="" style={{ height: 30, width: 'auto', maxWidth: 100, objectFit: 'contain', borderRadius: 4, flexShrink: 0, border: '1px solid var(--border)' }} />
               ) : (
-                <span style={{ fontSize: 16, flexShrink: 0 }}>{publicBoardMode.emoji || '🎮'}</span>
+                <span style={{ fontSize: 20, flexShrink: 0 }}>{publicBoardMode.emoji || '🎮'}</span>
               )}
-              <span style={{ fontWeight: 700, fontSize: 13, color: '#3db86a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
-                Board Public
-                <span style={{ fontSize: 10, fontWeight: 400, color: 'var(--text-muted)', marginLeft: 6 }}>{publicBoardMode.name}</span>
-              </span>
+              {/* Board name — same size/weight as personal board mobile */}
+              <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{publicBoardMode.name}</span>
+              {/* "Public" badge — same style as personal board mobile */}
+              <span style={{ fontSize: 10, fontWeight: 700, color: '#3db86a', border: '1px solid #3db86a', borderRadius: 4, padding: '1px 5px', flexShrink: 0 }}>Public</span>
               <button onClick={refreshPublicBoard} title="Rafraîchir" style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', color: 'var(--text-muted)', fontSize: 14, cursor: 'pointer', flexShrink: 0, lineHeight: 1 }}>↻</button>
               <button onClick={closePublicBoard} style={{ background: 'rgba(255,255,255,.08)', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 10px', color: 'var(--text-muted)', fontSize: 11, cursor: 'pointer', flexShrink: 0 }}>✕</button>
-              <button onClick={() => setShowSearch(true)} style={{ background: 'var(--accent)', border: 'none', borderRadius: 7, padding: '7px 14px', color: '#fff', fontWeight: 700, fontSize: 12, flexShrink: 0 }}>{isTaskBoard ? '+ Ajouter une tâche' : '+ Ajouter un jeu'}</button>
             </>
           ) : (
             <>
@@ -1141,17 +1140,27 @@ export default function App() {
         <header style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
           {publicBoardMode ? (
             <>
-              {/* Board icon */}
-              {publicBoardMode.headerImg ? (
-                <img src={publicBoardMode.headerImg} alt=""
-                  style={{ height: 53, width: 'auto', maxWidth: 220, objectFit: 'contain', borderRadius: 6, flexShrink: 0, border: '1px solid var(--border)' }}
-                />
-              ) : (
-                <span style={{ fontSize: 18, flexShrink: 0 }}>{publicBoardMode.emoji || '🎮'}</span>
-              )}
-              <span style={{ fontWeight: 700, fontSize: 14, color: '#3db86a', flexShrink: 0 }}>Board Public</span>
-              <span style={{ fontSize: 12, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 180 }}>{publicBoardMode.name}</span>
-              <button onClick={addColumn} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>+ Colonne</button>
+              {/* Board icon — clickable if Steam game, same as personal board */}
+              {(() => {
+                const steamAppId = publicBoardMode.headerImg?.match(/apps\/(\d+)\//)?.[1];
+                return publicBoardMode.headerImg ? (
+                  <img src={publicBoardMode.headerImg} alt=""
+                    onClick={steamAppId ? () => window.open(`https://store.steampowered.com/app/${steamAppId}`, '_blank') : undefined}
+                    title={steamAppId ? 'Voir sur Steam' : undefined}
+                    style={{ height: 53, width: 'auto', maxWidth: 220, objectFit: 'contain', borderRadius: 6, flexShrink: 0, border: '1px solid var(--border)', cursor: steamAppId ? 'pointer' : 'default' }}
+                  />
+                ) : (
+                  <span style={{ fontSize: 36, flexShrink: 0 }}>{publicBoardMode.emoji || '🎮'}</span>
+                );
+              })()}
+              {/* Board name — big, same as personal board */}
+              <span style={{ fontWeight: 700, fontSize: 24, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flexShrink: 1 }}>{publicBoardMode.name}</span>
+              {/* "Board Public" badge — same style as Public badge on personal boards */}
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#3db86a', display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0, border: '1px solid #3db86a', borderRadius: 5, padding: '2px 7px' }}>
+                <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="10" cy="7" r="4"/><path d="M4 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M15 3.13a4 4 0 0 1 0 7.75"/><path d="M20 21v-2a4 4 0 0 0-3-3.85"/>
+                </svg> Public
+              </span>
               <button onClick={toggleCompact} style={{ background: compactView ? 'rgba(192,87,10,0.15)' : 'var(--surface2)', border: compactView ? '1px solid var(--accent)' : '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: compactView ? 'var(--accent)' : 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0, fontWeight: compactView ? 700 : 400 }}>⊟ Compact</button>
               <button onClick={refreshPublicBoard} style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 11px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ fontSize: 15, lineHeight: 1 }}>↻</span> Rafraîchir</button>
               {/* ── Steam game info — encart centre du header (public board) ── */}
