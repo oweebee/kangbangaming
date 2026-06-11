@@ -103,7 +103,7 @@ function ColumnHeader({ col, onRename, onDelete, onSetEmoji, onColDragStart, onC
   );
 }
 
-export default function KanbanBoard({ columns, byColumn, dragging, setDragging, moveGame, onCardClick, onArchiveGame, onUnarchiveGame, onDeleteGame, onEditGame, onRenameColumn, onDeleteColumn, onSetEmoji, onReorderColumns, onAddToColumn, onReorderGames, isTaskBoard, appUsers = [] }) {
+export default function KanbanBoard({ columns, byColumn, dragging, setDragging, moveGame, onCardClick, onArchiveGame, onUnarchiveGame, onDeleteGame, onEditGame, onRenameColumn, onDeleteColumn, onSetEmoji, onReorderColumns, onAddToColumn, onReorderGames, isTaskBoard, appUsers = [], compactView = false }) {
   const [draggingColId, setDraggingColId] = useState(null);
   const [dragOverColId, setDragOverColId] = useState(null);
   const [dragInsert, setDragInsert] = useState(null); // { colId, beforeAppid: string|null }
@@ -199,7 +199,7 @@ export default function KanbanBoard({ columns, byColumn, dragging, setDragging, 
                 return (
                   <div
                     key={game.appid}
-                    style={{ position: 'relative', paddingTop: hasAssignees ? 40 : 0 }}
+                    style={{ position: 'relative', paddingTop: hasAssignees && !compactView ? 40 : 0 }}
                     onDragOver={e => {
                       if (draggingColId || !dragging || dragging.appid === game.appid) return;
                       e.preventDefault();
@@ -215,7 +215,7 @@ export default function KanbanBoard({ columns, byColumn, dragging, setDragging, 
                     {dragInsert?.colId === col.id && dragInsert?.beforeAppid === game.appid && (
                       <div style={{ height: 3, background: 'var(--accent)', borderRadius: 3, margin: '0 2px 4px', opacity: 0.85 }} />
                     )}
-                    {hasAssignees && (
+                    {hasAssignees && !compactView && (
                       <AssigneeAvatars
                         assignees={game.assignees}
                         appUsers={appUsers}
@@ -233,6 +233,9 @@ export default function KanbanBoard({ columns, byColumn, dragging, setDragging, 
                       onEdit={onEditGame}
                       isDragging={dragging?.appid === game.appid}
                       isTaskBoard={isTaskBoard}
+                      compact={compactView}
+                      assignees={game.assignees}
+                      appUsers={appUsers}
                     />
                   </div>
                 );

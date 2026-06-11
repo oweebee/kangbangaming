@@ -56,7 +56,7 @@ function AvatarPopup({ user, anchorRect }) {
   );
 }
 
-export default function AssigneeAvatars({ assignees = [], appUsers = [], size = 24, borderColor = 'var(--surface)' }) {
+export default function AssigneeAvatars({ assignees = [], appUsers = [], size = 24, borderColor = 'var(--surface)', top = 4, bottom = undefined, left = 8 }) {
   const [popup, setPopup] = useState(null); // { user, rect }
   const timerRef = useRef(null);
 
@@ -67,7 +67,7 @@ export default function AssigneeAvatars({ assignees = [], appUsers = [], size = 
   if (users.length === 0) return null;
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', position: 'absolute', top: 4, left: 8, zIndex: 10 }}>
+    <div style={{ display: 'flex', alignItems: 'center', position: 'absolute', top: bottom !== undefined ? undefined : top, bottom: bottom !== undefined ? bottom : undefined, left, zIndex: 10 }}>
       {users.map((user, idx) => {
         const initials = user.username?.[0]?.toUpperCase() || '?';
         const isHovered = popup?.user?.id === user.id;

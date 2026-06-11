@@ -2,6 +2,9 @@ import { useState } from 'react';
 import { getTaskType } from '../taskTypes.jsx';
 import { getDateInfo } from './TaskModal.jsx';
 import { progressColor } from './ProgressSlider.jsx';
+import AssigneeAvatars from './AssigneeAvatars.jsx';
+
+const COMPACT_ICON_SIZE = 33; // 44 * 0.75
 
 function formatPlaytime(minutes) {
   if (!minutes || minutes === 0) return null;
@@ -11,7 +14,7 @@ function formatPlaytime(minutes) {
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 
-export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArchive, onUnarchive, onDelete, onEdit, isDragging, readOnly, isTaskBoard }) {
+export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArchive, onUnarchive, onDelete, onEdit, isDragging, readOnly, isTaskBoard, compact = false, assignees = [], appUsers = [] }) {
   const [imgError, setImgError] = useState(false);
   const [ttImgError, setTtImgError] = useState(false);
   const isCustom   = game.type === 'custom';
@@ -28,6 +31,7 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
       onDragEnd={readOnly || isArchived ? undefined : onDragEnd}
       onClick={readOnly || isArchived ? undefined : onClick}
       style={{
+        position: 'relative',
         background: isArchived ? 'var(--surface2)' : tt ? tt.bg : 'var(--surface2)',
         border: isArchived ? '1px solid rgba(120,120,120,0.3)' : isUrgent ? '1.5px solid rgba(220,60,60,0.6)' : tt ? `1.5px solid ${tt.border}` : '1px solid var(--border)',
         borderRadius: 8,
@@ -49,8 +53,8 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
         e.currentTarget.style.borderColor = isUrgent ? 'rgba(220,60,60,0.6)' : tt ? tt.border : 'var(--border)';
       }}
     >
-      {/* ── Image area ── */}
-      {isCustom && tt ? (
+      {/* ── Image area — masquée en mode compact ── */}
+      {!compact && isCustom && tt ? (
         <div style={{ width: '100%', position: 'relative' }}>
           {/* Image pleine largeur, hauteur auto — pas de rognage */}
           {tt.img && !ttImgError ? (
@@ -93,7 +97,7 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
             }}>ARCHIVÉ</div>
           )}
         </div>
-      ) : isCustom ? (
+      ) : !compact && isCustom ? (
         <div style={{
           width: '100%', height: 88, position: 'relative',
           background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
@@ -118,7 +122,7 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
             }}>ARCHIVÉ</div>
           )}
         </div>
-      ) : !imgError && game.header_img ? (
+      ) : !compact && !imgError && game.header_img ? (
         <div style={{ position: 'relative' }}>
           <img
             src={game.header_img} alt={game.name}
@@ -144,7 +148,7 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
             }}>ARCHIVÉ</div>
           )}
         </div>
-      ) : (
+      ) : !compact ? (
         <div style={{
           width: '100%', height: 88, position: 'relative', background: 'var(--steam)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24,
@@ -168,10 +172,10 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
             }}>ARCHIVÉ</div>
           )}
         </div>
-      )}
+      ) : null}
 
       {/* ── Info area ── */}
-      <div style={{ padding: '7px 9px' }}>
+      <div style={{ padding: '7px 9px', paddingRight: compact ? COMPACT_ICON_SIZE + 14 : 9, paddingBottom: compact ? COMPACT_ICON_SIZE + 10 : 7 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 4 }}>
           <div style={{
             fontWeight: 600, fontSize: 12, lineHeight: '1.3', marginBottom: 3,
@@ -271,6 +275,56 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
           )}
         </div>
       </div>
+      {/* ── Compact mode: icône bas-droite + avatars ── */}
+      {compact && (
+        <>
+          {/* Icône bas-droite */}
+          <div style={{
+            position: 'absolute',
+            bottom: typeof game.progress === 'number' && !isArchived ? 9 : 6,
+            right: 6,
+            width: COMPACT_ICON_SIZE,
+            height: COMPACT_ICON_SIZE,
+            borderRadius: 6,
+            overflow: 'hidden',
+            border: '1px solid rgba(255,255,255,0.12)',
+            background: 'var(--surface2)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0,
+          }}>
+            {/* Carte Steam → icône du jeu */}
+            {!isCustom && game.icon_img && (
+              <img src={game.icon_img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            )}
+            {!isCustom && !game.icon_img && (
+              <span style={{ fontSize: 18, lineHeight: 1 }}>🎮</span>
+            )}
+            {/* Tâche avec type → image type */}
+            {isCustom && tt && !ttImgError && tt.img && (
+              <img src={tt.img} alt={tt.label} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            )}
+            {isCustom && tt && (ttImgError || !tt.img) && (
+              <span style={{ fontSize: 18, lineHeight: 1 }}>{tt.emoji}</span>
+            )}
+            {/* Tâche manuelle sans type → emoji de la tâche */}
+            {isCustom && !tt && (
+              <span style={{ fontSize: 18, lineHeight: 1 }}>{game.emoji || '🎮'}</span>
+            )}
+          </div>
+          {/* Avatars en mode compact — bas gauche */}
+          {assignees?.length > 0 && appUsers?.length > 0 && (
+            <AssigneeAvatars
+              assignees={assignees}
+              appUsers={appUsers}
+              size={COMPACT_ICON_SIZE}
+              borderColor={tt ? tt.border : 'var(--border)'}
+              bottom={typeof game.progress === 'number' && !isArchived ? 9 : 6}
+              left={6}
+            />
+          )}
+        </>
+      )}
+
       {/* ── Progress bar — shown when progress is set ── */}
       {typeof game.progress === 'number' && !isArchived && (
         <div style={{ height: 3, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
