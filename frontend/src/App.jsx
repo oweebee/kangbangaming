@@ -182,6 +182,7 @@ export default function App() {
   // Home view
   const [showHome, setShowHome] = useState(true);
   const [homePublicBoards, setHomePublicBoards] = useState([]);
+  const [deadlineRefreshKey, setDeadlineRefreshKey] = useState(0);
 
   // Board state
   const [boards, setBoards] = useState([]);
@@ -568,7 +569,7 @@ export default function App() {
     const boardApi = getBoardApi();
     await fetch(`${boardApi}/games`, {
       method: 'POST', headers: authHeaders(token),
-      body: JSON.stringify({ appid: game.appid, name: game.name, header_img: game.header_img, icon_img: game.icon_img, column: colId, type: game.type || 'steam', emoji: game.emoji || null, taskType: game.taskType || null, urgent: game.urgent ?? false, assignees: game.assignees ?? [], notes: game.notes ?? [], progress: game.progress ?? null }),
+      body: JSON.stringify({ appid: game.appid, name: game.name, header_img: game.header_img, icon_img: game.icon_img, column: colId, type: game.type || 'steam', emoji: game.emoji || null, taskType: game.taskType || null, dueDate: game.dueDate || null, startDate: game.startDate || null, endDate: game.endDate || null, urgent: game.urgent ?? false, assignees: game.assignees ?? [], notes: game.notes ?? [], progress: game.progress ?? null }),
     });
     if (publicBoardMode) {
       const res = await fetch(`${boardApi}/games`, { headers: authHeaders(token) });
@@ -576,6 +577,7 @@ export default function App() {
     } else {
       fetchGames(activeBoardId);
     }
+    if (game.dueDate || game.startDate || game.endDate) setDeadlineRefreshKey(k => k + 1);
   };
   const removeGame = async (appid) => {
     const boardApi = getBoardApi();
@@ -616,6 +618,7 @@ export default function App() {
       body: JSON.stringify({ name, emoji, taskType: taskType ?? null, dueDate: dueDate ?? null, startDate: startDate ?? null, endDate: endDate ?? null, urgent: urgent ?? false, assignees: assignees ?? [], notes: notes ?? [], progress: progress ?? null }),
     });
     setGames(prev => prev.map(g => g.appid === appid ? { ...g, ...updatedGame } : g));
+    if (updatedGame.dueDate || updatedGame.startDate || updatedGame.endDate) setDeadlineRefreshKey(k => k + 1);
   };
 
   // Generic field patch — used by TaskModal for immediate note/urgent/assignee saves
@@ -757,7 +760,7 @@ export default function App() {
 
       {/* ── Colonne gauche : Échéances (35%) ── */}
       <div style={{ flex: 35, minWidth: 0, borderRight: '1px solid var(--border)', overflowY: 'auto', padding: '28px 20px' }}>
-        <DeadlinePanel token={token} onOpenTask={handleDeadlineOpen} />
+        <DeadlinePanel token={token} onOpenTask={handleDeadlineOpen} refreshKey={deadlineRefreshKey} />
       </div>
 
       {/* ── Colonne droite : Boards (65%) ── */}

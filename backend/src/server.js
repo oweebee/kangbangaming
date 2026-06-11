@@ -929,10 +929,10 @@ app.get('/api/public/boards/:boardId/games', requireAuth, (req, res) => {
 app.post('/api/public/boards/:boardId/games', requireAuth, (req, res) => {
   const f = findPublicBoard(req.params.boardId);
   if (!f) return res.status(404).json({ error: 'Not found' });
-  const { appid, name, header_img, icon_img, column, type, emoji, taskType, urgent, assignees, notes, progress } = req.body;
+  const { appid, name, header_img, icon_img, column, type, emoji, taskType, dueDate, startDate, endDate, urgent, assignees, notes, progress } = req.body;
   if (!appid || !column) return res.status(400).json({ error: 'Missing fields' });
   if (!f.board.games) f.board.games = {};
-  f.board.games[appid] = { appid, name, header_img: header_img || null, icon_img: icon_img || null, column, type: type || 'steam', emoji: emoji || null, taskType: taskType || null, urgent: urgent || false, assignees: assignees || [], notes: notes || [], progress: progress ?? null, archived: false, sortOrder: Date.now(), addedAt: new Date().toISOString() };
+  f.board.games[appid] = { appid, name, header_img: header_img || null, icon_img: icon_img || null, column, type: type || 'steam', emoji: emoji || null, taskType: taskType || null, dueDate: dueDate || null, startDate: startDate || null, endDate: endDate || null, urgent: urgent || false, assignees: assignees || [], notes: notes || [], progress: progress ?? null, archived: false, sortOrder: Date.now(), addedAt: new Date().toISOString() };
   f.userBoards[req.params.boardId] = f.board;
   f.all[f.userId] = f.userBoards;
   writeBoards(f.all);
@@ -1111,13 +1111,13 @@ app.get('/api/boards/:boardId/games', requireAuth, (req, res) => {
 });
 
 app.post('/api/boards/:boardId/games', requireAuth, (req, res) => {
-  const { appid, name, header_img, column, icon_img, type, emoji, taskType, urgent, assignees, notes, progress } = req.body;
+  const { appid, name, header_img, column, icon_img, type, emoji, taskType, dueDate, startDate, endDate, urgent, assignees, notes, progress } = req.body;
   if (!appid || !column) return res.status(400).json({ error: 'Missing fields' });
   const userBoards = getUserBoards(req.user.id);
   const board = userBoards[req.params.boardId];
   if (!board) return res.status(404).json({ error: 'Board not found' });
   if (!board.games) board.games = {};
-  board.games[appid] = { appid, name, header_img: header_img || null, icon_img: icon_img || null, column, type: type || 'steam', emoji: emoji || null, taskType: taskType || null, urgent: urgent || false, assignees: assignees || [], notes: notes || [], progress: progress ?? null, archived: false, sortOrder: Date.now(), addedAt: new Date().toISOString() };
+  board.games[appid] = { appid, name, header_img: header_img || null, icon_img: icon_img || null, column, type: type || 'steam', emoji: emoji || null, taskType: taskType || null, dueDate: dueDate || null, startDate: startDate || null, endDate: endDate || null, urgent: urgent || false, assignees: assignees || [], notes: notes || [], progress: progress ?? null, archived: false, sortOrder: Date.now(), addedAt: new Date().toISOString() };
   setUserBoards(req.user.id, userBoards);
   res.status(201).json(board.games[appid]);
 });

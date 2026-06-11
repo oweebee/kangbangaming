@@ -134,7 +134,7 @@ function Section({ cat, tasks, onOpenTask }) {
 }
 
 // ── Composant principal ────────────────────────────────────────────────────────
-export default function DeadlinePanel({ token, onOpenTask }) {
+export default function DeadlinePanel({ token, onOpenTask, refreshKey = 0 }) {
   const [tasks, setTasks]     = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -145,7 +145,7 @@ export default function DeadlinePanel({ token, onOpenTask }) {
       .then(r => r.ok ? r.json() : [])
       .then(data => { setTasks(data); setLoading(false); })
       .catch(() => setLoading(false));
-  }, [token]);
+  }, [token, refreshKey]);
 
   const categorized = { overdue: [], active: [], upcoming: [] };
   for (const task of tasks) {
