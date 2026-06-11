@@ -753,12 +753,13 @@ export default function App() {
   };
 
   const homeView = (
-    <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-      {/* Colonne gauche : échéances */}
-      <DeadlinePanel token={token} onOpenTask={handleDeadlineOpen} />
-      {/* Colonne droite : boards */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '28px 32px' }}>
+    <div style={{ flex: 1, overflowY: 'auto', padding: '28px 32px' }}>
       <div style={{ maxWidth: 960, margin: '0 auto' }}>
+        {/* Échéances */}
+        <DeadlinePanel token={token} onOpenTask={handleDeadlineOpen} />
+
+        {/* Séparateur si échéances présentes */}
+
         {/* Boards publics de la communauté */}
         <div style={{ marginBottom: 36 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
@@ -824,7 +825,6 @@ export default function App() {
             </>
           );
         })()}
-      </div>
       </div>
     </div>
   );
