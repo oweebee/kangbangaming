@@ -160,10 +160,18 @@ export default function TaskModal({ game, onClose, onEdit, appUsers = [], onPatc
   const TtIcon    = tt?.FallbackIcon;
   const dateInfo  = getDateInfo(game);
   const isUrgent  = !!game.urgent;
-  const cardBorderColor = isUrgent ? 'rgba(220,60,60,0.6)' : tt ? tt.border : 'var(--border)';
+  const isDone    = !!game.done;
+  const cardBorderColor = isDone ? 'rgba(61,184,106,0.6)' : isUrgent ? 'rgba(220,60,60,0.6)' : tt ? tt.border : 'var(--border)';
 
   const handleSaveNotes    = (notes)    => { if (onPatchGame) onPatchGame(game.appid, { notes }); };
-  const handleSaveProgress = (progress) => { if (onPatchGame) onPatchGame(game.appid, { progress }); };
+  const handleSaveProgress = (progress) => {
+    if (onPatchGame) {
+      const updates = { progress };
+      if (progress === 100) updates.done = true;
+      onPatchGame(game.appid, updates);
+    }
+  };
+  const handleToggleDone = () => { if (onPatchGame) onPatchGame(game.appid, { done: !isDone }); };
 
   return (
     <div
@@ -295,6 +303,42 @@ export default function TaskModal({ game, onClose, onEdit, appUsers = [], onPatc
               <AssigneeRow assignees={game.assignees} appUsers={appUsers} borderColor={cardBorderColor} />
             </div>
           )}
+
+          {/* Terminée toggle */}
+          <button
+            onClick={handleToggleDone}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              background: isDone ? 'rgba(61,184,106,0.12)' : 'var(--surface2)',
+              border: `1.5px solid ${isDone ? '#3db86a' : 'var(--border)'}`,
+              borderRadius: 9, padding: '11px 14px', width: '100%', cursor: 'pointer',
+              transition: 'all .15s', textAlign: 'left',
+            }}
+          >
+            <div style={{
+              width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
+              border: `2px solid ${isDone ? '#3db86a' : 'rgba(255,255,255,0.25)'}`,
+              background: isDone ? '#3db86a' : 'transparent',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transition: 'all .15s',
+            }}>
+              {isDone && (
+                <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+              )}
+            </div>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: isDone ? '#3db86a' : 'var(--text)' }}>
+                {isDone ? 'Terminée ✓' : 'Marquer comme terminée'}
+              </div>
+              {isDone && (
+                <div style={{ fontSize: 10, color: 'rgba(61,184,106,0.7)', marginTop: 1 }}>
+                  Cette tâche est considérée comme complétée
+                </div>
+              )}
+            </div>
+          </button>
 
           {/* Progress */}
           <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 9, padding: '12px 14px' }}>

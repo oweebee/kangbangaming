@@ -33,6 +33,15 @@ export default function GameStatsWidget({ api, token, board, rightOffset = 0 }) 
   const [loading, setLoading]   = useState(true);
   const [slideIn, setSlideIn]   = useState(false);
 
+  // Verrou permanent : 'open' | 'closed' | null (libre)
+  const [permanentLock, setPermanentLock] = useState(() => {
+    try { return localStorage.getItem('statsWidgetLock') || null; } catch { return null; }
+  });
+  const setPermanentLockAndSave = (val) => {
+    setPermanentLock(val);
+    try { if (val) localStorage.setItem('statsWidgetLock', val); else localStorage.removeItem('statsWidgetLock'); } catch {}
+  };
+
   const appid = extractAppId(board?.headerImg) || extractAppId(board?.gameIcon);
 
   // Fetch game stats when board changes
@@ -55,13 +64,15 @@ export default function GameStatsWidget({ api, token, board, rightOffset = 0 }) 
       .catch(() => {});
   }, [token]);
 
-  // Slide-in animation
+  // Slide-in animation (respecte le verrou permanent)
   useEffect(() => {
     if (!appid) return;
+    if (permanentLock === 'open')   { setSlideIn(true);  return; }
+    if (permanentLock === 'closed') { setSlideIn(false); return; }
     setSlideIn(false);
     const t = setTimeout(() => setSlideIn(true), 60);
     return () => clearTimeout(t);
-  }, [appid]);
+  }, [appid, permanentLock]);
 
   if (!appid) return null;
   if (!loading && !stats) return null;
@@ -71,38 +82,77 @@ export default function GameStatsWidget({ api, token, board, rightOffset = 0 }) 
   const achPct    = stats?.achievements_total > 0
     ? Math.round((stats.achievements_unlocked / stats.achievements_total) * 100) : 0;
 
+  // Quand fermé : se cacher entièrement derrière le bord droit (+ le panel éventuel)
+  // Quand ouvert : dépasser de 18px depuis le bord (rightOffset)
+  const closedTranslate = rightOffset > 0
+    ? `translateX(calc(100% + ${rightOffset}px))`   // caché derrière le panel droit
+    : 'translateX(calc(100% - 28px))';              // classique : seul le tab visible
+  const openTranslate = `translateX(-${18 + rightOffset}px)`;
+
   return (
     <div style={{
       position: 'fixed',
       bottom: 50,
-      right: rightOffset,
+      right: 0,
       zIndex: 40,
       width: 258,
       display: 'flex',
       alignItems: 'stretch',
-      transform: slideIn ? 'translateX(-18px)' : 'translateX(calc(100% - 28px))',
-      transition: 'transform 0.3s cubic-bezier(0.34, 1.2, 0.64, 1), right 0.32s cubic-bezier(0.4,0,0.2,1)',
+      transform: slideIn ? openTranslate : closedTranslate,
+      transition: 'transform 0.3s cubic-bezier(0.34, 1.2, 0.64, 1)',
     }}>
       {/* Pull tab */}
       <div
-        onClick={() => setSlideIn(v => !v)}
         style={{
           width: 28, flexShrink: 0,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: 'var(--surface)', border: '1px solid var(--border)',
-          borderRight: slideIn ? 'none' : '1px solid var(--border)',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          background: permanentLock ? 'rgba(192,87,10,0.12)' : 'var(--surface)',
+          border: permanentLock ? '1px solid rgba(192,87,10,0.35)' : '1px solid var(--border)',
+          borderRight: slideIn ? 'none' : undefined,
           borderRadius: slideIn ? '12px 0 0 12px' : 12,
-          cursor: 'pointer',
           boxShadow: slideIn ? 'none' : '0 4px 16px rgba(0,0,0,.5)',
           transition: 'border-radius .3s, box-shadow .3s',
+          gap: 4, paddingTop: 6, paddingBottom: 6,
         }}
       >
-        <span style={{
-          fontSize: 14,
-          transform: slideIn ? 'rotate(0deg)' : 'rotate(180deg)',
-          transition: 'transform .3s',
-          display: 'block', lineHeight: 1, userSelect: 'none',
-        }}>›</span>
+        {/* Flèche toggle (libre seulement) */}
+        <div
+          onClick={() => { if (!permanentLock) setSlideIn(v => !v); }}
+          style={{ cursor: permanentLock ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1, width: '100%' }}
+          title={permanentLock ? `Verrouillé ${permanentLock === 'open' ? 'ouvert' : 'fermé'}` : (slideIn ? 'Fermer' : 'Ouvrir')}
+        >
+          <span style={{
+            fontSize: 14,
+            transform: slideIn ? 'rotate(0deg)' : 'rotate(180deg)',
+            transition: 'transform .3s',
+            display: 'block', lineHeight: 1, userSelect: 'none',
+            color: permanentLock ? 'var(--accent)' : 'var(--text-muted)',
+          }}>›</span>
+        </div>
+
+        {/* Bouton verrou */}
+        <div
+          onClick={() => {
+            if (!permanentLock) {
+              // Verrouiller dans l'état actuel
+              setPermanentLockAndSave(slideIn ? 'open' : 'closed');
+            } else {
+              // Déverrouiller
+              setPermanentLockAndSave(null);
+            }
+          }}
+          title={permanentLock ? 'Déverrouiller' : (slideIn ? 'Verrouiller ouvert' : 'Verrouiller fermé')}
+          style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', paddingBottom: 2 }}
+        >
+          <svg viewBox="0 0 24 24" width="11" height="11" fill="none"
+            stroke={permanentLock ? 'var(--accent)' : 'rgba(255,255,255,0.3)'}
+            strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            {permanentLock
+              ? <><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></>
+              : <><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></>
+            }
+          </svg>
+        </div>
       </div>
 
       {/* Main card */}

@@ -14,12 +14,13 @@ function formatPlaytime(minutes) {
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 
-export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArchive, onUnarchive, onDelete, onEdit, isDragging, readOnly, isTaskBoard, compact = false, assignees = [], appUsers = [] }) {
+export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArchive, onUnarchive, onDelete, onEdit, isDragging, readOnly, isTaskBoard, compact = false, assignees = [], appUsers = [], onToggleDone }) {
   const [imgError, setImgError] = useState(false);
   const [ttImgError, setTtImgError] = useState(false);
   const isCustom   = game.type === 'custom';
   const isArchived = !!game.archived;
   const isUrgent   = !!game.urgent;
+  const isDone     = !!game.done;
   const tt         = game.taskType ? getTaskType(game.taskType) : null;
   const TtFallback = tt?.FallbackIcon;
   const dateInfo  = getDateInfo(game);
@@ -33,7 +34,7 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
       style={{
         position: 'relative',
         background: isArchived ? 'var(--surface2)' : tt ? tt.bg : 'var(--surface2)',
-        border: isArchived ? '2px solid #787878' : isUrgent ? '2px solid #dc3c3c' : tt ? `2px solid ${tt.border}` : '2px solid var(--border)',
+        border: isArchived ? '2px solid #787878' : isDone ? '2px solid #3db86a' : isUrgent ? '2px solid #dc3c3c' : tt ? `2px solid ${tt.border}` : '2px solid var(--border)',
         borderRadius: 8,
         overflow: 'hidden',
         cursor: readOnly || isArchived ? 'default' : 'grab',
@@ -45,12 +46,12 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
       onMouseEnter={readOnly || isArchived ? undefined : e => {
         e.currentTarget.style.transform = 'translateY(-1px)';
         e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.4)';
-        e.currentTarget.style.borderColor = isUrgent ? '#dc3c3c' : tt ? tt.border : '#555';
+        e.currentTarget.style.borderColor = isDone ? '#3db86a' : isUrgent ? '#dc3c3c' : tt ? tt.border : '#555';
       }}
       onMouseLeave={readOnly || isArchived ? undefined : e => {
         e.currentTarget.style.transform = '';
         e.currentTarget.style.boxShadow = '';
-        e.currentTarget.style.borderColor = isUrgent ? '#dc3c3c' : tt ? tt.border : 'var(--border)';
+        e.currentTarget.style.borderColor = isDone ? '#3db86a' : isUrgent ? '#dc3c3c' : tt ? tt.border : 'var(--border)';
       }}
     >
       {/* ── Image area — masquée en mode compact ── */}
@@ -325,12 +326,64 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
         </>
       )}
 
+      {/* ── Done toggle button — bottom of info area ── */}
+      {!isArchived && onToggleDone && (
+        <div style={{ padding: '0 9px 7px', marginTop: -4 }}>
+          <button
+            onClick={e => { e.stopPropagation(); onToggleDone(!isDone); }}
+            title={isDone ? 'Marquer comme non terminée' : 'Marquer comme terminée'}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 5,
+              background: isDone ? 'rgba(61,184,106,0.12)' : 'rgba(255,255,255,0.04)',
+              border: `1px solid ${isDone ? '#3db86a' : 'rgba(255,255,255,0.1)'}`,
+              borderRadius: 5, padding: '3px 8px',
+              color: isDone ? '#3db86a' : 'var(--text-muted)',
+              fontSize: 10, fontWeight: isDone ? 700 : 400,
+              cursor: 'pointer', width: '100%', justifyContent: 'center',
+              transition: 'all .15s',
+            }}
+          >
+            {isDone ? (
+              <><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Terminée</>
+            ) : (
+              <><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/></svg> Marquer terminée</>
+            )}
+          </button>
+        </div>
+      )}
+
+      {/* Done badge overlay on image */}
+      {isDone && !isArchived && !compact && (
+        <div style={{
+          position: 'absolute', top: 5, left: 5,
+          background: 'rgba(30,100,50,0.92)', color: '#5de085',
+          fontSize: 9, fontWeight: 800, padding: '2px 6px',
+          borderRadius: 4, letterSpacing: '0.06em',
+          display: 'flex', alignItems: 'center', gap: 3,
+        }}>
+          <svg viewBox="0 0 24 24" width="8" height="8" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          TERMINÉE
+        </div>
+      )}
+
+      {/* Done badge on compact */}
+      {isDone && !isArchived && compact && (
+        <div style={{
+          position: 'absolute', top: 4, left: 4,
+          background: 'rgba(30,100,50,0.92)', color: '#5de085',
+          width: 16, height: 16, borderRadius: '50%',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <svg viewBox="0 0 24 24" width="9" height="9" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+      )}
+
       {/* ── Progress bar — shown when progress is set ── */}
       {typeof game.progress === 'number' && !isArchived && (
         <div style={{ height: 5, background: 'rgba(255,255,255,0.18)', overflow: 'hidden' }}>
           <div style={{
             width: `${game.progress}%`, height: '100%',
-            background: progressColor(game.progress) || '#c03030',
+            background: isDone ? '#3db86a' : (progressColor(game.progress) || '#c03030'),
             transition: 'width .3s, background .3s',
           }} />
         </div>

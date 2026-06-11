@@ -14,6 +14,7 @@ import GameStatsWidget from './components/GameStatsWidget.jsx';
 import GlobalSearch from './components/GlobalSearch.jsx';
 import SteamEncart from './components/SteamEncart.jsx';
 import GameInfoPanel, { GAME_INFO_PANEL_WIDTH } from './components/GameInfoPanel.jsx';
+import DeadlinePanel from './components/DeadlinePanel.jsx';
 
 const DISCORD_ICON_URL = 'https://cdn.discordapp.com/icons/983316258302877747/ebcf20448ef8818f93e8f31afad9f8d9.webp?size=64';
 
@@ -619,6 +620,8 @@ export default function App() {
 
   // Generic field patch — used by TaskModal for immediate note/urgent/assignee saves
   const patchGame = async (appid, fields) => {
+    // Auto-done when progress hits 100
+    if (fields.progress === 100 && !fields.hasOwnProperty('done')) fields = { ...fields, done: true };
     const boardApi = getBoardApi();
     await fetch(`${boardApi}/games/${appid}`, {
       method: 'PATCH', headers: authHeaders(token),
@@ -737,8 +740,24 @@ export default function App() {
     fetchGames(b.id);
   };
 
+  // Ouvrir une tâche depuis DeadlinePanel : naviguer vers le board puis ouvrir la carte
+  const handleDeadlineOpen = (task) => {
+    setPendingOpenGameId(task.gameId);
+    if (task.isPublic) {
+      openPublicBoard({ id: task.boardId, name: task.boardName, ownerUsername: task.ownerUsername, gameIcon: task.boardIcon, headerImg: task.boardHeaderImg });
+    } else {
+      const b = boards.find(b => b.id === task.boardId);
+      if (b) openBoard(b);
+      else { setActiveBoardId(task.boardId); setShowHome(false); setPublicBoardMode(null); fetchGames(task.boardId); }
+    }
+  };
+
   const homeView = (
-    <div style={{ flex: 1, overflowY: 'auto', padding: '28px 32px' }}>
+    <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+      {/* Colonne gauche : échéances */}
+      <DeadlinePanel token={token} onOpenTask={handleDeadlineOpen} />
+      {/* Colonne droite : boards */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '28px 32px' }}>
       <div style={{ maxWidth: 960, margin: '0 auto' }}>
         {/* Boards publics de la communauté */}
         <div style={{ marginBottom: 36 }}>
@@ -805,6 +824,7 @@ export default function App() {
             </>
           );
         })()}
+      </div>
       </div>
     </div>
   );
@@ -1340,14 +1360,14 @@ export default function App() {
           loading ? (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Chargement...</div>
           ) : (
-            <KanbanBoard columns={columns} byColumn={byColumn} dragging={dragging} setDragging={setDragging} moveGame={moveGame} onCardClick={setSelectedGame} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} onRenameColumn={renameColumn} onDeleteColumn={deleteColumn} onSetEmoji={setColumnEmoji} onReorderColumns={reorderColumns} onAddToColumn={colId => { setSearchTargetCol(colId); setShowSearch(true); }} onReorderGames={reorderGamesInColumn} isTaskBoard={isTaskBoard} appUsers={appUsers} compactView={compactView} leftOffset={infoPanelLocked && infoPanelSide === 'left' ? GAME_INFO_PANEL_WIDTH : 0} rightOffset={infoPanelLocked && infoPanelSide === 'right' ? GAME_INFO_PANEL_WIDTH : 0} />
+            <KanbanBoard columns={columns} byColumn={byColumn} dragging={dragging} setDragging={setDragging} moveGame={moveGame} onCardClick={setSelectedGame} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} onRenameColumn={renameColumn} onDeleteColumn={deleteColumn} onSetEmoji={setColumnEmoji} onReorderColumns={reorderColumns} onAddToColumn={colId => { setSearchTargetCol(colId); setShowSearch(true); }} onReorderGames={reorderGamesInColumn} isTaskBoard={isTaskBoard} appUsers={appUsers} compactView={compactView} leftOffset={infoPanelLocked && infoPanelSide === 'left' ? GAME_INFO_PANEL_WIDTH : 0} rightOffset={infoPanelLocked && infoPanelSide === 'right' ? GAME_INFO_PANEL_WIDTH : 0} onToggleDone={(appid, done) => patchGame(appid, { done })} />
           )
         ) : !activeBoardId ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Crée un board pour commencer</div>
         ) : loading ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Chargement...</div>
         ) : (
-          <KanbanBoard columns={columns} byColumn={byColumn} dragging={dragging} setDragging={setDragging} moveGame={moveGame} onCardClick={setSelectedGame} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} onRenameColumn={renameColumn} onDeleteColumn={deleteColumn} onSetEmoji={setColumnEmoji} onReorderColumns={reorderColumns} onAddToColumn={colId => { setSearchTargetCol(colId); setShowSearch(true); }} onReorderGames={reorderGamesInColumn} isTaskBoard={isTaskBoard} appUsers={appUsers} compactView={compactView} leftOffset={infoPanelLocked && infoPanelSide === 'left' ? GAME_INFO_PANEL_WIDTH : 0} rightOffset={infoPanelLocked && infoPanelSide === 'right' ? GAME_INFO_PANEL_WIDTH : 0} />
+          <KanbanBoard columns={columns} byColumn={byColumn} dragging={dragging} setDragging={setDragging} moveGame={moveGame} onCardClick={setSelectedGame} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} onRenameColumn={renameColumn} onDeleteColumn={deleteColumn} onSetEmoji={setColumnEmoji} onReorderColumns={reorderColumns} onAddToColumn={colId => { setSearchTargetCol(colId); setShowSearch(true); }} onReorderGames={reorderGamesInColumn} isTaskBoard={isTaskBoard} appUsers={appUsers} compactView={compactView} leftOffset={infoPanelLocked && infoPanelSide === 'left' ? GAME_INFO_PANEL_WIDTH : 0} rightOffset={infoPanelLocked && infoPanelSide === 'right' ? GAME_INFO_PANEL_WIDTH : 0} onToggleDone={(appid, done) => patchGame(appid, { done })} />
         )}
         </div>
       </div>

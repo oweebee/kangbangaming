@@ -178,6 +178,64 @@ app.get('/api/users/list', requireAuth, (req, res) => {
   res.json(list);
 });
 
+// ── Deadlines ─────────────────────────────────────────────────────────────────
+// Returns all tasks/games with dates from personal boards + followed public boards
+
+app.get('/api/deadlines', requireAuth, (req, res) => {
+  const results = [];
+  const allBoards = readBoards();
+  const me = readUsers().find(u => u.id === req.user.id);
+  const favIds = new Set(me?.favorites || []);
+  const userMap = new Map();
+  for (const u of readUsers()) userMap.set(u.id, u.username);
+
+  function collectFromBoard(boardId, board, ownerId) {
+    const isOwn = ownerId === req.user.id;
+    const boardName = board.name || '';
+    const boardIcon = board.gameIcon || null;
+    const boardHeaderImg = board.headerImg || null;
+    for (const [gameId, game] of Object.entries(board.games || {})) {
+      if (!game.dueDate && !game.startDate && !game.endDate) continue;
+      if (game.archived) continue;
+      results.push({
+        boardId, boardName, boardIcon, boardHeaderImg,
+        isOwn, ownerUsername: isOwn ? null : (userMap.get(ownerId) || 'unknown'),
+        isPublic: !isOwn,
+        gameId,
+        name: game.name || '',
+        dueDate: game.dueDate || null,
+        startDate: game.startDate || null,
+        endDate: game.endDate || null,
+        done: !!game.done,
+        progress: game.progress ?? null,
+        urgent: !!game.urgent,
+        taskType: game.taskType || null,
+        header_img: game.header_img || null,
+        icon_img: game.icon_img || null,
+        emoji: game.emoji || null,
+        type: game.type || 'steam',
+      });
+    }
+  }
+
+  // Own boards
+  const userBoards = getUserBoards(req.user.id);
+  for (const [boardId, board] of Object.entries(userBoards)) {
+    collectFromBoard(boardId, board, req.user.id);
+  }
+
+  // Followed public boards
+  for (const [userId, boards] of Object.entries(allBoards)) {
+    if (userId === req.user.id) continue;
+    for (const [boardId, board] of Object.entries(boards)) {
+      if (!board.public || !favIds.has(boardId)) continue;
+      collectFromBoard(boardId, board, userId);
+    }
+  }
+
+  res.json(results);
+});
+
 // ── Global search ─────────────────────────────────────────────────────────────
 
 app.get('/api/search', requireAuth, (req, res) => {
@@ -1082,6 +1140,7 @@ app.patch('/api/boards/:boardId/games/:appid', requireAuth, (req, res) => {
   if (req.body.urgent !== undefined) game.urgent = req.body.urgent;
   if (req.body.assignees !== undefined) game.assignees = req.body.assignees;
   if (req.body.progress !== undefined) game.progress = req.body.progress;
+  if (req.body.done !== undefined) game.done = req.body.done;
   setUserBoards(req.user.id, userBoards);
   res.json(game);
 });

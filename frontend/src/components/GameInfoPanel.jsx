@@ -141,13 +141,7 @@ export default function GameInfoPanel({
     ? (isOpen ? 'translateX(0)' : 'translateX(-100%)')
     : (isOpen ? 'translateX(0)' : 'translateX(100%)');
 
-  // Chevron: points toward panel interior
-  // Left+open → ← | Left+closed → → | Right+open → → | Right+closed → ←
-  const chevronPoints = (isOpen && isLeft) || (!isOpen && !isLeft)
-    ? '15 18 9 12 15 6'  // ←
-    : '9 18 15 12 9 6';  // →
-
-  const tabHeight = isOpen ? 116 : 88;
+  const tabHeight = isOpen ? 88 : 64;
 
   const accentColor = locked ? '#e8813a' : 'rgba(255,255,255,0.65)';
   const dimColor    = locked ? '#e8813a' : 'rgba(255,255,255,0.4)';
@@ -224,15 +218,6 @@ export default function GameInfoPanel({
           <LockIcon locked={locked} size={14} />
         </div>
 
-        {/* Chevron — bottom, click to open/close */}
-        <div
-          onClick={handleTabClick}
-          style={{ cursor: locked ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', flex: 1, paddingBottom: 6 }}
-        >
-          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke={dimColor} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points={chevronPoints} />
-          </svg>
-        </div>
       </div>
 
       {/* ── Sliding panel ── */}
