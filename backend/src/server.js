@@ -638,11 +638,11 @@ function extractYoutubeId(raw = '') {
 app.get('/api/steam/news/:appid/raw', async (req, res) => {
   try {
     const data = await steamFetch(
-      `https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=${req.params.appid}&count=3&maxlength=3000&format=json`
+      `https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=${req.params.appid}&count=3&maxlength=0&format=json`
     );
     const items = (data.appnews?.newsitems || []).slice(0, 3).map(n => ({
       title: n.title,
-      raw_snippet: n.contents?.slice(0, 600),
+      raw_snippet: n.contents?.slice(0, 2000),
       image: extractImage(n.contents),
       youtube: extractYoutubeId(n.contents),
     }));
@@ -656,7 +656,7 @@ app.get('/api/steam/news/:appid', requireAuth, async (req, res) => {
   if (entry && Date.now() - entry.cacheAt < NEWS_TTL) return res.json(entry.data);
   try {
     const data = await steamFetch(
-      `https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=${appid}&count=15&maxlength=3000&format=json`
+      `https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=${appid}&count=15&maxlength=0&format=json`
     );
     const items = (data.appnews?.newsitems || []).map(n => ({
       gid: n.gid,
