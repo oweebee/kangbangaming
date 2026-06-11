@@ -69,57 +69,76 @@ function BoardEmojiPicker({ current, onSelect, onClose }) {
 const API = import.meta.env.VITE_API_URL || '/api';
 
 function HomeBoardCard({ board, isPublic, isFav, onToggleFav, onClick }) {
-  const [hover, setHover] = React.useState(false);
+  const [favHover, setFavHover] = React.useState(false);
   return (
     <div
-      onClick={onClick}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
       style={{
-        background: hover ? 'var(--surface2)' : 'var(--surface)',
+        background: 'var(--surface1)',
         border: `1px solid ${isFav ? 'rgba(245,197,24,0.35)' : 'var(--border)'}`,
-        borderRadius: 12, cursor: 'pointer', overflow: 'hidden',
-        transition: 'background .12s, border-color .12s', display: 'flex', flexDirection: 'column',
-        position: 'relative',
+        borderRadius: 12, overflow: 'hidden',
+        display: 'flex', flexDirection: 'column',
       }}
     >
-      {/* Banner */}
-      <div style={{ width: '100%', height: 110, background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0, position: 'relative' }}>
+      {/* Banner — clickable */}
+      <div
+        onClick={onClick}
+        style={{ width: '100%', height: 110, background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0, cursor: 'pointer' }}
+      >
         {(board.headerImg || board.gameIcon) ? (
           <img src={board.headerImg || board.gameIcon} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         ) : (
           <span style={{ fontSize: 44 }}>{board.emoji || '🎮'}</span>
         )}
-        {/* Star button — personal boards only */}
-        {onToggleFav && (
-          <button
-            onClick={e => { e.stopPropagation(); onToggleFav(isFav); }}
-            title={isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}
-            style={{
-              position: 'absolute', top: 6, right: 6,
-              background: 'rgba(0,0,0,0.55)', border: 'none', borderRadius: '50%',
-              width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', opacity: isFav || hover ? 1 : 0,
-              transition: 'opacity .15s',
-            }}
-          >
-            <svg viewBox="0 0 24 24" width="14" height="14"
-              fill={isFav ? '#f5c518' : 'none'}
-              stroke={isFav ? '#f5c518' : '#fff'} strokeWidth="2"
-              strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-            </svg>
-          </button>
-        )}
       </div>
       {/* Info */}
-      <div style={{ padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 6 }}>
+      <div
+        onClick={onClick}
+        style={{ padding: '10px 12px 6px', display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}
+      >
         {isFav && <svg viewBox="0 0 24 24" width="10" height="10" fill="#f5c518" stroke="#f5c518" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>}
         <span style={{ flex: 1, fontWeight: 700, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text)' }}>{board.name}</span>
         <span style={{ fontSize: 10, fontWeight: 700, color: (isPublic || board.public) ? '#3db86a' : '#f5a500', border: `1px solid ${(isPublic || board.public) ? '#3db86a' : '#f5a500'}`, borderRadius: 4, padding: '1px 5px', flexShrink: 0 }}>
           {(isPublic || board.public) ? 'Public' : 'Privé'}
         </span>
       </div>
+      {/* Action bar */}
+      {onToggleFav ? (
+        <div style={{ display: 'flex', gap: 6, padding: '0 10px 10px' }}>
+          <button
+            onClick={onClick}
+            style={{ flex: 1, background: 'var(--accent)', border: 'none', borderRadius: 6, padding: '5px 0', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
+          >▶ Afficher</button>
+          <button
+            onClick={e => { e.stopPropagation(); onToggleFav(isFav); }}
+            onMouseEnter={() => setFavHover(true)}
+            onMouseLeave={() => setFavHover(false)}
+            style={{
+              background: isFav
+                ? (favHover ? 'rgba(220,50,50,.15)' : 'rgba(245,197,24,.12)')
+                : 'var(--surface2)',
+              border: isFav
+                ? (favHover ? '1px solid rgba(220,50,50,.6)' : '1px solid rgba(245,197,24,.5)')
+                : '1px solid var(--border)',
+              borderRadius: 6, padding: '5px 10px', cursor: 'pointer',
+              color: isFav ? (favHover ? '#e05555' : '#f5c518') : 'var(--text-muted)',
+              fontSize: 11, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0,
+              transition: 'background .15s, border-color .15s, color .15s',
+            }}
+          >
+            {isFav
+              ? (favHover ? <><span style={{ fontSize: 12, lineHeight: 1 }}>✕</span> Retirer</> : <>⭐ Épinglé</>)
+              : <>☆ Favoris</>
+            }
+          </button>
+        </div>
+      ) : (
+        <div style={{ padding: '0 10px 10px' }}>
+          <button
+            onClick={onClick}
+            style={{ width: '100%', background: 'var(--accent)', border: 'none', borderRadius: 6, padding: '5px 0', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
+          >▶ Afficher</button>
+        </div>
+      )}
     </div>
   );
 }
