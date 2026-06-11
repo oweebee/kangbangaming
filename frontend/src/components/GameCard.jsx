@@ -13,11 +13,12 @@ function formatPlaytime(minutes) {
 
 export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArchive, onUnarchive, onDelete, onEdit, isDragging, readOnly, isTaskBoard }) {
   const [imgError, setImgError] = useState(false);
+  const [ttImgError, setTtImgError] = useState(false);
   const isCustom   = game.type === 'custom';
   const isArchived = !!game.archived;
   const isUrgent   = !!game.urgent;
   const tt         = game.taskType ? getTaskType(game.taskType) : null;
-  const TtIcon    = tt?.Icon;
+  const TtFallback = tt?.FallbackIcon;
   const dateInfo  = getDateInfo(game);
 
   return (
@@ -50,12 +51,24 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
     >
       {/* ── Image area ── */}
       {isCustom && tt ? (
-        <div style={{
-          width: '100%', height: 88, position: 'relative',
-          background: tt.imgBg,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <TtIcon />
+        <div style={{ width: '100%', position: 'relative' }}>
+          {/* Image pleine largeur, hauteur auto — pas de rognage */}
+          {tt.img && !ttImgError ? (
+            <img
+              src={tt.img}
+              alt={tt.label}
+              onError={() => setTtImgError(true)}
+              style={{ width: '100%', height: 'auto', display: 'block' }}
+            />
+          ) : (
+            <div style={{
+              width: '100%', height: 88,
+              background: 'linear-gradient(135deg, #111 0%, #1a1a1a 100%)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              {TtFallback ? <TtFallback /> : <span style={{ fontSize: 32 }}>{tt.emoji}</span>}
+            </div>
+          )}
           <div style={{
             position: 'absolute', bottom: 4, left: 5,
             background: tt.badgeBg, color: tt.badgeText,
