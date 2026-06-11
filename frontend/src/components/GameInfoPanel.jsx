@@ -150,8 +150,10 @@ export default function GameInfoPanel({
           width: 26,
           height: tabHeight,
           background: locked
-            ? 'linear-gradient(180deg, rgba(232,129,58,0.3) 0%, rgba(192,80,10,0.3) 100%)'
-            : 'linear-gradient(180deg, rgba(50,55,70,0.97) 0%, rgba(28,31,38,0.97) 100%)',
+            ? 'linear-gradient(180deg, rgba(232,129,58,0.25) 0%, rgba(192,80,10,0.25) 100%)'
+            : 'linear-gradient(180deg, rgba(50,55,70,0.55) 0%, rgba(28,31,38,0.55) 100%)',
+          backdropFilter: 'blur(6px)',
+          WebkitBackdropFilter: 'blur(6px)',
           border: `1px solid ${locked ? 'rgba(232,129,58,0.55)' : 'rgba(255,255,255,0.11)'}`,
           ...(isLeft
             ? { borderLeft: 'none', borderRadius: '0 10px 10px 0', boxShadow: '3px 0 14px rgba(0,0,0,0.55)' }
