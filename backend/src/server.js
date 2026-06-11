@@ -634,8 +634,8 @@ function extractYoutubeId(raw = '') {
   return null;
 }
 
-// Debug: raw news content (admin only, no cache)
-app.get('/api/steam/news/:appid/raw', requireAuth, async (req, res) => {
+// Debug: raw news content (no auth, temp)
+app.get('/api/steam/news/:appid/raw', async (req, res) => {
   try {
     const data = await steamFetch(
       `https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=${req.params.appid}&count=3&maxlength=3000&format=json`
