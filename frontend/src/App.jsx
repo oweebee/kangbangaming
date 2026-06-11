@@ -399,7 +399,8 @@ export default function App() {
   useEffect(() => {
     const board = boards.find(b => b.id === activeBoardId);
     // publicBoardMode.headerImg already contains board.headerImg || firstGame.header_img from the API
-    const headerImg = board?.headerImg || publicBoardMode?.headerImg || games.find(g => g.header_img)?.header_img || null;
+    // Do NOT fall back to games[] here — games state may be stale from the previous board
+    const headerImg = board?.headerImg || publicBoardMode?.headerImg || null;
     const appId = headerImg?.match(/apps\/(\d+)\//)?.[1] || null;
     if (!appId || !token) { setGameInfo(null); return; }
     fetch(`${API}/steam/gameinfo/${appId}`, { headers: { Authorization: `Bearer ${token}` } })

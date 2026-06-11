@@ -525,7 +525,7 @@ app.get('/api/public/boards', requireAuth, (req, res) => {
   for (const [userId, userBoards] of Object.entries(all)) {
     for (const [boardId, board] of Object.entries(userBoards || {})) {
       if (board.public) {
-        const user = readUsers().find(u => u.id === req.user.id); const favIds = new Set(user?.favorites || []); const firstGame = Object.values(board.games || {})[0]; const headerImg = board.headerImg || firstGame?.header_img || null; result.push({ id: boardId, name: board.name, emoji: board.emoji || '', gameIcon: board.gameIcon || null, headerImg, columns: board.columns || [], games: Object.values(board.games || {}), gameCount: Object.keys(board.games || {}).length, ownerUsername: userMap.get(userId) || 'unknown', ownerId: userId, isOwner: userId === req.user.id, isFavorite: favIds.has(boardId) });
+        const user = readUsers().find(u => u.id === req.user.id); const favIds = new Set(user?.favorites || []); const firstGame = Object.values(board.games || {}).find(g => g.header_img); const headerImg = board.headerImg || firstGame?.header_img || null; result.push({ id: boardId, name: board.name, emoji: board.emoji || '', gameIcon: board.gameIcon || null, headerImg, columns: board.columns || [], games: Object.values(board.games || {}), gameCount: Object.keys(board.games || {}).length, ownerUsername: userMap.get(userId) || 'unknown', ownerId: userId, isOwner: userId === req.user.id, isFavorite: favIds.has(boardId) });
       }
     }
   }
@@ -545,7 +545,7 @@ app.get('/api/user/favorites', requireAuth, (req, res) => {
   for (const [userId, userBoards] of Object.entries(all)) {
     for (const [boardId, board] of Object.entries(userBoards || {})) {
       if (favIds.has(boardId) && board.public) {
-        const firstGame2 = Object.values(board.games || {})[0]; const headerImg2 = board.headerImg || firstGame2?.header_img || null; result.push({ id: boardId, name: board.name, emoji: board.emoji || '', gameIcon: board.gameIcon || null, headerImg: headerImg2, ownerUsername: userMap.get(userId) || 'unknown', ownerId: userId, isFavorite: true });
+        const firstGame2 = Object.values(board.games || {}).find(g => g.header_img); const headerImg2 = board.headerImg || firstGame2?.header_img || null; result.push({ id: boardId, name: board.name, emoji: board.emoji || '', gameIcon: board.gameIcon || null, headerImg: headerImg2, ownerUsername: userMap.get(userId) || 'unknown', ownerId: userId, isFavorite: true });
       }
     }
   }
