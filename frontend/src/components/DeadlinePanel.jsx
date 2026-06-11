@@ -100,8 +100,40 @@ function taskToGame(task) {
 // ── Section ────────────────────────────────────────────────────────────────────
 function Section({ cat, tasks, onOpenTask }) {
   const [collapsed, setCollapsed] = useState(false);
+  const [order, setOrder] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(`dlOrder_${cat}`) || 'null') || []; } catch { return []; }
+  });
+  const [dragKey, setDragKey] = useState(null);
+  const [dragOver, setDragOver] = useState(null);
   const meta = CAT_META[cat];
   if (tasks.length === 0) return null;
+
+  // Build a stable key per task for ordering
+  const taskKey = t => `${t.boardId}__${t.gameId}`;
+
+  function applyOrder(items) {
+    if (!order || order.length === 0) return items;
+    const map = new Map(items.map(t => [taskKey(t), t]));
+    const sorted = order.map(k => map.get(k)).filter(Boolean);
+    const extra = items.filter(t => !order.includes(taskKey(t)));
+    return [...sorted, ...extra];
+  }
+
+  function handleDrop(overId) {
+    if (!dragKey || dragKey === overId) return;
+    const base = applyOrder(tasks).map(taskKey);
+    const from = base.indexOf(dragKey);
+    const to = base.indexOf(overId);
+    if (from === -1 || to === -1) return;
+    const next = [...base];
+    next.splice(from, 1);
+    next.splice(to, 0, dragKey);
+    try { localStorage.setItem(`dlOrder_${cat}`, JSON.stringify(next)); } catch {}
+    setOrder(next);
+    setDragKey(null); setDragOver(null);
+  }
+
+  const sorted = applyOrder(tasks);
 
   return (
     <div style={{ marginBottom: 20 }}>
@@ -121,11 +153,25 @@ function Section({ cat, tasks, onOpenTask }) {
 
       {!collapsed && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10 }}>
-          {tasks.map((task, i) => {
+          {sorted.map((task, i) => {
             const game = taskToGame(task);
             const isPublic = task.isPublic;
+            const key = taskKey(task);
             return (
-              <div key={`${task.boardId}-${task.gameId}-${i}`} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <div
+                key={`${key}-${i}`}
+                draggable
+                onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; setDragKey(key); }}
+                onDragEnd={() => { setDragKey(null); setDragOver(null); }}
+                onDragOver={e => { e.preventDefault(); setDragOver(key); }}
+                onDrop={e => { e.preventDefault(); handleDrop(key); }}
+                style={{
+                  display: 'flex', flexDirection: 'column', gap: 4,
+                  opacity: dragKey === key ? 0.4 : 1,
+                  outline: dragOver === key && dragKey !== key ? `2px dashed ${meta.color}` : 'none',
+                  borderRadius: 8, cursor: 'grab',
+                }}
+              >
                 <GameCard
                   game={game}
                   onClick={() => onOpenTask(task)}
@@ -134,7 +180,7 @@ function Section({ cat, tasks, onOpenTask }) {
                   onDragStart={() => {}}
                   onDragEnd={() => {}}
                 />
-                {/* Nom du board — toujours visible sous la carte */}
+                {/* Nom du board */}
                 <div style={{
                   display: 'flex', alignItems: 'center', gap: 4,
                   padding: '3px 6px',

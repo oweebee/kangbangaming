@@ -127,9 +127,13 @@ function HomeBoardCard({ board, isPublic, isFav, onToggleFav, onClick }) {
               transition: 'background .15s, border-color .15s, color .15s',
             }}
           >
-            {isFav
-              ? (favHover ? <><span style={{ fontSize: 12, lineHeight: 1 }}>✕</span> Retirer</> : <>📌 Épinglé</>)
-              : <>📌 Épingler</>
+            {isPublic
+              ? (isFav
+                ? (favHover ? <><span style={{ fontSize: 12, lineHeight: 1 }}>✕</span> Retirer</> : <>✓ Suivi</>)
+                : <>+ Suivre</>)
+              : (isFav
+                ? (favHover ? <><span style={{ fontSize: 12, lineHeight: 1 }}>✕</span> Retirer</> : <>📌 Épinglé</>)
+                : <>📌 Épingler</>)
             }
           </button>
         </div>
@@ -180,6 +184,24 @@ export default function App() {
   const [showHome, setShowHome] = useState(true);
   const [homePublicBoards, setHomePublicBoards] = useState([]);
   const [deadlineRefreshKey, setDeadlineRefreshKey] = useState(0);
+  // Home section drag order (IDs) — persisted in localStorage
+  const [homePublicOrder, setHomePublicOrder] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('homePublicOrder') || 'null') || []; } catch { return []; }
+  });
+  const [homeFavOrder, setHomeFavOrder] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('homeFavOrder') || 'null') || []; } catch { return []; }
+  });
+  const [homeOtherOrder, setHomeOtherOrder] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('homeOtherOrder') || 'null') || []; } catch { return []; }
+  });
+  const [homeDragId, setHomeDragId] = useState(null);
+  const [homeDragOver, setHomeDragOver] = useState(null);
+  // Resizable splitter between DeadlinePanel and boards columns
+  const [homeSplitPct, setHomeSplitPct] = useState(() => {
+    try { return parseFloat(localStorage.getItem('homeSplitPct') || '35'); } catch { return 35; }
+  });
+  const homeSplitterDragging = useRef(false);
+  const homeSplitterRef = useRef(null);
 
   // Board state
   const [boards, setBoards] = useState([]);
@@ -749,16 +771,96 @@ export default function App() {
     }
   };
 
+  // ── Home section drag-to-reorder helpers ──────────────────────────────────
+  function applySectionOrder(items, order) {
+    if (!order || order.length === 0) return items;
+    const map = new Map(items.map(b => [b.id, b]));
+    const sorted = order.map(id => map.get(id)).filter(Boolean);
+    const extra = items.filter(b => !order.includes(b.id));
+    return [...sorted, ...extra];
+  }
+
+  function handleHomeDrop(section, overId, setOrder, storageKey) {
+    if (!homeDragId || homeDragId === overId) return;
+    setOrder(prev => {
+      const base = applySectionOrder(
+        section === 'public' ? homePublicBoards
+        : section === 'fav' ? sortedBoards.filter(b => personalFavIds.includes(b.id))
+        : sortedBoards.filter(b => !personalFavIds.includes(b.id)),
+        prev
+      ).map(b => b.id);
+      const from = base.indexOf(homeDragId);
+      const to = base.indexOf(overId);
+      if (from === -1 || to === -1) return prev;
+      const next = [...base];
+      next.splice(from, 1);
+      next.splice(to, 0, homeDragId);
+      try { localStorage.setItem(storageKey, JSON.stringify(next)); } catch {}
+      return next;
+    });
+    setHomeDragId(null);
+    setHomeDragOver(null);
+  }
+
   const homeView = (
     <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
 
-      {/* ── Colonne gauche : Échéances (35%) ── */}
-      <div style={{ flex: 35, minWidth: 0, borderRight: '1px solid var(--border)', overflowY: 'auto', padding: '28px 20px' }}>
+      {/* ── Colonne gauche : Échéances ── */}
+      <div style={{ width: `${homeSplitPct}%`, minWidth: 0, flexShrink: 0, overflowY: 'auto', padding: '28px 20px' }}>
         <DeadlinePanel token={token} onOpenTask={handleDeadlineOpen} refreshKey={deadlineRefreshKey} />
       </div>
 
-      {/* ── Colonne droite : Boards (65%) ── */}
-      <div style={{ flex: 65, minWidth: 0, overflowY: 'auto', padding: '28px 28px' }}>
+      {/* ── Séparateur redimensionnable ── */}
+      <div
+        ref={homeSplitterRef}
+        onMouseDown={e => {
+          e.preventDefault();
+          homeSplitterDragging.current = true;
+          const container = homeSplitterRef.current?.parentElement;
+          const onMove = mv => {
+            if (!homeSplitterDragging.current || !container) return;
+            const rect = container.getBoundingClientRect();
+            const raw = ((mv.clientX - rect.left) / rect.width) * 100;
+            // Min = one card width (~224px) on each side
+            const minPct = (224 / rect.width) * 100;
+            const maxPct = 100 - minPct;
+            const clamped = Math.max(minPct, Math.min(maxPct, raw));
+            setHomeSplitPct(clamped);
+            try { localStorage.setItem('homeSplitPct', String(clamped)); } catch {}
+          };
+          const onUp = () => {
+            homeSplitterDragging.current = false;
+            window.removeEventListener('mousemove', onMove);
+            window.removeEventListener('mouseup', onUp);
+          };
+          window.addEventListener('mousemove', onMove);
+          window.addEventListener('mouseup', onUp);
+        }}
+        style={{
+          width: 6, flexShrink: 0, cursor: 'col-resize',
+          background: 'var(--border)',
+          position: 'relative',
+          transition: 'background .15s',
+          userSelect: 'none',
+        }}
+        onMouseEnter={e => e.currentTarget.style.background = 'var(--accent)'}
+        onMouseLeave={e => { if (!homeSplitterDragging.current) e.currentTarget.style.background = 'var(--border)'; }}
+      >
+        {/* Poignée visuelle centrale */}
+        <div style={{
+          position: 'absolute', top: '50%', left: '50%',
+          transform: 'translate(-50%, -50%)',
+          display: 'flex', flexDirection: 'column', gap: 3,
+          pointerEvents: 'none',
+        }}>
+          {[0,1,2].map(i => (
+            <div key={i} style={{ width: 2, height: 2, borderRadius: '50%', background: 'var(--text-muted)', opacity: 0.5 }} />
+          ))}
+        </div>
+      </div>
+
+      {/* ── Colonne droite : Boards ── */}
+      <div style={{ flex: 1, minWidth: 0, overflowY: 'auto', padding: '28px 28px' }}>
       <div style={{ maxWidth: 960, margin: '0 auto' }}>
         {/* Boards publics de la communauté */}
         <div style={{ marginBottom: 36 }}>
@@ -773,11 +875,20 @@ export default function App() {
             <div style={{ color: 'var(--text-muted)', fontSize: 12, padding: '16px 0' }}>Aucun board public disponible pour l'instant.</div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
-              {homePublicBoards.map(b => (
-                <HomeBoardCard key={b.id} board={b} isPublic
-                  isFav={favBoards.some(f => f.id === b.id)}
-                  onToggleFav={(cur) => toggleFavorite(b.id, b, cur)}
-                  onClick={() => openPublicBoard(b)} />
+              {applySectionOrder(homePublicBoards, homePublicOrder).map(b => (
+                <div key={b.id}
+                  draggable
+                  onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; setHomeDragId(b.id); }}
+                  onDragEnd={() => { setHomeDragId(null); setHomeDragOver(null); }}
+                  onDragOver={e => { e.preventDefault(); setHomeDragOver(`pub_${b.id}`); }}
+                  onDrop={e => { e.preventDefault(); handleHomeDrop('public', b.id, setHomePublicOrder, 'homePublicOrder'); }}
+                  style={{ opacity: homeDragId === b.id ? 0.4 : 1, outline: homeDragOver === `pub_${b.id}` && homeDragId !== b.id ? '2px dashed var(--accent)' : 'none', borderRadius: 12, cursor: 'grab' }}
+                >
+                  <HomeBoardCard board={b} isPublic
+                    isFav={favBoards.some(f => f.id === b.id)}
+                    onToggleFav={(cur) => toggleFavorite(b.id, b, cur)}
+                    onClick={() => openPublicBoard(b)} />
+                </div>
               ))}
             </div>
           )}
@@ -801,8 +912,17 @@ export default function App() {
                     <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--surface2)', borderRadius: 99, padding: '1px 7px' }}>{favBoards2.length}</span>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
-                    {favBoards2.map(b => (
-                      <HomeBoardCard key={b.id} board={b} isFav onToggleFav={(cur) => togglePersonalFavorite(b.id, cur)} onClick={() => openBoard(b)} />
+                    {applySectionOrder(favBoards2, homeFavOrder).map(b => (
+                      <div key={b.id}
+                        draggable
+                        onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; setHomeDragId(b.id); }}
+                        onDragEnd={() => { setHomeDragId(null); setHomeDragOver(null); }}
+                        onDragOver={e => { e.preventDefault(); setHomeDragOver(`fav_${b.id}`); }}
+                        onDrop={e => { e.preventDefault(); handleHomeDrop('fav', b.id, setHomeFavOrder, 'homeFavOrder'); }}
+                        style={{ opacity: homeDragId === b.id ? 0.4 : 1, outline: homeDragOver === `fav_${b.id}` && homeDragId !== b.id ? '2px dashed #f5c518' : 'none', borderRadius: 12, cursor: 'grab' }}
+                      >
+                        <HomeBoardCard board={b} isFav onToggleFav={(cur) => togglePersonalFavorite(b.id, cur)} onClick={() => openBoard(b)} />
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -819,8 +939,17 @@ export default function App() {
                   <div style={{ color: 'var(--text-muted)', fontSize: 12, padding: '8px 0' }}>Tous tes boards sont épinglés 📌</div>
                 ) : (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
-                    {otherBoards.map(b => (
-                      <HomeBoardCard key={b.id} board={b} isFav={false} onToggleFav={(cur) => togglePersonalFavorite(b.id, cur)} onClick={() => openBoard(b)} />
+                    {applySectionOrder(otherBoards, homeOtherOrder).map(b => (
+                      <div key={b.id}
+                        draggable
+                        onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; setHomeDragId(b.id); }}
+                        onDragEnd={() => { setHomeDragId(null); setHomeDragOver(null); }}
+                        onDragOver={e => { e.preventDefault(); setHomeDragOver(`other_${b.id}`); }}
+                        onDrop={e => { e.preventDefault(); handleHomeDrop('other', b.id, setHomeOtherOrder, 'homeOtherOrder'); }}
+                        style={{ opacity: homeDragId === b.id ? 0.4 : 1, outline: homeDragOver === `other_${b.id}` && homeDragId !== b.id ? '2px dashed #f5a500' : 'none', borderRadius: 12, cursor: 'grab' }}
+                      >
+                        <HomeBoardCard board={b} isFav={false} onToggleFav={(cur) => togglePersonalFavorite(b.id, cur)} onClick={() => openBoard(b)} />
+                      </div>
                     ))}
                   </div>
                 )}
@@ -1173,14 +1302,14 @@ export default function App() {
           loading ? (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Chargement...</div>
           ) : (
-            <MobileBoard columns={columns} byColumn={byColumn} onCardClick={setSelectedGame} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} isTaskBoard={isTaskBoard} />
+            <MobileBoard columns={columns} byColumn={byColumn} onCardClick={setSelectedGame} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} isTaskBoard={isTaskBoard} onToggleDone={(appid, done) => patchGame(appid, { done })} />
           )
         ) : !activeBoardId ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Crée un board pour commencer</div>
         ) : loading ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Chargement...</div>
         ) : (
-          <MobileBoard columns={columns} byColumn={byColumn} onCardClick={setSelectedGame} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} isTaskBoard={isTaskBoard} />
+          <MobileBoard columns={columns} byColumn={byColumn} onCardClick={setSelectedGame} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} isTaskBoard={isTaskBoard} onToggleDone={(appid, done) => patchGame(appid, { done })} />
         )}
         {(activeBoardId || publicBoardMode) && (
           <div style={{ background: 'var(--surface)', borderTop: '1px solid var(--border)', padding: '8px 12px', display: 'flex', gap: 8, flexShrink: 0 }}>
