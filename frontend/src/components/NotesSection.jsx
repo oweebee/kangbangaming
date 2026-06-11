@@ -31,7 +31,7 @@ function formatNoteDate(isoStr) {
 //   notes   – array of {id, text, createdAt, editedAt}
 //   onSave  – called with full updated notes array on any change
 //   compact – compact styling (SearchModal)
-export default function NotesSection({ notes: externalNotes = [], onSave, compact = false }) {
+export default function NotesSection({ notes: externalNotes = [], onSave, onDraftChange, compact = false }) {
   const [notes, setNotes]         = useState(externalNotes);
   const [newNote, setNewNote]     = useState('');
   const [editingId, setEditingId] = useState(null);
@@ -46,6 +46,11 @@ export default function NotesSection({ notes: externalNotes = [], onSave, compac
 
   const push = (updated) => { setNotes(updated); onSave(updated); };
 
+  const setNewNoteWithDraft = (val) => {
+    setNewNote(val);
+    onDraftChange?.(val);
+  };
+
   const addNote = () => {
     const text = newNote.trim();
     if (!text) return;
@@ -53,7 +58,7 @@ export default function NotesSection({ notes: externalNotes = [], onSave, compac
       id: `note_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
       text, createdAt: new Date().toISOString(), editedAt: null,
     }]);
-    setNewNote('');
+    setNewNoteWithDraft('');
   };
 
   const saveEdit = () => {
@@ -92,7 +97,7 @@ export default function NotesSection({ notes: externalNotes = [], onSave, compac
       {/* ── New note input — always at top ── */}
       <textarea
         value={newNote}
-        onChange={e => setNewNote(e.target.value)}
+        onChange={e => setNewNoteWithDraft(e.target.value)}
         onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) addNote(); }}
         placeholder={notes.length === 0 ? 'Ajouter une note… (Ctrl+Entrée pour valider)' : 'Nouvelle note…'}
         style={inputStyle}

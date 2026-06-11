@@ -67,6 +67,7 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
   const [urgent,    setUrgent]    = useState(!!initialGame?.urgent);
   const [assignees, setAssignees] = useState(initialGame?.assignees || []);
   const [notes,     setNotes]     = useState(initialGame?.notes     || []);
+  const [notesDraft, setNotesDraft] = useState('');
   const [progress,  setProgress]  = useState(initialGame?.progress ?? null);
   const [showAssigneeMenu, setShowAssigneeMenu] = useState(false);
   const assigneeMenuRef = useRef(null);
@@ -103,6 +104,10 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
 
   const handleSubmitCustom = () => {
     if (!customName.trim()) return;
+    // Auto-save unsaved note draft
+    const finalNotes = notesDraft.trim()
+      ? [...notes, { id: `note_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`, text: notesDraft.trim(), createdAt: new Date().toISOString(), editedAt: null }]
+      : notes;
     const gameData = {
       appid:     initialGame?.appid || `custom_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
       name:      customName.trim(),
@@ -116,7 +121,7 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
       endDate:   dateMode === 'period' ? (endDate || null) : null,
       urgent,
       assignees,
-      notes,
+      notes: finalNotes,
       progress,
     };
     if (isEditMode && onSave) {
@@ -545,7 +550,7 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
             <ProgressSlider value={progress} onChange={setProgress} compact />
 
             {/* ── Notes ── */}
-            <NotesSection notes={notes} onSave={setNotes} compact />
+            <NotesSection notes={notes} onSave={setNotes} onDraftChange={setNotesDraft} compact />
 
             {/* ── Submit ── */}
             <button
