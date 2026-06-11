@@ -612,22 +612,43 @@ function stripMarkup(str = '') {
 }
 
 function extractImage(raw = '') {
-  const bbMatch = raw.match(/\[img\]\s*(\{STEAM_CLAN_IMAGE\}[^\s[\]]+|\bhttps?:\/\/[^\s[\]]+\.(?:jpe?g|png|gif|webp))\s*\[\/img\]/i);
+  // [img]{STEAM_CLAN_IMAGE}/path[/img] or [img]https://...[/img]
+  const bbMatch = raw.match(/\[img\]\s*((?:\{STEAM_CLAN_IMAGE\}|https?:\/\/)[^\s\[\]]*)\s*\[\/img\]/i);
   if (bbMatch) return bbMatch[1].replace(/\{STEAM_CLAN_IMAGE\}/g, STEAM_CLAN_IMG);
+  // HTML <img src="...">
   const htmlMatch = raw.match(/<img[^>]+src=["']([^"']+)["']/i);
   if (htmlMatch) return htmlMatch[1];
-  const urlMatch = raw.match(/https?:\/\/[^\s[\]"'<>]+\.(?:jpe?g|png|gif|webp)/i);
+  // Any CDN image URL with known extension
+  const urlMatch = raw.match(/https?:\/\/[^\s\[\]"'<>]+\.(?:jpe?g|png|gif|webp)(?:[?#][^\s\[\]"'<>]*)?/i);
   if (urlMatch) return urlMatch[0];
   return null;
 }
 
 function extractYoutubeId(raw = '') {
-  const bbMatch = raw.match(/\[previewyoutube=([A-Za-z0-9_-]{8,15})[;\]]/i);
+  // [previewyoutube=ID;full][/previewyoutube] — ID can be any length
+  const bbMatch = raw.match(/\[previewyoutube=([A-Za-z0-9_-]+)[;\]]/i);
   if (bbMatch) return bbMatch[1];
-  const urlMatch = raw.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]{8,15})/i);
+  // Standard YouTube URLs
+  const urlMatch = raw.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]+)/i);
   if (urlMatch) return urlMatch[1];
   return null;
 }
+
+// Debug: raw news content (admin only, no cache)
+app.get('/api/steam/news/:appid/raw', requireAuth, async (req, res) => {
+  try {
+    const data = await steamFetch(
+      `https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=${req.params.appid}&count=3&maxlength=3000&format=json`
+    );
+    const items = (data.appnews?.newsitems || []).slice(0, 3).map(n => ({
+      title: n.title,
+      raw_snippet: n.contents?.slice(0, 600),
+      image: extractImage(n.contents),
+      youtube: extractYoutubeId(n.contents),
+    }));
+    res.json(items);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
 
 app.get('/api/steam/news/:appid', requireAuth, async (req, res) => {
   const { appid } = req.params;
