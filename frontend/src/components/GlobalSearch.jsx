@@ -18,18 +18,18 @@ function highlight(text, q) {
 }
 
 const BADGE = {
-  board: { label: 'Board',  color: '#f5a500' },
-  name:  { label: 'Tâche',  color: '#4cd882' },
-  note:  { label: 'Note',   color: '#a78bfa' },
+  board: { label: 'Board', color: '#f5a500' },
+  name:  { label: 'Tâche', color: '#4cd882' },
+  note:  { label: 'Note',  color: '#a78bfa' },
 };
 const PUBLIC_COLOR = '#47a7f5';
 
 export default function GlobalSearch({ token, onGoToBoard, onOpenGame }) {
-  const [query, setQuery]       = useState('');
-  const [results, setResults]   = useState([]);
-  const [loading, setLoading]   = useState(false);
-  const [open, setOpen]         = useState(false);
-  const [expanded, setExpanded] = useState(false); // whether input is visible
+  const [query, setQuery]         = useState('');
+  const [results, setResults]     = useState([]);
+  const [loading, setLoading]     = useState(false);
+  const [open, setOpen]           = useState(false);
+  const [expanded, setExpanded]   = useState(false);
   const [activeIdx, setActiveIdx] = useState(-1);
 
   const debounceRef  = useRef(null);
@@ -76,7 +76,7 @@ export default function GlobalSearch({ token, onGoToBoard, onOpenGame }) {
     setTimeout(() => inputRef.current?.focus(), 50);
   };
 
-  // Close on outside click — always collapse and clear
+  // Fermer au clic extérieur
   useEffect(() => {
     const fn = (e) => {
       if (containerRef.current && !containerRef.current.contains(e.target)) {
@@ -91,146 +91,146 @@ export default function GlobalSearch({ token, onGoToBoard, onOpenGame }) {
   }, []);
 
   return (
-    <div ref={containerRef} style={{ position: 'relative', flexShrink: 0, display: 'flex', alignItems: 'center' }}>
-      {/* Loupe icon (always visible) */}
+    <div ref={containerRef} style={{ position: 'relative', flexShrink: 0 }}>
+
+      {/* Icône loupe — seul élément dans le flux du header */}
       <button
         onClick={handleIconClick}
         title="Rechercher"
         style={{
-          background: expanded ? 'var(--surface2)' : 'none',
-          border: expanded ? `1px solid var(--accent)` : '1px solid transparent',
-          borderRadius: expanded ? '8px 0 0 8px' : 8,
-          borderRight: expanded ? 'none' : undefined,
+          background: expanded ? 'rgba(192,87,10,0.18)' : 'none',
+          border: expanded ? '1px solid var(--accent)' : '1px solid transparent',
+          borderRadius: 8,
           width: 30, height: 30,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           cursor: 'pointer', flexShrink: 0,
           transition: 'background .15s, border-color .15s',
         }}
       >
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke={expanded ? 'var(--accent)' : 'var(--text-muted)'}
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none"
+          stroke={expanded ? 'var(--accent)' : 'var(--text-muted)'}
           strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
         </svg>
       </button>
 
-      {/* Expandable input */}
-      <div style={{
-        overflow: 'hidden',
-        width: expanded ? 230 : 0,
-        transition: 'width .2s cubic-bezier(0.4,0,0.2,1)',
-        flexShrink: 0,
-      }}>
-        <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-          <input
-            ref={inputRef}
-            type="search"
-            placeholder="Boards, tâches, notes…"
-            value={query}
-            onChange={e => handleInput(e.target.value)}
-            onFocus={() => query && results.length > 0 && setOpen(true)}
-            onKeyDown={handleKeyDown}
-            style={{
-              background: 'var(--surface2)',
-              border: '1px solid var(--accent)',
-              borderLeft: 'none',
-              borderRadius: '0 8px 8px 0',
-              padding: '6px 28px 6px 10px',
-              color: 'var(--text)', fontSize: 12, outline: 'none',
-              width: '100%',
-            }}
-          />
-          {loading && (
+      {/* Panneau flottant : champ + dropdown. position:absolute → ne touche pas au layout du header */}
+      {expanded && (
+        <div style={{ position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 2001 }}>
+
+          {/* Champ de saisie */}
+          <div style={{ position: 'relative' }}>
+            <input
+              ref={inputRef}
+              type="search"
+              placeholder="Boards, tâches, notes…"
+              value={query}
+              onChange={e => handleInput(e.target.value)}
+              onFocus={() => query && results.length > 0 && setOpen(true)}
+              onKeyDown={handleKeyDown}
+              style={{
+                display: 'block',
+                background: 'var(--surface1)',
+                border: '1px solid var(--accent)',
+                borderRadius: 8,
+                padding: '7px 30px 7px 12px',
+                color: 'var(--text)', fontSize: 13, outline: 'none',
+                width: 260,
+                boxShadow: '0 6px 24px rgba(0,0,0,0.55)',
+              }}
+            />
+            {loading && (
+              <div style={{
+                position: 'absolute', right: 9, top: '50%', transform: 'translateY(-50%)',
+                width: 10, height: 10,
+                border: '2px solid var(--accent)', borderTopColor: 'transparent',
+                borderRadius: '50%', animation: 'gspin .55s linear infinite',
+              }} />
+            )}
+          </div>
+
+          {/* Dropdown résultats */}
+          {open && query.length >= 2 && (
             <div style={{
-              position: 'absolute', right: 9,
-              width: 10, height: 10,
-              border: '2px solid var(--accent)', borderTopColor: 'transparent',
-              borderRadius: '50%', animation: 'gspin .55s linear infinite',
-              flexShrink: 0,
-            }} />
-          )}
-        </div>
-      </div>
-
-      {/* Dropdown */}
-      {open && query.length >= 2 && (
-        <div style={{
-          position: 'absolute', top: 'calc(100% + 6px)', right: 0, width: 380,
-          background: 'var(--surface1)', border: '1px solid var(--border)',
-          borderRadius: 10, boxShadow: '0 10px 40px rgba(0,0,0,.65)',
-          zIndex: 2000, maxHeight: 460, overflowY: 'auto',
-        }}>
-          {!loading && results.length === 0 ? (
-            <div style={{ padding: '18px 16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 12 }}>
-              Aucun résultat pour «&nbsp;{query}&nbsp;»
-            </div>
-          ) : results.map((r, idx) => {
-            const badge = BADGE[r.matchedIn] || { label: r.matchedIn, color: '#fff' };
-            const isActive = idx === activeIdx;
-            return (
-              <div
-                key={`${r.type}-${r.boardId}-${r.gameId || ''}-${idx}`}
-                onClick={() => handleSelect(r)}
-                onMouseEnter={() => setActiveIdx(idx)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px',
-                  cursor: 'pointer',
-                  background: isActive ? 'var(--surface2)' : 'transparent',
-                  borderBottom: '1px solid rgba(255,255,255,0.04)',
-                  transition: 'background .08s',
-                }}
-              >
-                {/* Thumbnail */}
-                <div style={{
-                  width: 52, height: 30, borderRadius: 5, overflow: 'hidden', flexShrink: 0,
-                  background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  border: '1px solid rgba(255,255,255,0.06)',
-                }}>
-                  {r.gameImg ? (
-                    <img src={r.gameImg} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : r.boardHeaderImg ? (
-                    <img src={r.boardHeaderImg} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : r.boardIcon ? (
-                    <img src={r.boardIcon} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
-                  ) : (
-                    <span style={{ fontSize: 16 }}>🎮</span>
-                  )}
+              marginTop: 4,
+              width: 380,
+              background: 'var(--surface1)', border: '1px solid var(--border)',
+              borderRadius: 10, boxShadow: '0 10px 40px rgba(0,0,0,.65)',
+              maxHeight: 460, overflowY: 'auto',
+            }}>
+              {!loading && results.length === 0 ? (
+                <div style={{ padding: '18px 16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 12 }}>
+                  Aucun résultat pour «&nbsp;{query}&nbsp;»
                 </div>
+              ) : results.map((r, idx) => {
+                const badge = BADGE[r.matchedIn] || { label: r.matchedIn, color: '#fff' };
+                const isActive = idx === activeIdx;
+                return (
+                  <div
+                    key={`${r.type}-${r.boardId}-${r.gameId || ''}-${idx}`}
+                    onClick={() => handleSelect(r)}
+                    onMouseEnter={() => setActiveIdx(idx)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px',
+                      cursor: 'pointer',
+                      background: isActive ? 'var(--surface2)' : 'transparent',
+                      borderBottom: '1px solid rgba(255,255,255,0.04)',
+                      transition: 'background .08s',
+                    }}
+                  >
+                    {/* Miniature */}
+                    <div style={{
+                      width: 52, height: 30, borderRadius: 5, overflow: 'hidden', flexShrink: 0,
+                      background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      border: '1px solid rgba(255,255,255,0.06)',
+                    }}>
+                      {r.gameImg ? (
+                        <img src={r.gameImg} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : r.boardHeaderImg ? (
+                        <img src={r.boardHeaderImg} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : r.boardIcon ? (
+                        <img src={r.boardIcon} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                      ) : (
+                        <span style={{ fontSize: 16 }}>🎮</span>
+                      )}
+                    </div>
 
-                {/* Text */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 700, fontSize: 12, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.3 }}>
-                    {r.type === 'board'
-                      ? highlight(r.boardName, query)
-                      : highlight(r.gameName, query)}
+                    {/* Texte */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, fontSize: 12, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.3 }}>
+                        {r.type === 'board' ? highlight(r.boardName, query) : highlight(r.gameName, query)}
+                      </div>
+                      {r.type !== 'board' && (
+                        <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.3 }}>
+                          {r.matchedIn === 'note' && r.notePreview
+                            ? <>📝 {highlight(r.notePreview, query)}</>
+                            : `📋 ${r.boardName}`}
+                        </div>
+                      )}
+                      {r.matchedIn === 'note' && (
+                        <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 1, lineHeight: 1.3 }}>📋 {r.boardName}</div>
+                      )}
+                      {r.isPublic && r.ownerUsername && (
+                        <div style={{ fontSize: 10, color: PUBLIC_COLOR, marginTop: 1, lineHeight: 1.3, opacity: 0.8 }}>
+                          🌐 {r.isFollowed ? 'Suivi · ' : ''}{r.ownerUsername}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Badge */}
+                    <span style={{
+                      fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4, flexShrink: 0,
+                      color: badge.color, border: `1px solid ${badge.color}`, opacity: 0.9,
+                      letterSpacing: '0.03em',
+                    }}>
+                      {badge.label}
+                    </span>
                   </div>
-                  {r.type !== 'board' && (
-                    <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.3 }}>
-                      {r.matchedIn === 'note' && r.notePreview
-                        ? <>📝 {highlight(r.notePreview, query)}</>
-                        : `📋 ${r.boardName}`}
-                    </div>
-                  )}
-                  {r.matchedIn === 'note' && (
-                    <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 1, lineHeight: 1.3 }}>📋 {r.boardName}</div>
-                  )}
-                  {r.isPublic && r.ownerUsername && (
-                    <div style={{ fontSize: 10, color: PUBLIC_COLOR, marginTop: 1, lineHeight: 1.3, opacity: 0.8 }}>
-                      🌐 {r.isFollowed ? 'Suivi · ' : ''}{r.ownerUsername}
-                    </div>
-                  )}
-                </div>
+                );
+              })}
+            </div>
+          )}
 
-                {/* Badge */}
-                <span style={{
-                  fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4, flexShrink: 0,
-                  color: badge.color, border: `1px solid ${badge.color}`, opacity: 0.9,
-                  letterSpacing: '0.03em',
-                }}>
-                  {badge.label}
-                </span>
-              </div>
-            );
-          })}
         </div>
       )}
 
