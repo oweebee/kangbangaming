@@ -380,10 +380,16 @@ export default function App() {
     fetch(`${API}/public/boards`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.ok ? r.json() : []).then(setHomePublicBoards).catch(() => {});
   }, [showHome, token]);
+  // Sync columns whenever activeBoardId OR boards changes (avoids race where boards loads after activeBoardId effect)
   useEffect(() => {
     if (!activeBoardId) return;
     const board = boards.find(b => b.id === activeBoardId);
     if (board) setColumns(board.columns || []);
+  }, [activeBoardId, boards]);
+
+  // Fetch games only when the active board changes
+  useEffect(() => {
+    if (!activeBoardId) return;
     fetchGames(activeBoardId);
   }, [activeBoardId]);
 
@@ -392,12 +398,13 @@ export default function App() {
   // Use same fallback as the render path: board.headerImg OR first game with header_img
   useEffect(() => {
     const board = boards.find(b => b.id === activeBoardId);
-    const headerImg = board?.headerImg || games.find(g => g.header_img)?.header_img || null;
+    // publicBoardMode.headerImg already contains board.headerImg || firstGame.header_img from the API
+    const headerImg = board?.headerImg || publicBoardMode?.headerImg || games.find(g => g.header_img)?.header_img || null;
     const appId = headerImg?.match(/apps\/(\d+)\//)?.[1] || null;
     if (!appId || !token) { setGameInfo(null); return; }
     fetch(`${API}/steam/gameinfo/${appId}`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.ok ? r.json() : null).then(setGameInfo).catch(() => setGameInfo(null));
-  }, [activeBoardId, boards, token]); // games intentionally omitted — backend cache makes extra calls cheap
+  }, [activeBoardId, boards, token, publicBoardMode]);
 
   // Board game search
   const searchBoardGames = useCallback(async (q) => {
@@ -706,7 +713,7 @@ export default function App() {
                 <div style={{ marginBottom: 28 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
                     <svg viewBox="0 0 24 24" width="14" height="14" fill="#f5c518" stroke="#f5c518" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: '#f5c518', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Mes Favoris</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: '#f5c518', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Épinglés</span>
                     <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--surface2)', borderRadius: 99, padding: '1px 7px' }}>{favBoards2.length}</span>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
@@ -725,7 +732,7 @@ export default function App() {
                 {sortedBoards.length === 0 ? (
                   <div style={{ color: 'var(--text-muted)', fontSize: 12, padding: '16px 0' }}>Crée un board pour commencer.</div>
                 ) : otherBoards.length === 0 ? (
-                  <div style={{ color: 'var(--text-muted)', fontSize: 12, padding: '8px 0' }}>Tous tes boards sont en favoris ⭐</div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: 12, padding: '8px 0' }}>Tous tes boards sont épinglés 📌</div>
                 ) : (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
                     {otherBoards.map(b => (
