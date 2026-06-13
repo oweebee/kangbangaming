@@ -91,7 +91,7 @@ function BoardEmojiPicker({ current, onSelect, onClose }) {
   });
   return (
     <div ref={ref} style={{
-      position: 'absolute', left: '100%', top: 0, zIndex: 100,
+      position: 'absolute', left: '100%', bottom: 0, zIndex: 100,
       background: 'var(--surface2)', border: '1px solid var(--border)',
       borderRadius: 10, padding: '8px 8px 4px', marginLeft: 6,
       boxShadow: '0 8px 24px rgba(0,0,0,.6)',

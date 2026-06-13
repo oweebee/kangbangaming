@@ -31,19 +31,21 @@ function EmojiPicker({ current, onSelect, onClose }) {
   });
   return (
     <div ref={ref} style={{
-      position: 'absolute', top: '100%', left: 0, zIndex: 50,
-      background: 'var(--surface2)', border: '1px solid var(--border)',
-      borderRadius: 10, padding: '8px 8px 4px', marginTop: 4,
-      boxShadow: '0 8px 24px rgba(0,0,0,.5)',
-      width: 272, maxHeight: 320, overflowY: 'auto',
+      position: 'absolute', bottom: '100%', left: 0, zIndex: 50,
+      background: 'var(--surface1)', border: '1px solid var(--border)',
+      borderRadius: 12, padding: '10px 10px 6px', marginBottom: 6,
+      boxShadow: '0 -4px 32px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.04)',
+      width: 272, maxHeight: 340, overflowY: 'auto',
     }}>
-      <div style={{ marginBottom: 6 }}>
-        <button onClick={() => onSelect('')} style={{ ...btn(''), width: 'auto', padding: '0 10px', fontSize: 12, color: 'var(--text-muted)' }}>✕ Aucun</button>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid var(--border)' }}>
+        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Icône de colonne</span>
+        <button onClick={() => onSelect('')} style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '2px 8px', fontSize: 11, color: 'var(--text-muted)', cursor: 'pointer' }}>✕ Aucun</button>
       </div>
       {EMOJI_CATS.map(cat => (
-        <div key={cat.label} style={{ marginBottom: 8 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4, paddingLeft: 2 }}>{cat.label}</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: 2 }}>
+        <div key={cat.label} style={{ marginBottom: 10 }}>
+          <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 5, paddingLeft: 2, opacity: 0.6 }}>{cat.label}</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: 3 }}>
             {cat.emojis.map(e => <button key={e} onClick={() => onSelect(e)} style={btn(e)}>{e}</button>)}
           </div>
         </div>
