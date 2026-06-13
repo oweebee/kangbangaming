@@ -468,15 +468,27 @@ const WISHLIST_TTL = 15 * 60 * 1000; // 15 min
 
 app.get('/api/steam/wishlist', requireAuth, async (req, res) => {
   const creds = getUserSteamCreds(req.user.id);
-  if (!creds.steamId) return res.json([]);
+  if (!creds.steamId || !creds.apiKey) return res.json([]);
   const now = Date.now();
   const cached = wishlistCache.get(req.user.id);
   if (cached && now - cached.fetchedAt < WISHLIST_TTL) return res.json([...cached.appids]);
   try {
-    const url = `https://store.steampowered.com/wishlist/profiles/${creds.steamId}/wishlistdata/?p=0`;
+    // API officielle Steam (fonctionne même avec profil privé)
+    const url = `https://api.steampowered.com/IWishlistService/GetWishlist/v1/?key=${creds.apiKey}&steamid=${creds.steamId}`;
     const resp = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
     const data = await resp.json();
-    const appids = Object.keys(data || {}).map(Number);
+    const items = data?.response?.items || [];
+    const appids = items.map(i => Number(i.appid));
+    if (appids.length === 0) {
+      // Fallback : page store publique
+      try {
+        const r2 = await fetch(`https://store.steampowered.com/wishlist/profiles/${creds.steamId}/wishlistdata/?p=0`, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+        const d2 = await r2.json();
+        const ids2 = Object.keys(d2 || {}).map(Number).filter(Boolean);
+        wishlistCache.set(req.user.id, { appids: new Set(ids2), fetchedAt: now });
+        return res.json(ids2);
+      } catch {}
+    }
     wishlistCache.set(req.user.id, { appids: new Set(appids), fetchedAt: now });
     res.json(appids);
   } catch { res.json([]); }
