@@ -1017,6 +1017,13 @@ export default function App() {
     </div>
   );
 
+  // ── Couleur de type pour les boards (genre Steam ou violet perso) ────────────
+  const getBoardTypeColor = (b) => {
+    if (!b?.gameIcon) return '#6b3fa0'; // board perso = violet foncé
+    const appid = getSteamAppId(b.gameIcon);
+    return (appid && boardGenreColors[appid]) ? boardGenreColors[appid] : '#66c0f4';
+  };
+
   // ── Sidebar ───────────────────────────────────────────────────────────────
 
   const sidebarContent = (
@@ -1410,13 +1417,6 @@ export default function App() {
       </div>
     );
   }
-
-  // ── Couleur de type pour les boards (genre Steam ou violet perso) ────────────
-  const getBoardTypeColor = (b) => {
-    if (!b?.gameIcon) return '#6b3fa0'; // board perso = violet foncé
-    const appid = getSteamAppId(b.gameIcon);
-    return (appid && boardGenreColors[appid]) ? boardGenreColors[appid] : '#66c0f4';
-  };
 
   // ── Desktop layout ────────────────────────────────────────────────────────
 
