@@ -103,7 +103,7 @@ function ColumnHeader({ col, onRename, onDelete, onSetEmoji, onColDragStart, onC
   );
 }
 
-export default function KanbanBoard({ columns, byColumn, dragging, setDragging, moveGame, onCardClick, onArchiveGame, onUnarchiveGame, onDeleteGame, onEditGame, onRenameColumn, onDeleteColumn, onSetEmoji, onReorderColumns, onAddToColumn, onReorderGames, isTaskBoard, appUsers = [], compactView = false, leftOffset = 0, rightOffset = 0, onToggleDone, onToggleUrgent, onUpdateAssignees, onClickNotes }) {
+export default function KanbanBoard({ columns, byColumn, dragging, setDragging, moveGame, onCardClick, onArchiveGame, onUnarchiveGame, onDeleteGame, onEditGame, onRenameColumn, onDeleteColumn, onSetEmoji, onReorderColumns, onAddToColumn, onReorderGames, isTaskBoard, appUsers = [], compactView = false, leftOffset = 0, rightOffset = 0, onToggleDone, onToggleUrgent, onUpdateAssignees, onClickNotes, genreColors = {} }) {
   const [draggingColId, setDraggingColId] = useState(null);
   const [dragOverColId, setDragOverColId] = useState(null);
   const [dragInsert, setDragInsert] = useState(null); // { colId, beforeAppid: string|null }
@@ -195,7 +195,8 @@ export default function KanbanBoard({ columns, byColumn, dragging, setDragging, 
               {games.map((game, idx) => {
                 const hasAssignees = isTaskBoard && appUsers.length > 0 && game.assignees?.length > 0;
                 const tt = game.taskType ? getTaskType(game.taskType) : null;
-                const cardBorderColor = game.urgent ? 'rgba(220,60,60,0.6)' : tt ? tt.border : 'var(--border)';
+                const steamColor = game.type !== 'custom' ? (genreColors[String(game.appid)] || '#66c0f4') : null;
+                const cardBorderColor = game.urgent ? 'rgba(220,60,60,0.6)' : tt ? tt.border : steamColor || 'var(--border)';
                 return (
                   <div
                     key={game.appid}
@@ -240,6 +241,7 @@ export default function KanbanBoard({ columns, byColumn, dragging, setDragging, 
                       onToggleUrgent={onToggleUrgent ? (urgent) => onToggleUrgent(game.appid, urgent) : undefined}
                       onUpdateAssignees={onUpdateAssignees ? (assignees) => onUpdateAssignees(game.appid, assignees) : undefined}
                       onClickNotes={onClickNotes ? () => onClickNotes(game) : undefined}
+                      genreColor={steamColor}
                     />
                   </div>
                 );

@@ -15,7 +15,7 @@ function formatPlaytime(minutes) {
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 
-export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArchive, onUnarchive, onDelete, onEdit, isDragging, readOnly, isTaskBoard, compact = false, assignees = [], appUsers = [], onToggleDone, onToggleUrgent, onUpdateAssignees, onClickNotes }) {
+export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArchive, onUnarchive, onDelete, onEdit, isDragging, readOnly, isTaskBoard, compact = false, assignees = [], appUsers = [], onToggleDone, onToggleUrgent, onUpdateAssignees, onClickNotes, genreColor = null }) {
   const [imgError, setImgError] = useState(false);
   const [ttImgError, setTtImgError] = useState(false);
   const isCustom   = game.type === 'custom';
@@ -36,7 +36,7 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
       style={{
         position: 'relative',
         background: isArchived ? 'var(--surface2)' : tt ? tt.bg : 'var(--surface2)',
-        border: isArchived ? '2px solid #787878' : isDone ? '2px solid #3db86a' : isUrgent ? '2px solid #dc3c3c' : tt ? `2px solid ${tt.border}` : '2px solid var(--border)',
+        border: isArchived ? '2px solid #787878' : isDone ? '2px solid #3db86a' : isUrgent ? '2px solid #dc3c3c' : tt ? `2px solid ${tt.border}` : !isCustom ? `2px solid ${genreColor || '#66c0f4'}` : '2px solid var(--border)',
         borderRadius: 8,
         overflow: 'hidden',
         cursor: readOnly || isArchived ? 'default' : 'grab',
@@ -48,12 +48,12 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
       onMouseEnter={readOnly || isArchived ? undefined : e => {
         e.currentTarget.style.transform = 'translateY(-1px)';
         e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.4)';
-        e.currentTarget.style.borderColor = isDone ? '#3db86a' : isUrgent ? '#dc3c3c' : tt ? tt.border : '#555';
+        e.currentTarget.style.borderColor = isDone ? '#3db86a' : isUrgent ? '#dc3c3c' : tt ? tt.border : !isCustom ? (genreColor || '#66c0f4') : '#555';
       }}
       onMouseLeave={readOnly || isArchived ? undefined : e => {
         e.currentTarget.style.transform = '';
         e.currentTarget.style.boxShadow = '';
-        e.currentTarget.style.borderColor = isDone ? '#3db86a' : isUrgent ? '#dc3c3c' : tt ? tt.border : 'var(--border)';
+        e.currentTarget.style.borderColor = isDone ? '#3db86a' : isUrgent ? '#dc3c3c' : tt ? tt.border : !isCustom ? (genreColor || '#66c0f4') : 'var(--border)';
       }}
     >
       {/* ── Image area — masquée en mode compact ── */}

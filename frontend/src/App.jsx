@@ -487,11 +487,10 @@ export default function App() {
   }, [activeBoardId]);
 
 
-  // Fetch genres Steam pour colorier les liserets des boards
+  // Fetch genres Steam pour colorier les liserets des boards ET les cartes jeux
   useEffect(() => {
     if (!token) return;
-    [...boards, ...favBoards].forEach(b => {
-      const appid = getSteamAppId(b.gameIcon);
+    const fetchGenre = (appid) => {
       if (!appid || fetchedGenreIds.current.has(appid)) return;
       fetchedGenreIds.current.add(appid);
       fetch(`${API}/steam/gameinfo/${appid}`, { headers: { Authorization: `Bearer ${token}` } })
@@ -501,8 +500,16 @@ export default function App() {
           if (color) setBoardGenreColors(prev => ({ ...prev, [appid]: color }));
         })
         .catch(() => { fetchedGenreIds.current.delete(appid); });
+    };
+    // Icônes de boards
+    [...boards, ...favBoards].forEach(b => fetchGenre(getSteamAppId(b.gameIcon)));
+    // Cartes jeux individuelles dans le kanban
+    games.forEach(g => {
+      if (g.type === 'custom') return;
+      const appid = g.appid != null ? String(g.appid) : null;
+      fetchGenre(appid);
     });
-  }, [boards, favBoards, token]);
+  }, [boards, favBoards, games, token]);
 
   // Memoize Steam appId — only changes when board identity/image changes, NOT on every card update.
   // Having games in a useMemo (vs useEffect) means the effect only re-fires when the *string value* changes.
@@ -1376,14 +1383,14 @@ export default function App() {
           loading ? (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Chargement...</div>
           ) : (
-            <MobileBoard columns={columns} byColumn={byColumn} onCardClick={g => { setSelectedGameDefaultTab('infos'); setSelectedGame(g); }} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} isTaskBoard={isTaskBoard} onToggleDone={(appid, done) => patchGame(appid, { done })} onToggleUrgent={(appid, urgent) => patchGame(appid, { urgent })} onUpdateAssignees={(appid, assignees) => patchGame(appid, { assignees })} onClickNotes={handleCardNotesClick} />
+            <MobileBoard columns={columns} byColumn={byColumn} onCardClick={g => { setSelectedGameDefaultTab('infos'); setSelectedGame(g); }} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} isTaskBoard={isTaskBoard} onToggleDone={(appid, done) => patchGame(appid, { done })} onToggleUrgent={(appid, urgent) => patchGame(appid, { urgent })} onUpdateAssignees={(appid, assignees) => patchGame(appid, { assignees })} onClickNotes={handleCardNotesClick} genreColors={boardGenreColors} />
           )
         ) : !activeBoardId ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Crée un board pour commencer</div>
         ) : loading ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Chargement...</div>
         ) : (
-          <MobileBoard columns={columns} byColumn={byColumn} onCardClick={g => { setSelectedGameDefaultTab('infos'); setSelectedGame(g); }} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} isTaskBoard={isTaskBoard} onToggleDone={(appid, done) => patchGame(appid, { done })} onToggleUrgent={(appid, urgent) => patchGame(appid, { urgent })} onUpdateAssignees={(appid, assignees) => patchGame(appid, { assignees })} onClickNotes={handleCardNotesClick} />
+          <MobileBoard columns={columns} byColumn={byColumn} onCardClick={g => { setSelectedGameDefaultTab('infos'); setSelectedGame(g); }} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} isTaskBoard={isTaskBoard} onToggleDone={(appid, done) => patchGame(appid, { done })} onToggleUrgent={(appid, urgent) => patchGame(appid, { urgent })} onUpdateAssignees={(appid, assignees) => patchGame(appid, { assignees })} onClickNotes={handleCardNotesClick} genreColors={boardGenreColors} />
         )}
         {(activeBoardId || publicBoardMode) && (
           <div style={{ background: 'var(--surface)', borderTop: '1px solid var(--border)', padding: '8px 12px', display: 'flex', gap: 8, flexShrink: 0 }}>
@@ -1569,14 +1576,14 @@ export default function App() {
           loading ? (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Chargement...</div>
           ) : (
-            <KanbanBoard columns={columns} byColumn={byColumn} dragging={dragging} setDragging={setDragging} moveGame={moveGame} onCardClick={g => { setSelectedGameDefaultTab('infos'); setSelectedGame(g); }} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} onRenameColumn={renameColumn} onDeleteColumn={deleteColumn} onSetEmoji={setColumnEmoji} onReorderColumns={reorderColumns} onAddToColumn={colId => { setSearchTargetCol(colId); setShowSearch(true); }} onReorderGames={reorderGamesInColumn} isTaskBoard={isTaskBoard} appUsers={appUsers} compactView={compactView} leftOffset={infoPanelLocked && infoPanelSide === 'left' ? GAME_INFO_PANEL_WIDTH : 0} rightOffset={infoPanelLocked && infoPanelSide === 'right' ? GAME_INFO_PANEL_WIDTH : 0} onToggleDone={(appid, done) => patchGame(appid, { done })} onToggleUrgent={(appid, urgent) => patchGame(appid, { urgent })} onUpdateAssignees={(appid, assignees) => patchGame(appid, { assignees })} onClickNotes={handleCardNotesClick} />
+            <KanbanBoard columns={columns} byColumn={byColumn} dragging={dragging} setDragging={setDragging} moveGame={moveGame} onCardClick={g => { setSelectedGameDefaultTab('infos'); setSelectedGame(g); }} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} onRenameColumn={renameColumn} onDeleteColumn={deleteColumn} onSetEmoji={setColumnEmoji} onReorderColumns={reorderColumns} onAddToColumn={colId => { setSearchTargetCol(colId); setShowSearch(true); }} onReorderGames={reorderGamesInColumn} isTaskBoard={isTaskBoard} appUsers={appUsers} compactView={compactView} leftOffset={infoPanelLocked && infoPanelSide === 'left' ? GAME_INFO_PANEL_WIDTH : 0} rightOffset={infoPanelLocked && infoPanelSide === 'right' ? GAME_INFO_PANEL_WIDTH : 0} onToggleDone={(appid, done) => patchGame(appid, { done })} onToggleUrgent={(appid, urgent) => patchGame(appid, { urgent })} onUpdateAssignees={(appid, assignees) => patchGame(appid, { assignees })} onClickNotes={handleCardNotesClick} genreColors={boardGenreColors} />
           )
         ) : !activeBoardId ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Crée un board pour commencer</div>
         ) : loading ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Chargement...</div>
         ) : (
-          <KanbanBoard columns={columns} byColumn={byColumn} dragging={dragging} setDragging={setDragging} moveGame={moveGame} onCardClick={g => { setSelectedGameDefaultTab('infos'); setSelectedGame(g); }} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} onRenameColumn={renameColumn} onDeleteColumn={deleteColumn} onSetEmoji={setColumnEmoji} onReorderColumns={reorderColumns} onAddToColumn={colId => { setSearchTargetCol(colId); setShowSearch(true); }} onReorderGames={reorderGamesInColumn} isTaskBoard={isTaskBoard} appUsers={appUsers} compactView={compactView} leftOffset={infoPanelLocked && infoPanelSide === 'left' ? GAME_INFO_PANEL_WIDTH : 0} rightOffset={infoPanelLocked && infoPanelSide === 'right' ? GAME_INFO_PANEL_WIDTH : 0} onToggleDone={(appid, done) => patchGame(appid, { done })} onToggleUrgent={(appid, urgent) => patchGame(appid, { urgent })} onUpdateAssignees={(appid, assignees) => patchGame(appid, { assignees })} onClickNotes={handleCardNotesClick} />
+          <KanbanBoard columns={columns} byColumn={byColumn} dragging={dragging} setDragging={setDragging} moveGame={moveGame} onCardClick={g => { setSelectedGameDefaultTab('infos'); setSelectedGame(g); }} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} onRenameColumn={renameColumn} onDeleteColumn={deleteColumn} onSetEmoji={setColumnEmoji} onReorderColumns={reorderColumns} onAddToColumn={colId => { setSearchTargetCol(colId); setShowSearch(true); }} onReorderGames={reorderGamesInColumn} isTaskBoard={isTaskBoard} appUsers={appUsers} compactView={compactView} leftOffset={infoPanelLocked && infoPanelSide === 'left' ? GAME_INFO_PANEL_WIDTH : 0} rightOffset={infoPanelLocked && infoPanelSide === 'right' ? GAME_INFO_PANEL_WIDTH : 0} onToggleDone={(appid, done) => patchGame(appid, { done })} onToggleUrgent={(appid, urgent) => patchGame(appid, { urgent })} onUpdateAssignees={(appid, assignees) => patchGame(appid, { assignees })} onClickNotes={handleCardNotesClick} genreColors={boardGenreColors} />
         )}
         </div>
       </div>
