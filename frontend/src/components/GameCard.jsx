@@ -4,7 +4,7 @@ import { getDateInfo } from './TaskModal.jsx';
 import { progressColor } from './ProgressSlider.jsx';
 import AssigneeAvatars from './AssigneeAvatars.jsx';
 
-const COMPACT_ICON_SIZE = 40; // 33 * 1.2 ≈ 40
+const COMPACT_ICON_SIZE = 32; // 40 * 0.8 (-20%)
 
 function formatPlaytime(minutes) {
   if (!minutes || minutes === 0) return null;
@@ -180,7 +180,7 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
       ) : null}
 
       {/* ── Info area ── */}
-      <div style={{ padding: compact ? '4px 9px' : '7px 9px', paddingRight: compact ? 50 : 9, paddingBottom: compact ? COMPACT_ICON_SIZE + 6 : 7 }}>
+      <div style={{ padding: compact ? '4px 9px' : '7px 9px', paddingRight: compact ? 42 : 9, paddingBottom: compact ? COMPACT_ICON_SIZE + 6 : 7 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 4 }}>
           <div style={{
             fontWeight: 600, fontSize: compact ? 13 : 14, lineHeight: compact ? '1.2' : '1.3', marginBottom: compact ? 1 : 3,
