@@ -28,7 +28,7 @@ export default function NowPlayingBanner({ gameIconUrl, token }) {
     return () => clearInterval(intervalRef.current);
   }, [appId, token]);
 
-  if (!players.length) return null;
+  if (!players.length) return null; // ← retire ce return pour tester l'affichage à vide
 
   return (
     <div style={{

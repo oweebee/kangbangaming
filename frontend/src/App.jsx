@@ -1452,7 +1452,7 @@ export default function App() {
               <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="var(--accent)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="10" cy="7" r="4"/><path d="M4 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M15 3.13a4 4 0 0 1 0 7.75"/><path d="M20 21v-2a4 4 0 0 0-3-3.85"/>
               </svg>
-            ) : '🔒'}</button>
+            ) : (<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="var(--text-muted)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>)}</button>
             <button onClick={e => { e.stopPropagation(); deleteBoard(b.id); }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 11, padding: 0, opacity: 0.4, cursor: 'pointer', flexShrink: 0 }}>✕</button>
           </div>
             ))}
@@ -1513,7 +1513,7 @@ export default function App() {
               <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="var(--accent)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="10" cy="7" r="4"/><path d="M4 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M15 3.13a4 4 0 0 1 0 7.75"/><path d="M20 21v-2a4 4 0 0 0-3-3.85"/>
               </svg>
-            ) : '🔒'}</button>
+            ) : (<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="var(--text-muted)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>)}</button>
             <button onClick={e => { e.stopPropagation(); deleteBoard(b.id); }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 11, padding: 0, opacity: 0.4, cursor: 'pointer', flexShrink: 0 }}>✕</button>
           </div>
         ))}
@@ -1752,7 +1752,7 @@ export default function App() {
 
 
         {showProfile && <ProfilePage token={token} currentUser={currentUser} onClose={() => setShowProfile(false)} onSaveSteam={handleSteamSave} />}
-        {activeBoard?.gameIcon && <NowPlayingBanner gameIconUrl={activeBoard.gameIcon} token={token} />}
+        {(publicBoardMode?.gameIcon || activeBoard?.gameIcon) && <NowPlayingBanner gameIconUrl={publicBoardMode?.gameIcon || activeBoard?.gameIcon} token={token} />}
       </div>
     );
   }
