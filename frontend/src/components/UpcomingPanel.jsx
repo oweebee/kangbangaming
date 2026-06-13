@@ -113,7 +113,7 @@ function FeaturedCard({ token, wishlist = new Set() }) {
         onMouseLeave={e => e.currentTarget.style.background = `linear-gradient(var(--surface), var(--surface)) padding-box, linear-gradient(135deg, ${gc}, ${gc}55) border-box`}
       >
         {/* Image bannière */}
-        <div style={{ width: '100%', height: 100, overflow: 'hidden', position: 'relative', background: 'var(--surface2)' }}>
+        <div style={{ width: '100%', height: 120, overflow: 'hidden', position: 'relative', background: 'var(--surface2)' }}>
           <img src={game.headerImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none'; }} />
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 35%, rgba(0,0,0,0.75) 100%)' }} />
           {/* Dots navigation */}
@@ -134,7 +134,7 @@ function FeaturedCard({ token, wishlist = new Set() }) {
           </div>
         </div>
         {/* Détails — hauteur fixe pour que la carte ne change pas de taille selon le jeu */}
-        <div style={{ padding: '7px 11px 9px', height: 78, boxSizing: 'border-box', overflow: 'hidden' }}>
+        <div style={{ padding: '7px 11px 9px', height: 94, boxSizing: 'border-box', overflow: 'hidden' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, marginBottom: 4 }}>
             {game.developers?.length > 0 && (
               <div style={{ fontSize: 10, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -354,61 +354,42 @@ export default function UpcomingPanel({ token }) {
             );
           }
 
-          // Carte compacte pour les autres jours
+          // Carte petite pour les autres jours
           return (
-            <div key={game.appid} style={{ padding: '5px 10px', borderBottom: 'none', position: 'relative' }}>
-              {wishlist.has(Number(game.appid)) && (
-                <div style={{ position: 'absolute', top: 5, left: 10, zIndex: 2 }}><WishlistDot /></div>
-              )}
-              <a
-                href={`https://store.steampowered.com/app/${game.appid}/`}
-                target="_blank"
-                rel="noreferrer"
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 9,
-                  padding: '6px 10px',
-                  textDecoration: 'none',
-                  transition: 'background .12s',
-                  ...borderStyle,
-                }}
-                onMouseEnter={e => e.currentTarget.style.background = `linear-gradient(var(--surface2), var(--surface2)) padding-box, linear-gradient(135deg, ${gc}, ${gc}55) border-box`}
-                onMouseLeave={e => e.currentTarget.style.background = `linear-gradient(var(--surface), var(--surface)) padding-box, linear-gradient(135deg, ${gc}, ${gc}55) border-box`}
-              >
-                <div style={{ width: 56, height: 36, borderRadius: 5, overflow: 'hidden', flexShrink: 0, background: 'var(--surface2)' }}>
-                  <img src={game.capsuleImage || game.headerImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none'; }} />
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 2 }}>
-                    {game.type === 'dlc' && (
-                      <span style={{ fontSize: 8, fontWeight: 800, background: 'rgba(90,60,160,0.3)', color: '#b090f0', borderRadius: 3, padding: '1px 4px', flexShrink: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>DLC</span>
-                    )}
-                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
-                      {game.name}
-                    </div>
-                  </div>
-                  {game.developers?.length > 0 && (
-                    <div style={{ fontSize: 10, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 3, opacity: 0.8 }}>
-                      {game.developers[0]}
-                    </div>
+            <a
+              key={game.appid}
+              href={`https://store.steampowered.com/app/${game.appid}/`}
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '5px 10px',
+                textDecoration: 'none',
+                transition: 'background .12s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--surface2)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+            >
+              <div style={{ width: 44, height: 28, borderRadius: 4, overflow: 'hidden', flexShrink: 0, background: 'var(--surface2)' }}>
+                <img src={game.capsuleImage || game.headerImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none'; }} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  {game.type === 'dlc' && (
+                    <span style={{ fontSize: 8, fontWeight: 800, background: 'rgba(90,60,160,0.3)', color: '#b090f0', borderRadius: 3, padding: '1px 4px', flexShrink: 0, textTransform: 'uppercase' }}>DLC</span>
                   )}
-                  {(game.genres?.length > 0 || playerTags(game.categories).length > 0) && (
-                    <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', marginBottom: 4 }}>
-                      {game.genres?.map(g => (
-                        <span key={g} style={{ fontSize: 10, background: `${gc}20`, border: `1px solid ${gc}50`, borderRadius: 3, padding: '1px 5px', color: gc, whiteSpace: 'nowrap' }}>{g}</span>
-                      ))}
-                      {playerTags(game.categories).map(t => (
-                        <span key={t} style={{ fontSize: 10, background: 'rgba(102,192,244,0.12)', border: '1px solid rgba(102,192,244,0.35)', borderRadius: 3, padding: '1px 5px', color: '#66c0f4', whiteSpace: 'nowrap' }}>{t}</span>
-                      ))}
-                    </div>
-                  )}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                    <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>📅 {formatDate(game.releaseDate)}</span>
-                    <DaysBadge days={days} />
-                    <ReviewBadge score={game.reviewScore} desc={game.reviewScoreDesc} total={game.reviewTotal} />
+                  <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                    {game.name}
                   </div>
                 </div>
-              </a>
-            </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                {wishlist.has(Number(game.appid)) && (
+                  <svg viewBox="0 0 24 24" width="10" height="10" fill="#f5c518" stroke="none" title="Wishlist"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                )}
+                <DaysBadge days={days} />
+              </div>
+            </a>
           );
         })}
       </div>
