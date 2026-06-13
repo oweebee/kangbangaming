@@ -125,12 +125,12 @@ function FeaturedCard({ token, wishlist = new Set() }) {
               ))}
             </div>
           )}
-          {/* Nom + wishlist */}
-          <div style={{ position: 'absolute', bottom: 9, left: 10, right: 50, display: 'flex', alignItems: 'center', gap: 6, overflow: 'hidden' }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', textShadow: '0 1px 4px rgba(0,0,0,0.9)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
-              {game.name}
-            </div>
-            {wishlist.has(Number(game.appid)) && <WishlistDot />}
+          {wishlist.has(Number(game.appid)) && (
+            <div style={{ position: 'absolute', top: 8, left: 8 }}><WishlistDot /></div>
+          )}
+          {/* Nom */}
+          <div style={{ position: 'absolute', bottom: 9, left: 10, right: 50, fontSize: 13, fontWeight: 700, color: '#fff', textShadow: '0 1px 4px rgba(0,0,0,0.9)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {game.name}
           </div>
         </div>
         {/* Détails */}
@@ -166,8 +166,8 @@ function FeaturedCard({ token, wishlist = new Set() }) {
 
 function WishlistDot() {
   return (
-    <span title="Dans ta wishlist Steam" style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 9, color: '#f5c518', background: 'rgba(245,197,24,0.15)', border: '1px solid rgba(245,197,24,0.35)', borderRadius: 3, padding: '1px 5px', whiteSpace: 'nowrap', flexShrink: 0 }}>
-      <svg viewBox="0 0 24 24" width="9" height="9" fill="#f5c518" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+    <span title="Dans ta wishlist Steam" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700, color: '#f5c518', background: 'rgba(245,197,24,0.18)', border: '1px solid rgba(245,197,24,0.5)', borderRadius: 5, padding: '3px 8px', whiteSpace: 'nowrap', animation: 'wishlistPulse 2s ease-in-out infinite', boxShadow: '0 0 8px rgba(245,197,24,0.3)' }}>
+      <svg viewBox="0 0 24 24" width="11" height="11" fill="#f5c518" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
       Wishlist
     </span>
   );
@@ -315,12 +315,12 @@ export default function UpcomingPanel({ token }) {
                     {game.type === 'dlc' && (
                       <span style={{ position: 'absolute', top: 7, left: 8, fontSize: 8, fontWeight: 800, background: 'rgba(90,60,160,0.85)', color: '#d0b0ff', borderRadius: 3, padding: '2px 5px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>DLC</span>
                     )}
+                    {wishlist.has(Number(game.appid)) && (
+                      <div style={{ position: 'absolute', top: 8, left: 8 }}><WishlistDot /></div>
+                    )}
                     {/* Nom par-dessus l'image */}
-                    <div style={{ position: 'absolute', bottom: 7, left: 10, right: 10, display: 'flex', alignItems: 'center', gap: 6, overflow: 'hidden' }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: '#fff', textShadow: '0 1px 4px rgba(0,0,0,0.8)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
-                        {game.name}
-                      </div>
-                      {wishlist.has(Number(game.appid)) && <WishlistDot />}
+                    <div style={{ position: 'absolute', bottom: 7, left: 10, right: 10, fontSize: 12, fontWeight: 700, color: '#fff', textShadow: '0 1px 4px rgba(0,0,0,0.8)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {game.name}
                     </div>
                   </div>
                   {/* Détails */}
@@ -356,7 +356,10 @@ export default function UpcomingPanel({ token }) {
 
           // Carte compacte pour les autres jours
           return (
-            <div key={game.appid} style={{ padding: '5px 10px', borderBottom: 'none' }}>
+            <div key={game.appid} style={{ padding: '5px 10px', borderBottom: 'none', position: 'relative' }}>
+              {wishlist.has(Number(game.appid)) && (
+                <div style={{ position: 'absolute', top: 5, left: 10, zIndex: 2 }}><WishlistDot /></div>
+              )}
               <a
                 href={`https://store.steampowered.com/app/${game.appid}/`}
                 target="_blank"
@@ -382,7 +385,6 @@ export default function UpcomingPanel({ token }) {
                     <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
                       {game.name}
                     </div>
-                    {wishlist.has(Number(game.appid)) && <WishlistDot />}
                   </div>
                   {game.developers?.length > 0 && (
                     <div style={{ fontSize: 10, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 3, opacity: 0.8 }}>
@@ -411,7 +413,13 @@ export default function UpcomingPanel({ token }) {
         })}
       </div>
 
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes wishlistPulse {
+          0%, 100% { box-shadow: 0 0 6px rgba(245,197,24,0.3); opacity: 1; }
+          50% { box-shadow: 0 0 14px rgba(245,197,24,0.7); opacity: 0.85; }
+        }
+      `}</style>
     </div>
   );
 }
