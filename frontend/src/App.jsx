@@ -233,6 +233,7 @@ export default function App() {
 
   // Home view
   const [showHome, setShowHome] = useState(true);
+  const [mobileHomeTab, setMobileHomeTab] = useState('boards'); // 'deadlines' | 'boards' | 'upcoming'
   const [homePublicBoards, setHomePublicBoards] = useState([]);
   const [deadlineRefreshKey, setDeadlineRefreshKey] = useState(0);
   // Home section drag order (IDs) — persisted in localStorage
@@ -996,6 +997,107 @@ export default function App() {
     return (appid && boardGenreColors[appid]) || '#66c0f4';
   };
 
+  // ── Vue accueil mobile : onglets ─────────────────────────────────────────
+  const boardsContent = (
+    <div style={{ flex: 1, overflowY: 'auto', padding: '20px 14px' }}>
+      {hiddenBoardIds.size > 0 && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10 }}>
+          <button onClick={() => setShowHiddenBoards(v => !v)} style={{ background: showHiddenBoards ? 'rgba(40,120,200,0.22)' : 'var(--surface2)', border: showHiddenBoards ? '1px solid rgba(60,150,240,0.6)' : '1px solid var(--border)', borderRadius: 6, padding: '5px 10px', cursor: 'pointer', color: showHiddenBoards ? '#70b8ff' : 'var(--text-muted)', fontSize: 11 }}>
+            Boards masqués ({hiddenBoardIds.size})
+          </button>
+        </div>
+      )}
+      {/* Boards publics */}
+      <div style={{ marginBottom: 28 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#3db86a" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="10" cy="7" r="4"/><path d="M4 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg>
+          <span style={{ fontSize: 11, fontWeight: 700, color: '#3db86a', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Boards Publics</span>
+          <span style={{ fontSize: 10, color: 'var(--text-muted)', background: 'var(--surface2)', borderRadius: 99, padding: '1px 6px' }}>{homePublicBoards.length}</span>
+        </div>
+        {homePublicBoards.length === 0
+          ? <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>Aucun board public disponible.</div>
+          : <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
+              {applySectionOrder(homePublicBoards, homePublicOrder).filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).map(b => (
+                <HomeBoardCard key={b.id} board={b} isPublic isFav={favBoards.some(f => f.id === b.id)} onToggleFav={cur => toggleFavorite(b.id, b, cur)} onClick={() => openPublicBoard(b)} typeColor={getBoardTypeColor(b)} isHidden={hiddenBoardIds.has(b.id)} onHide={() => hideBoard(b.id)} onUnhide={() => unhideBoard(b.id)} />
+              ))}
+            </div>
+        }
+      </div>
+      <div style={{ borderTop: '1px solid var(--border)', marginBottom: 24 }} />
+      {/* Mes boards */}
+      {(() => {
+        const favSet = new Set(personalFavIds);
+        const favBoards2 = sortedBoards.filter(b => favSet.has(b.id));
+        const otherBoards = sortedBoards.filter(b => !favSet.has(b.id));
+        return (<>
+          {favBoards2.length > 0 && (
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="#f5c518" stroke="#f5c518" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#f5c518', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Épinglés</span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
+                {applySectionOrder(favBoards2, homeFavOrder).filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).map(b => (
+                  <HomeBoardCard key={b.id} board={b} isFav onToggleFav={cur => togglePersonalFavorite(b.id, cur)} onClick={() => openBoard(b)} typeColor={getBoardTypeColor(b)} isHidden={hiddenBoardIds.has(b.id)} onHide={() => hideBoard(b.id)} onUnhide={() => unhideBoard(b.id)} />
+                ))}
+              </div>
+            </div>
+          )}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+              <span style={{ fontSize: 13 }}>🔒</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#f5a500', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Mes Boards</span>
+            </div>
+            {sortedBoards.length === 0
+              ? <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>Crée un board pour commencer.</div>
+              : otherBoards.length === 0
+                ? <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>Tous tes boards sont épinglés 📌</div>
+                : <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
+                    {applySectionOrder(otherBoards, homeOtherOrder).filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).map(b => (
+                      <HomeBoardCard key={b.id} board={b} isFav={false} onToggleFav={cur => togglePersonalFavorite(b.id, cur)} onClick={() => openBoard(b)} typeColor={getBoardTypeColor(b)} isHidden={hiddenBoardIds.has(b.id)} onHide={() => hideBoard(b.id)} onUnhide={() => unhideBoard(b.id)} />
+                    ))}
+                  </div>
+            }
+          </div>
+        </>);
+      })()}
+    </div>
+  );
+
+  const mobileHomeView = (
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      {/* Barre d'onglets */}
+      <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', flexShrink: 0, background: 'var(--surface)' }}>
+        {[
+          { id: 'deadlines', label: '⚠ Échéances' },
+          { id: 'boards',    label: '📋 Boards'   },
+          { id: 'upcoming',  label: '🎮 Sorties'  },
+        ].map(({ id, label }) => (
+          <button key={id} onClick={() => setMobileHomeTab(id)} style={{
+            flex: 1, background: 'none', border: 'none',
+            borderBottom: mobileHomeTab === id ? '2px solid var(--accent)' : '2px solid transparent',
+            padding: '10px 4px', marginBottom: -1,
+            color: mobileHomeTab === id ? 'var(--text)' : 'var(--text-muted)',
+            fontSize: 11, fontWeight: mobileHomeTab === id ? 700 : 400,
+            cursor: 'pointer',
+          }}>{label}</button>
+        ))}
+      </div>
+      {/* Contenu */}
+      {mobileHomeTab === 'deadlines' && (
+        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 14px' }}>
+          <DeadlinePanel token={token} onOpenTask={handleDeadlineOpen} refreshKey={deadlineRefreshKey} hiddenDeadlineIds={hiddenDeadlineIds} showHiddenDeadlines={showHiddenDeadlines} onHideDeadline={hideDeadline} onUnhideDeadline={unhideDeadline} onToggleShowHidden={() => setShowHiddenDeadlines(v => !v)} />
+        </div>
+      )}
+      {mobileHomeTab === 'boards' && boardsContent}
+      {mobileHomeTab === 'upcoming' && (
+        <div style={{ flex: 1, overflow: 'hidden' }}>
+          <UpcomingPanel token={token} />
+        </div>
+      )}
+    </div>
+  );
+
   const homeView = (
     <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
 
@@ -1602,7 +1704,7 @@ export default function App() {
           )}
         </header>
         {showHome && !publicBoardMode ? (
-          homeView
+          mobileHomeView
         ) : publicBoardMode ? (
           loading ? (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Chargement...</div>

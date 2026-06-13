@@ -186,6 +186,7 @@ export default function TaskModal({ game, onClose, onEdit, appUsers = [], onPatc
     if (onPatchGame) {
       const updates = { progress };
       if (progress === 100) updates.done = true;
+      else if (isDone) updates.done = false; // annule l'auto-done si on redescend en-dessous de 100%
       onPatchGame(game.appid, updates);
     }
   };
