@@ -3,11 +3,17 @@ import GameCard from './GameCard.jsx';
 import AssigneeAvatars from './AssigneeAvatars.jsx';
 import { getTaskType } from '../taskTypes.jsx';
 
-const EMOJIS = [
-  '🎮','🕹️','🏆','🥇','⭐','💎','🔥','❄️','⚡','🎯',
-  '📦','🚀','💀','👾','🛡️','⚔️','🗡️','🧩','🎲','🃏',
-  '✅','⏳','🔒','🔓','💤','👀','🧠','💪','🎪','🌟',
-  '📋','📌','🔖','🏁','🚩','💬','🎵','🎬','📺','🖥️',
+const EMOJI_CATS = [
+  { label: '🎮 Gaming', emojis: ['🎮','🕹️','👾','🎲','🃏','🧩','🎯','🏹','⚔️','🗡️','🛡️','🪃','🔫','💣','🧲','🪄','🎪','🎡','🎠','🎢'] },
+  { label: '🏆 Progression', emojis: ['🏆','🥇','🥈','🥉','🎖️','🏅','⭐','🌟','💫','✨','💥','🔥','❄️','⚡','🌊','💎','💍','👑','🎗️','🏁'] },
+  { label: '📋 Tâches', emojis: ['📋','📌','📍','🔖','📎','🖇️','📏','📐','✏️','🖊️','🖋️','📝','📄','📃','📑','📊','📈','📉','🗂️','🗃️'] },
+  { label: '💼 Pro', emojis: ['💼','🗄️','🖥️','💻','⌨️','🖱️','🖨️','📱','☎️','📞','📟','📠','🔍','🔎','🔬','🔭','📡','🛰️','⚙️','🔧'] },
+  { label: '🚦 Statuts', emojis: ['✅','❌','⚠️','🚫','⛔','🔴','🟠','🟡','🟢','🔵','🟣','⚫','⚪','🟤','🔶','🔷','🔸','🔹','💤','⏳'] },
+  { label: '🔔 Signaux', emojis: ['🔔','🔕','📣','📢','🚨','🚩','🏴','🏳️','🚀','💡','🔦','🕯️','🔒','🔓','🔑','🗝️','🪝','🔗','📡','🛜'] },
+  { label: '🌍 Nature', emojis: ['🌍','🌲','🌳','🌴','🌵','🌾','🍀','🌸','🌺','🌻','🌹','🍁','🍂','🍃','🌿','☘️','🪨','🌙','☀️','⛅'] },
+  { label: '🎨 Créa', emojis: ['🎨','🖌️','✏️','📸','🎬','🎵','🎶','🎸','🎹','🎺','🎻','🥁','🎤','🎧','🎭','🎪','🎠','🎡','🎢','🎠'] },
+  { label: '💬 Social', emojis: ['💬','💭','🗯️','❤️','🧡','💛','💚','💙','💜','🖤','🤍','💕','💞','💓','💗','💖','💘','💝','👍','👎'] },
+  { label: '🧠 Divers', emojis: ['🧠','👀','💪','🤝','🙌','👏','🤜','🏃','🧑‍💻','👷','🧑‍🎨','🦁','🐺','🦊','🐉','🦄','👻','💀','🤖','👽'] },
 ];
 
 function EmojiPicker({ current, onSelect, onClose }) {
@@ -17,26 +23,30 @@ function EmojiPicker({ current, onSelect, onClose }) {
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [onClose]);
+  const btn = (e) => ({
+    background: current === e ? 'var(--accent-dim)' : 'none',
+    border: current === e ? '1px solid var(--accent)' : '1px solid transparent',
+    borderRadius: 5, width: 30, height: 30, fontSize: 16,
+    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+  });
   return (
     <div ref={ref} style={{
       position: 'absolute', top: '100%', left: 0, zIndex: 50,
       background: 'var(--surface2)', border: '1px solid var(--border)',
-      borderRadius: 10, padding: 8, marginTop: 4,
-      display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: 2,
+      borderRadius: 10, padding: '8px 8px 4px', marginTop: 4,
       boxShadow: '0 8px 24px rgba(0,0,0,.5)',
+      width: 272, maxHeight: 320, overflowY: 'auto',
     }}>
-      <button onClick={() => onSelect('')} title="Aucun" style={{
-        background: current === '' ? 'var(--accent-dim)' : 'none',
-        border: current === '' ? '1px solid var(--accent)' : '1px solid transparent',
-        borderRadius: 5, width: 30, height: 30, fontSize: 12, color: 'var(--text-muted)', cursor: 'pointer',
-      }}>✕</button>
-      {EMOJIS.map(e => (
-        <button key={e} onClick={() => onSelect(e)} style={{
-          background: current === e ? 'var(--accent-dim)' : 'none',
-          border: current === e ? '1px solid var(--accent)' : '1px solid transparent',
-          borderRadius: 5, width: 30, height: 30, fontSize: 16,
-          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>{e}</button>
+      <div style={{ marginBottom: 6 }}>
+        <button onClick={() => onSelect('')} style={{ ...btn(''), width: 'auto', padding: '0 10px', fontSize: 12, color: 'var(--text-muted)' }}>✕ Aucun</button>
+      </div>
+      {EMOJI_CATS.map(cat => (
+        <div key={cat.label} style={{ marginBottom: 8 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4, paddingLeft: 2 }}>{cat.label}</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: 2 }}>
+            {cat.emojis.map(e => <button key={e} onClick={() => onSelect(e)} style={btn(e)}>{e}</button>)}
+          </div>
+        </div>
       ))}
     </div>
   );

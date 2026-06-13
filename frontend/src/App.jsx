@@ -27,11 +27,17 @@ function DiscordServerIcon({ size = 22, borderColor = 'var(--surface1)' }) {
   return <img src={DISCORD_ICON_URL} alt="" onError={() => setErr(true)} style={{ width: size, height: size, borderRadius: '50%', marginLeft: -(size * 0.2), position: 'relative', zIndex: 2, border: `1.5px solid ${borderColor}`, flexShrink: 0 }} />;
 }
 
-const EMOJIS = [
-  '🎮','🕹️','🏆','🥇','⭐','💎','🔥','❄️','⚡','🎯',
-  '📦','🚀','💀','👾','🛡️','⚔️','🗡️','🧩','🎲','🃏',
-  '✅','⏳','🔒','🔓','💤','👀','🧠','💪','🎪','🌟',
-  '📋','📌','🔖','🏁','🚩','💬','🎵','🎬','📺','🖥️',
+const EMOJI_CATS = [
+  { label: '🎮 Gaming', emojis: ['🎮','🕹️','👾','🎲','🃏','🧩','🎯','🏹','⚔️','🗡️','🛡️','🪃','🔫','💣','🧲','🪄','🎪','🎡','🎠','🎢'] },
+  { label: '🏆 Progression', emojis: ['🏆','🥇','🥈','🥉','🎖️','🏅','⭐','🌟','💫','✨','💥','🔥','❄️','⚡','🌊','💎','💍','👑','🎗️','🏁'] },
+  { label: '📋 Tâches', emojis: ['📋','📌','📍','🔖','📎','🖇️','📏','📐','✏️','🖊️','🖋️','📝','📄','📃','📑','📊','📈','📉','🗂️','🗃️'] },
+  { label: '💼 Pro', emojis: ['💼','🗄️','🖥️','💻','⌨️','🖱️','🖨️','📱','☎️','📞','📟','📠','🔍','🔎','🔬','🔭','📡','🛰️','⚙️','🔧'] },
+  { label: '🚦 Statuts', emojis: ['✅','❌','⚠️','🚫','⛔','🔴','🟠','🟡','🟢','🔵','🟣','⚫','⚪','🟤','🔶','🔷','🔸','🔹','💤','⏳'] },
+  { label: '🔔 Signaux', emojis: ['🔔','🔕','📣','📢','🚨','🚩','🏴','🏳️','🚀','💡','🔦','🕯️','🔒','🔓','🔑','🗝️','🪝','🔗','📡','🛜'] },
+  { label: '🌍 Nature', emojis: ['🌍','🌲','🌳','🌴','🌵','🌾','🍀','🌸','🌺','🌻','🌹','🍁','🍂','🍃','🌿','☘️','🪨','🌙','☀️','⛅'] },
+  { label: '🎨 Créa', emojis: ['🎨','🖌️','✏️','📸','🎬','🎵','🎶','🎸','🎹','🎺','🎻','🥁','🎤','🎧','🎭','🎪','🎠','🎡','🎢','🎠'] },
+  { label: '💬 Social', emojis: ['💬','💭','🗯️','❤️','🧡','💛','💚','💙','💜','🖤','🤍','💕','💞','💓','💗','💖','💘','💝','👍','👎'] },
+  { label: '🧠 Divers', emojis: ['🧠','👀','💪','🤝','🙌','👏','🤜','🏃','🧑‍💻','👷','🧑‍🎨','🦁','🐺','🦊','🐉','🦄','👻','💀','🤖','👽'] },
 ];
 
 /**
@@ -77,17 +83,33 @@ function BoardEmojiPicker({ current, onSelect, onClose }) {
     document.addEventListener('mousedown', h);
     return () => document.removeEventListener('mousedown', h);
   }, [onClose]);
+  const btnStyle = (e) => ({
+    background: current === e ? 'var(--accent-dim)' : 'none',
+    border: current === e ? '1px solid var(--accent)' : '1px solid transparent',
+    borderRadius: 5, width: 28, height: 28, fontSize: 15,
+    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+  });
   return (
     <div ref={ref} style={{
       position: 'absolute', left: '100%', top: 0, zIndex: 100,
       background: 'var(--surface2)', border: '1px solid var(--border)',
-      borderRadius: 10, padding: 8, marginLeft: 6,
-      display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: 2,
+      borderRadius: 10, padding: '8px 8px 4px', marginLeft: 6,
       boxShadow: '0 8px 24px rgba(0,0,0,.6)',
+      width: 260, maxHeight: 340, overflowY: 'auto',
     }}>
-      <button onClick={() => onSelect('')} style={{ background: current === '' ? 'var(--accent-dim)' : 'none', border: current === '' ? '1px solid var(--accent)' : '1px solid transparent', borderRadius: 5, width: 28, height: 28, fontSize: 11, color: 'var(--text-muted)', cursor: 'pointer' }}>✕</button>
-      {EMOJIS.map(e => (
-        <button key={e} onClick={() => onSelect(e)} style={{ background: current === e ? 'var(--accent-dim)' : 'none', border: current === e ? '1px solid var(--accent)' : '1px solid transparent', borderRadius: 5, width: 28, height: 28, fontSize: 15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{e}</button>
+      {/* Effacer */}
+      <div style={{ marginBottom: 6 }}>
+        <button onClick={() => onSelect('')} style={{ ...btnStyle(''), width: 'auto', padding: '0 10px', fontSize: 11, color: 'var(--text-muted)' }}>✕ Aucun</button>
+      </div>
+      {EMOJI_CATS.map(cat => (
+        <div key={cat.label} style={{ marginBottom: 8 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4, paddingLeft: 2 }}>{cat.label}</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: 2 }}>
+            {cat.emojis.map(e => (
+              <button key={e} onClick={() => onSelect(e)} style={btnStyle(e)}>{e}</button>
+            ))}
+          </div>
+        </div>
       ))}
     </div>
   );

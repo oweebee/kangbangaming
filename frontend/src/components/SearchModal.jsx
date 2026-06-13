@@ -5,11 +5,17 @@ import ProgressSlider from './ProgressSlider.jsx';
 import { StatusToggles, DatePicker, AssigneeEditor } from './CardControls.jsx';
 import ModalBackdrop from './ModalBackdrop.jsx';
 
-const CARD_EMOJIS = [
-  '🎮','🕹️','🏆','🥇','⭐','💎','🔥','❄️','⚡','🎯',
-  '📦','🚀','💀','👾','🛡️','⚔️','🗡️','🧩','🎲','🃏',
-  '✅','⏳','🔒','🎵','🎬','📺','🖥️','🧠','💡','🌟',
-  '🐉','🦁','🐺','🤖','👑','🎭','🏰','🌋','🌊','🌙',
+const CARD_EMOJI_CATS = [
+  { label: '🎮 Gaming', emojis: ['🎮','🕹️','👾','🎲','🃏','🧩','🎯','🏹','⚔️','🗡️','🛡️','🪃','🔫','💣','🧲','🪄','🎪','🎡','🎠','🎢'] },
+  { label: '🏆 Progression', emojis: ['🏆','🥇','🥈','🥉','🎖️','🏅','⭐','🌟','💫','✨','💥','🔥','❄️','⚡','🌊','💎','💍','👑','🎗️','🏁'] },
+  { label: '📋 Tâches', emojis: ['📋','📌','📍','🔖','📎','🖇️','📏','📐','✏️','🖊️','🖋️','📝','📄','📃','📑','📊','📈','📉','🗂️','🗃️'] },
+  { label: '💼 Pro', emojis: ['💼','🗄️','🖥️','💻','⌨️','🖱️','🖨️','📱','☎️','📞','📟','📠','🔍','🔎','🔬','🔭','📡','🛰️','⚙️','🔧'] },
+  { label: '🚦 Statuts', emojis: ['✅','❌','⚠️','🚫','⛔','🔴','🟠','🟡','🟢','🔵','🟣','⚫','⚪','🟤','🔶','🔷','🔸','🔹','💤','⏳'] },
+  { label: '🔔 Signaux', emojis: ['🔔','🔕','📣','📢','🚨','🚩','🏴','🏳️','🚀','💡','🔦','🕯️','🔒','🔓','🔑','🗝️','🪝','🔗','📡','🛜'] },
+  { label: '🌍 Nature', emojis: ['🌍','🌲','🌳','🌴','🌵','🌾','🍀','🌸','🌺','🌻','🌹','🍁','🍂','🍃','🌿','☘️','🪨','🌙','☀️','⛅'] },
+  { label: '🎨 Créa', emojis: ['🎨','🖌️','✏️','📸','🎬','🎵','🎶','🎸','🎹','🎺','🎻','🥁','🎤','🎧','🎭','🎪','🎠','🎡','🎢','🎠'] },
+  { label: '💬 Social', emojis: ['💬','💭','🗯️','❤️','🧡','💛','💚','💙','💜','🖤','🤍','💕','💞','💓','💗','💖','💘','💝','👍','👎'] },
+  { label: '🧠 Divers', emojis: ['🧠','👀','💪','🤝','🙌','👏','🤜','🏃','🧑‍💻','👷','🧑‍🎨','🦁','🐺','🦊','🐉','🦄','👻','💀','🤖','👽'] },
 ];
 
 function LibraryBadge() {
@@ -330,18 +336,22 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
                   <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Clique pour changer</span>
                 </div>
                 {showEmojiPicker && (
-                  <div style={{
-                    marginTop: 10, display: 'grid', gridTemplateColumns: 'repeat(10, 1fr)', gap: 5,
-                    background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 9, padding: 10,
-                  }}>
-                    {CARD_EMOJIS.map(e => (
-                      <button key={e} onClick={() => { setCustomEmoji(e); setShowEmojiPicker(false); }}
-                        style={{
-                          width: 38, height: 38, fontSize: 22, background: customEmoji === e ? 'var(--accent-dim)' : 'none',
-                          border: customEmoji === e ? '1px solid var(--accent)' : '1px solid transparent',
-                          borderRadius: 6, cursor: 'pointer',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        }}>{e}</button>
+                  <div style={{ marginTop: 10, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 9, padding: 10, maxHeight: 260, overflowY: 'auto' }}>
+                    {CARD_EMOJI_CATS.map(cat => (
+                      <div key={cat.label} style={{ marginBottom: 10 }}>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 5 }}>{cat.label}</div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(10, 1fr)', gap: 4 }}>
+                          {cat.emojis.map(e => (
+                            <button key={e} onClick={() => { setCustomEmoji(e); setShowEmojiPicker(false); }}
+                              style={{
+                                width: 34, height: 34, fontSize: 18, background: customEmoji === e ? 'var(--accent-dim)' : 'none',
+                                border: customEmoji === e ? '1px solid var(--accent)' : '1px solid transparent',
+                                borderRadius: 6, cursor: 'pointer',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              }}>{e}</button>
+                          ))}
+                        </div>
+                      </div>
                     ))}
                   </div>
                 )}
