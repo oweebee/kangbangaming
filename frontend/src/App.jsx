@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import KanbanBoard from './components/KanbanBoard.jsx';
+import NowPlayingBanner from './components/NowPlayingBanner.jsx';
 import MobileBoard from './components/MobileBoard.jsx';
 import GameModal from './components/GameModal.jsx';
 import TaskModal from './components/TaskModal.jsx';
@@ -1751,6 +1752,7 @@ export default function App() {
 
 
         {showProfile && <ProfilePage token={token} currentUser={currentUser} onClose={() => setShowProfile(false)} onSaveSteam={handleSteamSave} />}
+        {activeBoard?.gameIcon && <NowPlayingBanner gameIconUrl={activeBoard.gameIcon} token={token} />}
       </div>
     );
   }
@@ -1930,6 +1932,7 @@ export default function App() {
       }
       {showAdmin && <AdminPanel token={token} currentUser={currentUser} onClose={() => setShowAdmin(false)} />}
       {showProfile && <ProfilePage token={token} currentUser={currentUser} onClose={() => setShowProfile(false)} onSaveSteam={handleSteamSave} />}
+      {activeBoard?.gameIcon && !showHome && <NowPlayingBanner gameIconUrl={activeBoard.gameIcon} token={token} />}
       {/* Game stats widget — shown only when viewing a Steam-based board */}
       {isTaskBoard && !showHome && !isMobile && (
         <GameStatsWidget

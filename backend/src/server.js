@@ -1497,6 +1497,50 @@ app.get('/api/og-preview', requireAuth, async (req, res) => {
   }
 });
 
+// ── Steam "En jeu" — qui joue à ce jeu en ce moment ─────────────────────────
+
+const ingameCache = new Map(); // appid -> { players, fetchedAt }
+const INGAME_TTL = 60 * 1000; // 1 min
+
+app.get('/api/steam/ingame/:appid', requireAuth, async (req, res) => {
+  const { appid } = req.params;
+  if (!GLOBAL_STEAM_API_KEY) return res.json([]);
+
+  const now = Date.now();
+  const cached = ingameCache.get(appid);
+  if (cached && now - cached.fetchedAt < INGAME_TTL) return res.json(cached.players);
+
+  try {
+    // Récupérer tous les users avec un steamId
+    const users = readUsers().filter(u => u.steamId);
+    if (!users.length) return res.json([]);
+
+    const steamIds = users.map(u => u.steamId).join(',');
+    const url = `https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=${GLOBAL_STEAM_API_KEY}&steamids=${steamIds}`;
+    const data = await steamFetch(url);
+    const summaries = data.response?.players || [];
+
+    // Filtrer ceux qui jouent au bon jeu
+    const playing = summaries
+      .filter(p => String(p.gameid) === String(appid))
+      .map(p => {
+        const user = users.find(u => u.steamId === p.steamid);
+        return {
+          steamId: p.steamid,
+          username: user?.username || p.personaname,
+          steamPersonaName: p.personaname,
+          steamAvatar: p.avatarmedium || p.avatar || user?.steamAvatar || null,
+        };
+      });
+
+    ingameCache.set(appid, { players: playing, fetchedAt: now });
+    res.json(playing);
+  } catch (e) {
+    console.error('[ingame]', e.message);
+    res.json([]);
+  }
+});
+
 // ── Start ─────────────────────────────────────────────────────────────────────
 
 ensureAdmin().then(() => {
