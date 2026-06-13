@@ -130,7 +130,7 @@ function FeaturedCard({ token, wishlist = new Set() }) {
             <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', textShadow: '0 1px 4px rgba(0,0,0,0.9)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
               {game.name}
             </div>
-            {wishlist.has(game.appid) && <WishlistDot />}
+            {wishlist.has(Number(game.appid)) && <WishlistDot />}
           </div>
         </div>
         {/* Détails */}
@@ -320,7 +320,7 @@ export default function UpcomingPanel({ token }) {
                       <div style={{ fontSize: 12, fontWeight: 700, color: '#fff', textShadow: '0 1px 4px rgba(0,0,0,0.8)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
                         {game.name}
                       </div>
-                      {wishlist.has(game.appid) && <WishlistDot />}
+                      {wishlist.has(Number(game.appid)) && <WishlistDot />}
                     </div>
                   </div>
                   {/* Détails */}
@@ -382,7 +382,7 @@ export default function UpcomingPanel({ token }) {
                     <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
                       {game.name}
                     </div>
-                    {wishlist.has(game.appid) && <WishlistDot />}
+                    {wishlist.has(Number(game.appid)) && <WishlistDot />}
                   </div>
                   {game.developers?.length > 0 && (
                     <div style={{ fontSize: 10, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 3, opacity: 0.8 }}>
