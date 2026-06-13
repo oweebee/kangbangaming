@@ -3,6 +3,7 @@ import { TASK_TYPES, getTaskType } from '../taskTypes.jsx';
 import NotesSection from './NotesSection.jsx';
 import ProgressSlider from './ProgressSlider.jsx';
 import { StatusToggles, DatePicker, AssigneeEditor } from './CardControls.jsx';
+import ModalBackdrop from './ModalBackdrop.jsx';
 
 const CARD_EMOJIS = [
   '🎮','🕹️','🏆','🥇','⭐','💎','🔥','❄️','⚡','🎯',
@@ -154,14 +155,7 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
   const PreviewIcon = previewTt?.FallbackIcon;
 
   return (
-    <div
-      onClick={e => e.target === e.currentTarget && onClose()}
-      style={{
-        position: 'fixed', inset: 0, background: 'rgba(0,0,0,.75)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        zIndex: 100, padding: 20, backdropFilter: 'blur(4px)',
-      }}
-    >
+    <ModalBackdrop onClose={onClose}>
       <div style={{
         background: 'var(--surface)', border: '1px solid var(--border)',
         borderRadius: 14, width: '100%', maxWidth: 600,
@@ -496,6 +490,6 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
           </div>
         )}
       </div>
-    </div>
+    </ModalBackdrop>
   );
 }

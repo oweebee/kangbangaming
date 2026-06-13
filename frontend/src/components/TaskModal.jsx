@@ -4,6 +4,7 @@ import { getTaskType } from '../taskTypes.jsx';
 import NotesSection from './NotesSection.jsx';
 import ProgressSlider, { progressColor } from './ProgressSlider.jsx';
 import { StatusToggles, DatePicker, AssigneeEditor } from './CardControls.jsx';
+import ModalBackdrop from './ModalBackdrop.jsx';
 
 // ── Date helpers ──────────────────────────────────────────────────────────────
 
@@ -208,14 +209,7 @@ export default function TaskModal({ game, onClose, onEdit, appUsers = [], onPatc
   const handleEndTimeChange    = (v) => { setEndTime(v);    if (onPatchGame) onPatchGame(game.appid, { endTime: v || null }); };
 
   return (
-    <div
-      onClick={e => e.target === e.currentTarget && onClose()}
-      style={{
-        position: 'fixed', inset: 0, background: 'rgba(0,0,0,.78)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        zIndex: 100, padding: 20, backdropFilter: 'blur(4px)',
-      }}
-    >
+    <ModalBackdrop onClose={onClose}>
       <div style={{
         background: 'var(--surface)',
         border: isUrgent ? '2px solid rgba(220,60,60,0.6)' : tt ? `2px solid ${tt.border}` : `2px solid ${customColor || 'var(--border)'}`,
@@ -414,7 +408,7 @@ export default function TaskModal({ game, onClose, onEdit, appUsers = [], onPatc
           )}
         </div>
       </div>
-    </div>
+    </ModalBackdrop>
   );
 }
 

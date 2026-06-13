@@ -35,6 +35,31 @@ const EMOJIS = [
   '📋','📌','🔖','🏁','🚩','💬','🎵','🎬','📺','🖥️',
 ];
 
+/**
+ * Hook pour les séparateurs redimensionnables (col-resize).
+ * @param {React.RefObject} ref       – ref du div séparateur
+ * @param {React.RefObject} dragging  – ref booléen (en cours de drag)
+ * @param {'x'|'y'} axis             – 'x' = horizontal (col), 'y' = vertical (row)
+ * @param {(clientX: number, rect: DOMRect) => void} onMove – callback appelé à chaque mouvement
+ * @returns handlers onMouseDown + onTouchStart à passer au div
+ */
+function useSplitter(ref, dragging, onMove) {
+  function start(getClient) {
+    dragging.current = true;
+    const container = ref.current?.parentElement;
+    const move = e => { if (!dragging.current || !container) return; onMove(getClient(e), container.getBoundingClientRect()); };
+    const up   = () => { dragging.current = false; window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); window.removeEventListener('touchmove', move); window.removeEventListener('touchend', up); };
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup',   up);
+    window.addEventListener('touchmove', move, { passive: false });
+    window.addEventListener('touchend',  up);
+  }
+  return {
+    onMouseDown: e => { e.preventDefault(); start(ev => ({ clientX: ev.clientX, clientY: ev.clientY })); },
+    onTouchStart: e => { e.preventDefault(); start(ev => ({ clientX: ev.touches[0].clientX, clientY: ev.touches[0].clientY })); },
+  };
+}
+
 function useMobile() {
   const [mobile, setMobile] = useState(() => window.innerWidth < 768);
   useEffect(() => {
@@ -1109,49 +1134,19 @@ export default function App() {
       {/* ── Séparateur redimensionnable ── */}
       <div
         ref={homeSplitterRef}
-        onMouseDown={e => {
-          e.preventDefault();
-          homeSplitterDragging.current = true;
-          const container = homeSplitterRef.current?.parentElement;
-          const onMove = mv => {
-            if (!homeSplitterDragging.current || !container) return;
-            const rect = container.getBoundingClientRect();
-            const raw = ((mv.clientX - rect.left) / rect.width) * 100;
-            // Min = one card width (~224px) on each side
-            const minPct = (224 / rect.width) * 100;
-            const maxPct = 100 - minPct;
-            const clamped = Math.max(minPct, Math.min(maxPct, raw));
-            setHomeSplitPct(clamped);
-            try { localStorage.setItem('homeSplitPct', String(clamped)); } catch {}
-          };
-          const onUp = () => {
-            homeSplitterDragging.current = false;
-            window.removeEventListener('mousemove', onMove);
-            window.removeEventListener('mouseup', onUp);
-          };
-          window.addEventListener('mousemove', onMove);
-          window.addEventListener('mouseup', onUp);
-        }}
-        style={{
-          width: 6, flexShrink: 0, cursor: 'col-resize',
-          background: 'var(--border)',
-          position: 'relative',
-          transition: 'background .15s',
-          userSelect: 'none',
-        }}
+        {...useSplitter(homeSplitterRef, homeSplitterDragging, (client, rect) => {
+          const raw = ((client.clientX - rect.left) / rect.width) * 100;
+          const minPct = (224 / rect.width) * 100;
+          const clamped = Math.max(minPct, Math.min(100 - minPct, raw));
+          setHomeSplitPct(clamped);
+          try { localStorage.setItem('homeSplitPct', String(clamped)); } catch {}
+        })}
+        style={{ width: 6, flexShrink: 0, cursor: 'col-resize', background: 'var(--border)', position: 'relative', transition: 'background .15s', userSelect: 'none', touchAction: 'none' }}
         onMouseEnter={e => e.currentTarget.style.background = 'var(--accent)'}
         onMouseLeave={e => { if (!homeSplitterDragging.current) e.currentTarget.style.background = 'var(--border)'; }}
       >
-        {/* Poignée visuelle centrale */}
-        <div style={{
-          position: 'absolute', top: '50%', left: '50%',
-          transform: 'translate(-50%, -50%)',
-          display: 'flex', flexDirection: 'column', gap: 3,
-          pointerEvents: 'none',
-        }}>
-          {[0,1,2].map(i => (
-            <div key={i} style={{ width: 2, height: 2, borderRadius: '50%', background: 'var(--text-muted)', opacity: 0.5 }} />
-          ))}
+        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', display: 'flex', flexDirection: 'column', gap: 3, pointerEvents: 'none' }}>
+          {[0,1,2].map(i => <div key={i} style={{ width: 2, height: 2, borderRadius: '50%', background: 'var(--text-muted)', opacity: 0.5 }} />)}
         </div>
       </div>
 
@@ -1287,45 +1282,17 @@ export default function App() {
       {/* ── Séparateur 2 : Boards / Sorties à venir ── */}
       <div
         ref={homeUpcomingSplitterRef}
-        onMouseDown={e => {
-          e.preventDefault();
-          homeUpcomingSplitterDragging.current = true;
-          const container = homeUpcomingSplitterRef.current?.parentElement;
-          const onMove = mv => {
-            if (!homeUpcomingSplitterDragging.current || !container) return;
-            const rect = container.getBoundingClientRect();
-            const fromRight = rect.right - mv.clientX;
-            const clamped = Math.max(220, Math.min(560, fromRight));
-            setHomeUpcomingWidth(clamped);
-            try { localStorage.setItem('homeUpcomingWidth', String(clamped)); } catch {}
-          };
-          const onUp = () => {
-            homeUpcomingSplitterDragging.current = false;
-            window.removeEventListener('mousemove', onMove);
-            window.removeEventListener('mouseup', onUp);
-          };
-          window.addEventListener('mousemove', onMove);
-          window.addEventListener('mouseup', onUp);
-        }}
-        style={{
-          width: 6, flexShrink: 0, cursor: 'col-resize',
-          background: 'var(--border)',
-          position: 'relative',
-          transition: 'background .15s',
-          userSelect: 'none',
-        }}
+        {...useSplitter(homeUpcomingSplitterRef, homeUpcomingSplitterDragging, (client, rect) => {
+          const clamped = Math.max(220, Math.min(560, rect.right - client.clientX));
+          setHomeUpcomingWidth(clamped);
+          try { localStorage.setItem('homeUpcomingWidth', String(clamped)); } catch {}
+        })}
+        style={{ width: 6, flexShrink: 0, cursor: 'col-resize', background: 'var(--border)', position: 'relative', transition: 'background .15s', userSelect: 'none', touchAction: 'none' }}
         onMouseEnter={e => e.currentTarget.style.background = 'var(--accent)'}
         onMouseLeave={e => { if (!homeUpcomingSplitterDragging.current) e.currentTarget.style.background = 'var(--border)'; }}
       >
-        <div style={{
-          position: 'absolute', top: '50%', left: '50%',
-          transform: 'translate(-50%, -50%)',
-          display: 'flex', flexDirection: 'column', gap: 3,
-          pointerEvents: 'none',
-        }}>
-          {[0,1,2].map(i => (
-            <div key={i} style={{ width: 2, height: 2, borderRadius: '50%', background: 'var(--text-muted)', opacity: 0.5 }} />
-          ))}
+        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', display: 'flex', flexDirection: 'column', gap: 3, pointerEvents: 'none' }}>
+          {[0,1,2].map(i => <div key={i} style={{ width: 2, height: 2, borderRadius: '50%', background: 'var(--text-muted)', opacity: 0.5 }} />)}
         </div>
       </div>
 
@@ -1709,19 +1676,19 @@ export default function App() {
           loading ? (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Chargement...</div>
           ) : (
-            <MobileBoard columns={columns} byColumn={byColumn} onCardClick={g => { setSelectedGameDefaultTab('infos'); setSelectedGame(g); }} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} isTaskBoard={isTaskBoard} onToggleDone={(appid, done) => patchGame(appid, { done })} onToggleUrgent={(appid, urgent) => patchGame(appid, { urgent })} onUpdateAssignees={(appid, assignees) => patchGame(appid, { assignees })} onClickNotes={handleCardNotesClick} genreColors={boardGenreColors} hiddenCardIds={hiddenCardIds} showHiddenCards={showHiddenCards} onHideCard={hideCard} onUnhideCard={unhideCard} />
+            <MobileBoard columns={columns} byColumn={byColumn} onCardClick={g => { setSelectedGameDefaultTab('infos'); setSelectedGame(g); }} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} isTaskBoard={isTaskBoard} onToggleDone={(appid, done) => patchGame(appid, { done })} onToggleUrgent={(appid, urgent) => patchGame(appid, { urgent })} onUpdateAssignees={(appid, assignees) => patchGame(appid, { assignees })} onClickNotes={handleCardNotesClick} genreColors={boardGenreColors} hiddenCardIds={isTaskBoard ? hiddenCardIds : new Set()} showHiddenCards={showHiddenCards} onHideCard={isTaskBoard ? hideCard : undefined} onUnhideCard={isTaskBoard ? unhideCard : undefined} />
           )
         ) : !activeBoardId ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Crée un board pour commencer</div>
         ) : loading ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Chargement...</div>
         ) : (
-          <MobileBoard columns={columns} byColumn={byColumn} onCardClick={g => { setSelectedGameDefaultTab('infos'); setSelectedGame(g); }} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} isTaskBoard={isTaskBoard} onToggleDone={(appid, done) => patchGame(appid, { done })} onToggleUrgent={(appid, urgent) => patchGame(appid, { urgent })} onUpdateAssignees={(appid, assignees) => patchGame(appid, { assignees })} onClickNotes={handleCardNotesClick} genreColors={boardGenreColors} hiddenCardIds={hiddenCardIds} showHiddenCards={showHiddenCards} onHideCard={hideCard} onUnhideCard={unhideCard} />
+          <MobileBoard columns={columns} byColumn={byColumn} onCardClick={g => { setSelectedGameDefaultTab('infos'); setSelectedGame(g); }} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} isTaskBoard={isTaskBoard} onToggleDone={(appid, done) => patchGame(appid, { done })} onToggleUrgent={(appid, urgent) => patchGame(appid, { urgent })} onUpdateAssignees={(appid, assignees) => patchGame(appid, { assignees })} onClickNotes={handleCardNotesClick} genreColors={boardGenreColors} hiddenCardIds={isTaskBoard ? hiddenCardIds : new Set()} showHiddenCards={showHiddenCards} onHideCard={isTaskBoard ? hideCard : undefined} onUnhideCard={isTaskBoard ? unhideCard : undefined} />
         )}
         {(activeBoardId || publicBoardMode) && (
           <div style={{ background: 'var(--surface)', borderTop: '1px solid var(--border)', padding: '8px 12px', display: 'flex', gap: 8, flexShrink: 0 }}>
             <button onClick={addColumn} style={{ flex: 1, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '8px', color: 'var(--text-muted)', fontSize: 12 }}>+ Colonne</button>
-            {hiddenCount > 0 && (
+            {isTaskBoard && hiddenCount > 0 && (
               <button
                 onClick={() => setShowHiddenCards(v => !v)}
                 style={{
@@ -1893,7 +1860,7 @@ export default function App() {
               <div style={{ flex: '1 1 0', display: 'flex', justifyContent: 'center', minWidth: gameInfo ? 200 : 0, minHeight: 0 }}>
                 <SteamEncart gameInfo={gameInfo} />
               </div>
-              {(activeBoardId || publicBoardMode) && hiddenCount > 0 && (
+              {isTaskBoard && (activeBoardId || publicBoardMode) && hiddenCount > 0 && (
                 <button
                   onClick={() => setShowHiddenCards(v => !v)}
                   style={{
@@ -1943,14 +1910,14 @@ export default function App() {
           loading ? (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Chargement...</div>
           ) : (
-            <KanbanBoard columns={columns} byColumn={byColumn} dragging={dragging} setDragging={setDragging} moveGame={moveGame} onCardClick={g => { setSelectedGameDefaultTab('infos'); setSelectedGame(g); }} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} onRenameColumn={renameColumn} onDeleteColumn={deleteColumn} onSetEmoji={setColumnEmoji} onReorderColumns={reorderColumns} onAddToColumn={colId => { setSearchTargetCol(colId); setShowSearch(true); }} onReorderGames={reorderGamesInColumn} isTaskBoard={isTaskBoard} appUsers={appUsers} compactView={compactView} leftOffset={infoPanelLocked && infoPanelSide === 'left' ? GAME_INFO_PANEL_WIDTH : 0} rightOffset={infoPanelLocked && infoPanelSide === 'right' ? GAME_INFO_PANEL_WIDTH : 0} onToggleDone={(appid, done) => patchGame(appid, { done })} onToggleUrgent={(appid, urgent) => patchGame(appid, { urgent })} onUpdateAssignees={(appid, assignees) => patchGame(appid, { assignees })} onClickNotes={handleCardNotesClick} genreColors={boardGenreColors} hiddenCardIds={hiddenCardIds} showHiddenCards={showHiddenCards} onHideCard={hideCard} onUnhideCard={unhideCard} />
+            <KanbanBoard columns={columns} byColumn={byColumn} dragging={dragging} setDragging={setDragging} moveGame={moveGame} onCardClick={g => { setSelectedGameDefaultTab('infos'); setSelectedGame(g); }} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} onRenameColumn={renameColumn} onDeleteColumn={deleteColumn} onSetEmoji={setColumnEmoji} onReorderColumns={reorderColumns} onAddToColumn={colId => { setSearchTargetCol(colId); setShowSearch(true); }} onReorderGames={reorderGamesInColumn} isTaskBoard={isTaskBoard} appUsers={appUsers} compactView={compactView} leftOffset={infoPanelLocked && infoPanelSide === 'left' ? GAME_INFO_PANEL_WIDTH : 0} rightOffset={infoPanelLocked && infoPanelSide === 'right' ? GAME_INFO_PANEL_WIDTH : 0} onToggleDone={(appid, done) => patchGame(appid, { done })} onToggleUrgent={(appid, urgent) => patchGame(appid, { urgent })} onUpdateAssignees={(appid, assignees) => patchGame(appid, { assignees })} onClickNotes={handleCardNotesClick} genreColors={boardGenreColors} hiddenCardIds={isTaskBoard ? hiddenCardIds : new Set()} showHiddenCards={showHiddenCards} onHideCard={isTaskBoard ? hideCard : undefined} onUnhideCard={isTaskBoard ? unhideCard : undefined} />
           )
         ) : !activeBoardId ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Crée un board pour commencer</div>
         ) : loading ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Chargement...</div>
         ) : (
-          <KanbanBoard columns={columns} byColumn={byColumn} dragging={dragging} setDragging={setDragging} moveGame={moveGame} onCardClick={g => { setSelectedGameDefaultTab('infos'); setSelectedGame(g); }} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} onRenameColumn={renameColumn} onDeleteColumn={deleteColumn} onSetEmoji={setColumnEmoji} onReorderColumns={reorderColumns} onAddToColumn={colId => { setSearchTargetCol(colId); setShowSearch(true); }} onReorderGames={reorderGamesInColumn} isTaskBoard={isTaskBoard} appUsers={appUsers} compactView={compactView} leftOffset={infoPanelLocked && infoPanelSide === 'left' ? GAME_INFO_PANEL_WIDTH : 0} rightOffset={infoPanelLocked && infoPanelSide === 'right' ? GAME_INFO_PANEL_WIDTH : 0} onToggleDone={(appid, done) => patchGame(appid, { done })} onToggleUrgent={(appid, urgent) => patchGame(appid, { urgent })} onUpdateAssignees={(appid, assignees) => patchGame(appid, { assignees })} onClickNotes={handleCardNotesClick} genreColors={boardGenreColors} hiddenCardIds={hiddenCardIds} showHiddenCards={showHiddenCards} onHideCard={hideCard} onUnhideCard={unhideCard} />
+          <KanbanBoard columns={columns} byColumn={byColumn} dragging={dragging} setDragging={setDragging} moveGame={moveGame} onCardClick={g => { setSelectedGameDefaultTab('infos'); setSelectedGame(g); }} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} onRenameColumn={renameColumn} onDeleteColumn={deleteColumn} onSetEmoji={setColumnEmoji} onReorderColumns={reorderColumns} onAddToColumn={colId => { setSearchTargetCol(colId); setShowSearch(true); }} onReorderGames={reorderGamesInColumn} isTaskBoard={isTaskBoard} appUsers={appUsers} compactView={compactView} leftOffset={infoPanelLocked && infoPanelSide === 'left' ? GAME_INFO_PANEL_WIDTH : 0} rightOffset={infoPanelLocked && infoPanelSide === 'right' ? GAME_INFO_PANEL_WIDTH : 0} onToggleDone={(appid, done) => patchGame(appid, { done })} onToggleUrgent={(appid, urgent) => patchGame(appid, { urgent })} onUpdateAssignees={(appid, assignees) => patchGame(appid, { assignees })} onClickNotes={handleCardNotesClick} genreColors={boardGenreColors} hiddenCardIds={isTaskBoard ? hiddenCardIds : new Set()} showHiddenCards={showHiddenCards} onHideCard={isTaskBoard ? hideCard : undefined} onUnhideCard={isTaskBoard ? unhideCard : undefined} />
         )}
         </div>
       </div>

@@ -3,16 +3,9 @@ import { getTaskType } from '../taskTypes.jsx';
 import { getDateInfo } from './TaskModal.jsx';
 import { progressColor } from './ProgressSlider.jsx';
 import AssigneeAvatars from './AssigneeAvatars.jsx';
+import { formatPlaytime } from '../utils.js';
 
 const COMPACT_ICON_SIZE = 32; // 40 * 0.8 (-20%)
-
-function formatPlaytime(minutes) {
-  if (!minutes || minutes === 0) return null;
-  if (minutes < 60) return `${minutes} min`;
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return m > 0 ? `${h}h ${m}m` : `${h}h`;
-}
 
 export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArchive, onUnarchive, onDelete, onEdit, isDragging, readOnly, isTaskBoard, compact = false, assignees = [], appUsers = [], onToggleDone, onToggleUrgent, onUpdateAssignees, onClickNotes, genreColor = null, isHidden = false, onHide, onUnhide }) {
   const [imgError, setImgError] = useState(false);

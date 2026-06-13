@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import ModalBackdrop from './ModalBackdrop.jsx';
 
 const API = '/api';
 
@@ -183,8 +184,7 @@ export default function AdminPanel({ token, currentUser, onClose }) {
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,.65)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+    <ModalBackdrop onClose={onClose} zIndex={1000}>
       <div style={{ background: 'var(--surface1)', border: '1px solid var(--border)', borderRadius: 14, width: '100%', maxWidth: 580, maxHeight: '85vh', display: 'flex', flexDirection: 'column', boxShadow: '0 8px 40px rgba(0,0,0,.5)' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 20px 0', borderBottom: '1px solid var(--border)' }}>
@@ -263,6 +263,6 @@ export default function AdminPanel({ token, currentUser, onClose }) {
           )}
         </div>
       </div>
-    </div>
+    </ModalBackdrop>
   );
 }

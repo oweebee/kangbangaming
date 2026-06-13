@@ -1,14 +1,8 @@
 import { useState, useEffect } from 'react';
 import NotesSection from './NotesSection.jsx';
 import { StatusToggles, DatePicker } from './CardControls.jsx';
-
-function formatPlaytime(minutes) {
-  if (!minutes || minutes === 0) return 'Jamais joué';
-  if (minutes < 60) return `${minutes} min`;
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return m > 0 ? `${h}h ${m}m` : `${h}h`;
-}
+import { formatPlaytime } from '../utils.js';
+import ModalBackdrop from './ModalBackdrop.jsx';
 
 export default function GameModal({ game, onClose, api, token, onPatchGame, defaultTab = 'achievements', currentUser, appUsers = [] }) {
   const [achievements, setAchievements] = useState(null);
@@ -68,8 +62,6 @@ export default function GameModal({ game, onClose, api, token, onPatchGame, defa
     load();
   }, [game.appid, api, token]);
 
-  const handleBackdrop = (e) => { if (e.target === e.currentTarget) onClose(); };
-
   const filteredAchievements = achievements?.achievements?.filter(a => {
     if (filter === 'unlocked') return a.unlocked;
     if (filter === 'locked') return !a.unlocked;
@@ -77,11 +69,7 @@ export default function GameModal({ game, onClose, api, token, onPatchGame, defa
   }) || [];
 
   return (
-    <div onClick={handleBackdrop} style={{
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      zIndex: 100, padding: 20, backdropFilter: 'blur(4px)',
-    }}>
+    <ModalBackdrop onClose={onClose}>
       <div style={{
         background: 'var(--surface)', border: '2px solid var(--border)', borderRadius: 14,
         width: '100%', maxWidth: 620, maxHeight: '85vh',
@@ -104,7 +92,7 @@ export default function GameModal({ game, onClose, api, token, onPatchGame, defa
           <div style={{ position: 'absolute', bottom: 12, left: 16, right: 16 }}>
             <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 4 }}>{game.name}</div>
             <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>
-              ⏱ {formatPlaytime(game.playtime_minutes)}
+              ⏱ {formatPlaytime(game.playtime_minutes, 'Jamais joué')}
               {achievements && achievements.total > 0 && (
                 <span style={{ marginLeft: 12 }}>
                   🏆 {achievements.unlocked}/{achievements.total} succès ({achievements.percent}%)
@@ -210,7 +198,7 @@ export default function GameModal({ game, onClose, api, token, onPatchGame, defa
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {[
                   ['App ID', game.appid],
-                  ['Temps de jeu', formatPlaytime(game.playtime_minutes)],
+                  ['Temps de jeu', formatPlaytime(game.playtime_minutes, 'Jamais joué')],
                   ['Store Steam', <a href={`https://store.steampowered.com/app/${game.appid}`} target="_blank" rel="noreferrer" style={{ color: 'var(--accent)' }}>Ouvrir ↗</a>],
                 ].map(([label, value]) => (
                   <div key={label} style={{ display: 'flex', gap: 12 }}>
@@ -236,6 +224,6 @@ export default function GameModal({ game, onClose, api, token, onPatchGame, defa
           )}
         </div>
       </div>
-    </div>
+    </ModalBackdrop>
   );
 }
