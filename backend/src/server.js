@@ -550,7 +550,7 @@ app.get('/api/steam/upcoming', requireAuth, async (req, res) => {
     const results = await Promise.allSettled(
       items.slice(0, 60).map(async item => {
         try {
-          const r = await fetch(`https://store.steampowered.com/api/appdetails?appids=${item.id}&filters=release_date,basic,price_overview&cc=FR&l=french`, {
+          const r = await fetch(`https://store.steampowered.com/api/appdetails?appids=${item.id}&filters=release_date,basic,price_overview&cc=FR&l=english`, {
             headers: { 'User-Agent': 'Mozilla/5.0' },
           });
           const d = await r.json();
