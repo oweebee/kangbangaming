@@ -560,7 +560,7 @@ async function fetchSteamUpcomingItems() {
 }
 
 // Debug : voir le HTML brut retourné par Steam search (admin only)
-app.get('/api/debug/steam-search', requireAuth, async (req, res) => {
+app.get('/api/debug/steam-search', async (req, res) => {
   try {
     const category = req.query.cat || 998;
     const url = `https://store.steampowered.com/search/results/?filter=comingsoon&sort_by=Release_Date&cc=FR&l=english&json=1&count=10&category1=${category}`;
