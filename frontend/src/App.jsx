@@ -76,13 +76,29 @@ function useMobile() {
   return mobile;
 }
 
-function BoardEmojiPicker({ current, onSelect, onClose }) {
+function BoardEmojiPicker({ current, onSelect, onClose, anchorEl }) {
   const ref = useRef();
+  const [coords, setCoords] = useState({ left: -9999, top: -9999 });
+
   useEffect(() => {
     const h = e => { if (ref.current && !ref.current.contains(e.target)) onClose(); };
     document.addEventListener('mousedown', h);
     return () => document.removeEventListener('mousedown', h);
   }, [onClose]);
+
+  useEffect(() => {
+    if (!anchorEl || !ref.current) return;
+    const tr = anchorEl.getBoundingClientRect();
+    const pickerW = 260;
+    const pickerH = Math.min(340, window.innerHeight - 32);
+    let left = tr.right + 8;
+    if (left + pickerW > window.innerWidth - 8) left = tr.left - pickerW - 8;
+    let top = tr.top;
+    if (top + pickerH > window.innerHeight - 16) top = window.innerHeight - pickerH - 16;
+    if (top < 8) top = 8;
+    setCoords({ left, top });
+  }, [anchorEl]);
+
   const btnStyle = (e) => ({
     background: current === e ? 'var(--accent-dim)' : 'none',
     border: current === e ? '1px solid var(--accent)' : '1px solid transparent',
@@ -91,9 +107,9 @@ function BoardEmojiPicker({ current, onSelect, onClose }) {
   });
   return (
     <div ref={ref} style={{
-      position: 'absolute', left: '100%', bottom: 0, zIndex: 100,
+      position: 'fixed', left: coords.left, top: coords.top, zIndex: 9999,
       background: 'var(--surface2)', border: '1px solid var(--border)',
-      borderRadius: 10, padding: '8px 8px 4px', marginLeft: 6,
+      borderRadius: 10, padding: '8px 8px 4px',
       boxShadow: '0 8px 24px rgba(0,0,0,.6)',
       width: 260, maxHeight: 340, overflowY: 'auto',
     }}>
@@ -353,6 +369,7 @@ export default function App() {
   const [newBoardName, setNewBoardName] = useState('');
   const [showNewBoard, setShowNewBoard] = useState(false);
   const [emojiPickerFor, setEmojiPickerFor] = useState(null);
+  const [emojiPickerAnchor, setEmojiPickerAnchor] = useState(null);
   const [showDrawer, setShowDrawer] = useState(false);
 
   // Board name inline edit
@@ -1415,12 +1432,12 @@ export default function App() {
               <div style={{ position: 'relative' }}>
                 <div style={{ width: 38, height: 38, borderRadius: '50%', background: `linear-gradient(90deg, #f5c518 50%, ${getBoardTypeColor(b)} 50%)`, padding: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <button
-                    onClick={e => { e.stopPropagation(); setEmojiPickerFor(emojiPickerFor === b.id ? null : b.id); }}
+                    onClick={e => { e.stopPropagation(); if (emojiPickerFor === b.id) { setEmojiPickerFor(null); setEmojiPickerAnchor(null); } else { setEmojiPickerFor(b.id); setEmojiPickerAnchor(e.currentTarget); } }}
                     style={{ background: 'var(--surface2)', border: 'none', borderRadius: '50%', width: 34, height: 34, fontSize: b.emoji ? 18 : 11, cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                   >{b.emoji || '+'}</button>
                 </div>
                 {emojiPickerFor === b.id && (
-                  <BoardEmojiPicker current={b.emoji || ''} onSelect={emoji => { setBoardEmoji(b.id, emoji); setEmojiPickerFor(null); }} onClose={() => setEmojiPickerFor(null)} />
+                  <BoardEmojiPicker current={b.emoji || ''} onSelect={emoji => { setBoardEmoji(b.id, emoji); setEmojiPickerFor(null); setEmojiPickerAnchor(null); }} onClose={() => { setEmojiPickerFor(null); setEmojiPickerAnchor(null); }} anchorEl={emojiPickerAnchor} />
                 )}
               </div>
             )}
@@ -1477,12 +1494,12 @@ export default function App() {
               <div style={{ position: 'relative' }}>
                 <div style={{ width: 38, height: 38, borderRadius: '50%', background: getBoardTypeColor(b), padding: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <button
-                    onClick={e => { e.stopPropagation(); setEmojiPickerFor(emojiPickerFor === b.id ? null : b.id); }}
+                    onClick={e => { e.stopPropagation(); if (emojiPickerFor === b.id) { setEmojiPickerFor(null); setEmojiPickerAnchor(null); } else { setEmojiPickerFor(b.id); setEmojiPickerAnchor(e.currentTarget); } }}
                     style={{ background: 'var(--surface2)', border: 'none', borderRadius: '50%', width: 34, height: 34, fontSize: b.emoji ? 18 : 11, cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                   >{b.emoji || '+'}</button>
                 </div>
                 {emojiPickerFor === b.id && (
-                  <BoardEmojiPicker current={b.emoji || ''} onSelect={emoji => { setBoardEmoji(b.id, emoji); setEmojiPickerFor(null); }} onClose={() => setEmojiPickerFor(null)} />
+                  <BoardEmojiPicker current={b.emoji || ''} onSelect={emoji => { setBoardEmoji(b.id, emoji); setEmojiPickerFor(null); setEmojiPickerAnchor(null); }} onClose={() => { setEmojiPickerFor(null); setEmojiPickerAnchor(null); }} anchorEl={emojiPickerAnchor} />
                 )}
               </div>
             )}

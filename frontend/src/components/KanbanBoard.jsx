@@ -16,13 +16,29 @@ const EMOJI_CATS = [
   { label: '🧠 Divers', emojis: ['🧠','👀','💪','🤝','🙌','👏','🤜','🏃','🧑‍💻','👷','🧑‍🎨','🦁','🐺','🦊','🐉','🦄','👻','💀','🤖','👽'] },
 ];
 
-function EmojiPicker({ current, onSelect, onClose }) {
+function EmojiPicker({ current, onSelect, onClose, anchorRef }) {
   const ref = useRef();
+  const [coords, setCoords] = useState({ left: -9999, top: -9999 });
+
   useEffect(() => {
     const handler = e => { if (ref.current && !ref.current.contains(e.target)) onClose(); };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [onClose]);
+
+  useEffect(() => {
+    if (!anchorRef?.current || !ref.current) return;
+    const tr = anchorRef.current.getBoundingClientRect();
+    const pickerW = 272;
+    const pickerH = Math.min(340, window.innerHeight - 32);
+    let left = tr.right + 8;
+    if (left + pickerW > window.innerWidth - 8) left = tr.left - pickerW - 8;
+    let top = tr.top;
+    if (top + pickerH > window.innerHeight - 16) top = window.innerHeight - pickerH - 16;
+    if (top < 8) top = 8;
+    setCoords({ left, top });
+  }, [anchorRef]);
+
   const btn = (e) => ({
     background: current === e ? 'var(--accent-dim)' : 'none',
     border: current === e ? '1px solid var(--accent)' : '1px solid transparent',
@@ -31,7 +47,7 @@ function EmojiPicker({ current, onSelect, onClose }) {
   });
   return (
     <div ref={ref} style={{
-      position: 'absolute', left: '110%', top: 0, zIndex: 50,
+      position: 'fixed', left: coords.left, top: coords.top, zIndex: 9999,
       background: 'var(--surface1)', border: '1px solid var(--border)',
       borderRadius: 12, padding: '10px 10px 6px',
       boxShadow: '0 8px 32px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.04)',
@@ -58,6 +74,7 @@ function ColumnHeader({ col, onRename, onDelete, onSetEmoji, onColDragStart, onC
   const [editing, setEditing] = useState(false);
   const [label, setLabel] = useState(col.label);
   const [showEmoji, setShowEmoji] = useState(false);
+  const emojiButtonRef = useRef();
 
   const commit = () => {
     const trimmed = label.trim();
@@ -82,7 +99,7 @@ function ColumnHeader({ col, onRename, onDelete, onSetEmoji, onColDragStart, onC
       >⠇</div>
 
       <div style={{ position: 'relative' }}>
-        <button onClick={() => setShowEmoji(v => !v)} title="Choisir un emoji" style={{
+        <button ref={emojiButtonRef} onClick={() => setShowEmoji(v => !v)} title="Choisir un emoji" style={{
           background: col.emoji ? 'transparent' : 'var(--surface3)',
           border: '1px solid var(--border)', borderRadius: 5,
           width: 26, height: 26, fontSize: col.emoji ? 16 : 11,
@@ -90,7 +107,7 @@ function ColumnHeader({ col, onRename, onDelete, onSetEmoji, onColDragStart, onC
           display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
         }}>{col.emoji || '+'}</button>
         {showEmoji && (
-          <EmojiPicker current={col.emoji || ''} onSelect={e => { onSetEmoji(col.id, e); setShowEmoji(false); }} onClose={() => setShowEmoji(false)} />
+          <EmojiPicker current={col.emoji || ''} onSelect={e => { onSetEmoji(col.id, e); setShowEmoji(false); }} onClose={() => setShowEmoji(false)} anchorRef={emojiButtonRef} />
         )}
       </div>
 
