@@ -31,10 +31,10 @@ function EmojiPicker({ current, onSelect, onClose }) {
   });
   return (
     <div ref={ref} style={{
-      position: 'absolute', bottom: '100%', left: 0, zIndex: 50,
+      position: 'absolute', left: '110%', top: 0, zIndex: 50,
       background: 'var(--surface1)', border: '1px solid var(--border)',
-      borderRadius: 12, padding: '10px 10px 6px', marginBottom: 6,
-      boxShadow: '0 -4px 32px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.04)',
+      borderRadius: 12, padding: '10px 10px 6px',
+      boxShadow: '0 8px 32px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.04)',
       width: 272, maxHeight: 340, overflowY: 'auto',
     }}>
       {/* Header */}
