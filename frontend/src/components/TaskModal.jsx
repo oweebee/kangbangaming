@@ -216,7 +216,7 @@ export default function TaskModal({ game, onClose, onEdit, appUsers = [], onPatc
     >
       <div style={{
         background: 'var(--surface)',
-        border: isUrgent ? '1.5px solid rgba(220,60,60,0.6)' : tt ? `1.5px solid ${tt.border}` : '1px solid var(--border)',
+        border: isUrgent ? '2px solid rgba(220,60,60,0.6)' : tt ? `2px solid ${tt.border}` : '2px solid var(--border)',
         borderRadius: 14, width: '100%', maxWidth: 500,
         maxHeight: '88vh', display: 'flex', flexDirection: 'column', overflow: 'hidden',
         boxShadow: isUrgent ? '0 0 30px rgba(220,40,40,0.15)' : undefined,
@@ -262,7 +262,7 @@ export default function TaskModal({ game, onClose, onEdit, appUsers = [], onPatc
                 onClick={onEdit}
                 title="Éditer la tâche"
                 style={{
-                  background: 'rgba(0,0,0,0.55)', border: '1px solid rgba(255,255,255,0.18)',
+                  background: 'rgba(0,0,0,0.55)', border: '2px solid rgba(255,255,255,0.18)',
                   borderRadius: 7, width: 32, height: 32, color: '#ccc', fontSize: 13, cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}
@@ -275,7 +275,7 @@ export default function TaskModal({ game, onClose, onEdit, appUsers = [], onPatc
             <button
               onClick={onClose}
               style={{
-                background: 'rgba(0,0,0,0.55)', border: '1px solid rgba(255,255,255,0.18)',
+                background: 'rgba(0,0,0,0.55)', border: '2px solid rgba(255,255,255,0.18)',
                 borderRadius: 7, width: 32, height: 32, color: '#ccc', fontSize: 16, cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}
@@ -343,7 +343,7 @@ export default function TaskModal({ game, onClose, onEdit, appUsers = [], onPatc
 
             {/* Assignées — éditable */}
             {isTaskBoard && appUsers.length > 0 && (
-              <div style={{ background: 'var(--surface2)', border: `1px solid ${cardBorderColor}`, borderRadius: 9, padding: '10px 14px' }}>
+              <div style={{ background: 'var(--surface2)', border: `2px solid ${cardBorderColor}`, borderRadius: 9, padding: '10px 14px' }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: 8 }}>
                   👥 Assignés
                 </div>
@@ -356,7 +356,7 @@ export default function TaskModal({ game, onClose, onEdit, appUsers = [], onPatc
             )}
 
             {/* Progress */}
-            <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 9, padding: '12px 14px' }}>
+            <div style={{ background: 'var(--surface2)', border: '2px solid var(--border)', borderRadius: 9, padding: '12px 14px' }}>
               <ProgressSlider
                 value={game.progress ?? null}
                 onChange={handleSaveProgress}
@@ -365,7 +365,7 @@ export default function TaskModal({ game, onClose, onEdit, appUsers = [], onPatc
 
             {/* Couleur de la carte — uniquement boards personnalisés */}
             {!isTaskBoard && (
-              <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 9, padding: '10px 14px' }}>
+              <div style={{ background: 'var(--surface2)', border: '2px solid var(--border)', borderRadius: 9, padding: '10px 14px' }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: 10 }}>
                   🎨 Couleur de la carte
                 </div>
@@ -374,7 +374,7 @@ export default function TaskModal({ game, onClose, onEdit, appUsers = [], onPatc
                     type="color"
                     value={cardColor}
                     onChange={e => handleColorChange(e.target.value)}
-                    style={{ width: 36, height: 30, padding: 2, background: 'var(--surface3)', border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer' }}
+                    style={{ width: 36, height: 30, padding: 2, background: 'var(--surface3)', border: '2px solid var(--border)', borderRadius: 6, cursor: 'pointer' }}
                   />
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                     {['#66c0f4','#f5c518','#3db86a','#e05555','#c090f0','#f0a030','#55b8e0','#e87890'].map(c => (

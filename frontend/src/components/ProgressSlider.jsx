@@ -40,7 +40,7 @@ export default function ProgressSlider({ value, onChange, compact = false }) {
           fontSize: 11, fontWeight: 700,
           color: value === null ? 'var(--text-muted)' : color,
           background: value === null ? 'transparent' : `${color}22`,
-          border: `1px solid ${value === null ? 'var(--border)' : color}`,
+          border: `2px solid ${value === null ? 'var(--border)' : color}`,
           borderRadius: 5, padding: '1px 8px',
           transition: 'all .2s',
         }}>
@@ -69,8 +69,8 @@ export default function ProgressSlider({ value, onChange, compact = false }) {
                   ? (isOff ? 'rgba(255,255,255,0.1)' : c)
                   : (isOff ? 'var(--surface2)' : `${c}18`),
                 border: active
-                  ? `1.5px solid ${isOff ? 'rgba(255,255,255,0.3)' : c}`
-                  : `1.5px solid ${isOff ? 'var(--border)' : `${c}50`}`,
+                  ? `2px solid ${isOff ? 'rgba(255,255,255,0.3)' : c}`
+                  : `2px solid ${isOff ? 'var(--border)' : `${c}50`}`,
                 borderRight: !last ? 'none' : undefined,
                 borderRadius: first ? '7px 0 0 7px' : last ? '0 7px 7px 0' : 0,
                 color: active ? (isOff ? '#bbb' : '#fff') : (isOff ? 'var(--text-muted)' : c),

@@ -83,7 +83,7 @@ export default function GameModal({ game, onClose, api, token, onPatchGame, defa
       zIndex: 100, padding: 20, backdropFilter: 'blur(4px)',
     }}>
       <div style={{
-        background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14,
+        background: 'var(--surface)', border: '2px solid var(--border)', borderRadius: 14,
         width: '100%', maxWidth: 620, maxHeight: '85vh',
         display: 'flex', flexDirection: 'column', overflow: 'hidden',
       }}>
@@ -97,7 +97,7 @@ export default function GameModal({ game, onClose, api, token, onPatchGame, defa
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, var(--surface) 0%, transparent 60%)' }} />
           <button onClick={onClose} style={{
             position: 'absolute', top: 10, right: 10,
-            background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.2)',
+            background: 'rgba(0,0,0,0.6)', border: '2px solid rgba(255,255,255,0.2)',
             borderRadius: '50%', width: 32, height: 32, color: '#fff', fontSize: 16, cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>✕</button>
@@ -148,7 +148,7 @@ export default function GameModal({ game, onClose, api, token, onPatchGame, defa
                   {[['all', 'Tous', achievements.total], ['unlocked', '✅ Débloqués', achievements.unlocked], ['locked', '🔒 Verrouillés', achievements.total - achievements.unlocked]].map(([id, label, count]) => (
                     <button key={id} onClick={() => setFilter(id)} style={{
                       background: filter === id ? 'var(--accent)' : 'var(--surface2)',
-                      border: '1px solid var(--border)', borderRadius: 6, padding: '4px 10px',
+                      border: '2px solid var(--border)', borderRadius: 6, padding: '4px 10px',
                       color: filter === id ? '#000' : 'var(--text-muted)',
                       fontSize: 12, fontWeight: filter === id ? 600 : 400, cursor: 'pointer',
                     }}>{label} {count}</button>
