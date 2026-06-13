@@ -165,7 +165,8 @@ export default function TaskModal({ game, onClose, onEdit, appUsers = [], onPatc
   const isUrgent  = !!game.urgent;
   const isDone    = !!game.done;
   const notesCount = (game.notes || []).length;
-  const cardBorderColor = isDone ? 'rgba(61,184,106,0.6)' : isUrgent ? 'rgba(220,60,60,0.6)' : tt ? tt.border : 'var(--border)';
+  const customColor = !tt && game.color ? game.color : null;
+  const cardBorderColor = isDone ? 'rgba(61,184,106,0.6)' : isUrgent ? 'rgba(220,60,60,0.6)' : tt ? tt.border : customColor || 'var(--border)';
 
   // Couleur de la carte (boards personnalisés uniquement)
   const [cardColor,  setCardColor]  = useState(game.color || '#66c0f4');
@@ -216,7 +217,7 @@ export default function TaskModal({ game, onClose, onEdit, appUsers = [], onPatc
     >
       <div style={{
         background: 'var(--surface)',
-        border: isUrgent ? '2px solid rgba(220,60,60,0.6)' : tt ? `2px solid ${tt.border}` : '2px solid var(--border)',
+        border: isUrgent ? '2px solid rgba(220,60,60,0.6)' : tt ? `2px solid ${tt.border}` : `2px solid ${customColor || 'var(--border)'}`,
         borderRadius: 14, width: '100%', maxWidth: 500,
         maxHeight: '88vh', display: 'flex', flexDirection: 'column', overflow: 'hidden',
         boxShadow: isUrgent ? '0 0 30px rgba(220,40,40,0.15)' : undefined,

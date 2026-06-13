@@ -22,6 +22,7 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
   const isArchived = !!game.archived;
   const isUrgent   = !!game.urgent;
   const isDone     = !!game.done;
+  const customColor = isCustom && !tt ? (game.color || '#66c0f4') : null;
   const notesCount = (game.notes || []).length;
   const tt         = game.taskType ? getTaskType(game.taskType) : null;
   const TtFallback = tt?.FallbackIcon;
@@ -35,8 +36,8 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
       onClick={readOnly || isArchived ? undefined : onClick}
       style={{
         position: 'relative',
-        background: isArchived ? 'var(--surface2)' : tt ? tt.bg : 'var(--surface2)',
-        border: isArchived ? '2px solid #787878' : isDone ? '2px solid #3db86a' : isUrgent ? '2px solid #dc3c3c' : tt ? `2px solid ${tt.border}` : !isCustom ? `2px solid ${genreColor || '#66c0f4'}` : '2px solid var(--border)',
+        background: isArchived ? 'var(--surface2)' : tt ? tt.bg : customColor ? `${customColor}12` : 'var(--surface2)',
+        border: isArchived ? '2px solid #787878' : isDone ? '2px solid #3db86a' : isUrgent ? '2px solid #dc3c3c' : tt ? `2px solid ${tt.border}` : customColor ? `2px solid ${customColor}` : `2px solid ${genreColor || '#66c0f4'}`,
         borderRadius: 8,
         overflow: 'hidden',
         cursor: readOnly || isArchived ? 'default' : 'grab',
@@ -48,12 +49,12 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
       onMouseEnter={readOnly || isArchived ? undefined : e => {
         e.currentTarget.style.transform = 'translateY(-1px)';
         e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.4)';
-        e.currentTarget.style.borderColor = isDone ? '#3db86a' : isUrgent ? '#dc3c3c' : tt ? tt.border : !isCustom ? (genreColor || '#66c0f4') : '#555';
+        e.currentTarget.style.borderColor = isDone ? '#3db86a' : isUrgent ? '#dc3c3c' : tt ? tt.border : customColor ? customColor : (genreColor || '#66c0f4');
       }}
       onMouseLeave={readOnly || isArchived ? undefined : e => {
         e.currentTarget.style.transform = '';
         e.currentTarget.style.boxShadow = '';
-        e.currentTarget.style.borderColor = isDone ? '#3db86a' : isUrgent ? '#dc3c3c' : tt ? tt.border : !isCustom ? (genreColor || '#66c0f4') : 'var(--border)';
+        e.currentTarget.style.borderColor = isDone ? '#3db86a' : isUrgent ? '#dc3c3c' : tt ? tt.border : customColor ? customColor : (genreColor || '#66c0f4');
       }}
     >
       {/* ── Image area — masquée en mode compact ── */}
@@ -103,7 +104,9 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
       ) : !compact && isCustom ? (
         <div style={{
           width: '100%', height: 88, position: 'relative',
-          background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
+          background: customColor
+            ? `linear-gradient(135deg, ${customColor}30 0%, ${customColor}18 50%, ${customColor}08 100%)`
+            : 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 42,
         }}>
           {game.emoji || '🎮'}
