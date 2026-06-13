@@ -172,12 +172,6 @@ export default function UpcomingPanel({ token }) {
                 </div>
               </div>
 
-              {/* Prix si dispo */}
-              {game.price && (
-                <div style={{ fontSize: 10, color: 'var(--text-muted)', flexShrink: 0, textAlign: 'right' }}>
-                  {game.price === '0.00' ? 'Gratuit' : `${game.price}€`}
-                </div>
-              )}
             </a>
           );
         })}

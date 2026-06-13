@@ -588,22 +588,24 @@ async function fetchSteamUpcomingItems() {
 
 // Debug : voir le HTML brut retourné par Steam search (admin only)
 app.get('/api/debug/steam-search', async (req, res) => {
-  try {
-    const category = req.query.cat || 998;
-    const url = `https://store.steampowered.com/search/results/?filter=comingsoon&sort_by=Release_Date&cc=FR&l=english&json=1&count=10&category1=${category}`;
-    const r = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:120.0) Gecko/20100101 Firefox/120.0',
-        'Accept': 'text/javascript, text/html, application/xml, text/xml, */*',
-        'Accept-Language': 'en-US,en;q=0.5',
-        'X-Requested-With': 'XMLHttpRequest',
-      },
-    });
-    const text = await r.text();
-    res.json({ status: r.status, length: text.length, snippet: text.slice(0, 2000) });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
+  const hdrs = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:120.0) Gecko/20100101 Firefox/120.0', 'Accept-Language': 'en-US,en;q=0.5' };
+  const results = {};
+  const endpoints = {
+    mostAnticipated: 'https://store.steampowered.com/charts/mostanticipated/?json=1&cc=FR',
+    topUpcoming:     'https://store.steampowered.com/charts/topupcoming/?json=1&cc=FR',
+    salePageTop:     'https://store.steampowered.com/api/salepage/querysalepagedata?cc=FR&l=english&start=0&count=25&sort=asc&filter=comingsoon',
+    storeSearch:     'https://store.steampowered.com/api/storesearch/?term=&cc=FR&l=english&filter=comingsoon&count=20',
+  };
+  for (const [key, url] of Object.entries(endpoints)) {
+    try {
+      const r = await fetch(url, { headers: hdrs });
+      const text = await r.text();
+      results[key] = { status: r.status, length: text.length, snippet: text.slice(0, 400) };
+    } catch (e) {
+      results[key] = { error: e.message };
+    }
   }
+  res.json(results);
 });
 
 app.get('/api/steam/upcoming', requireAuth, async (req, res) => {
