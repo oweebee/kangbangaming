@@ -478,16 +478,18 @@ function parseReleaseDate(str) {
   return isNaN(d.getTime()) ? null : d;
 }
 
-// Parse les appids depuis le HTML de résultats Steam search
+// Parse les résultats depuis le HTML de Steam search
+// Chaque <a href=".../app/APPID/..."> contient un <span class="title">NOM</span>
 function parseSteamSearchHtml(html) {
   const results = [];
-  // Chaque résultat : data-ds-appid="XXXXX" ... <span class="title">NOM</span>
-  const appidRx = /data-ds-appid="(\d+)"/g;
-  const titleRx = /<span class="title">([^<]+)<\/span>/g;
-  const appids = [...html.matchAll(appidRx)].map(m => parseInt(m[1]));
-  const titles = [...html.matchAll(titleRx)].map(m => m[1].trim());
-  for (let i = 0; i < appids.length; i++) {
-    results.push({ id: appids[i], name: titles[i] || '', capsuleImage: null, finalPrice: null });
+  // Match chaque bloc <a href="...app/APPID/...">...</a> et extrait appid + titre
+  const rowRx = /href="[^"]*\/app\/(\d+)\/[^"]*"[^>]*>([\s\S]*?)<\/a>/g;
+  for (const m of html.matchAll(rowRx)) {
+    const id = parseInt(m[1]);
+    const inner = m[2];
+    const titleMatch = inner.match(/<span[^>]*class="[^"]*title[^"]*"[^>]*>([^<]+)<\/span>/);
+    const name = titleMatch ? titleMatch[1].trim() : '';
+    if (id && name) results.push({ id, name, capsuleImage: null, finalPrice: null });
   }
   return results;
 }
@@ -499,35 +501,43 @@ async function fetchSteamUpcomingItems() {
 
   // Source 1 : featured coming_soon (jeux mis en avant)
   try {
-    const r = await fetch('https://store.steampowered.com/api/featuredcategories?cc=FR&l=french', {
+    const r = await fetch('https://store.steampowered.com/api/featuredcategories?cc=FR&l=english', {
       headers: { 'User-Agent': 'Mozilla/5.0' },
     });
     const d = await r.json();
+    const before = items.length;
     for (const it of (d.coming_soon?.items || [])) {
       if (!seen.has(it.id)) { seen.add(it.id); items.push({ id: it.id, name: it.name, capsuleImage: it.large_capsule_image || it.small_capsule_image || null, finalPrice: it.final_price }); }
     }
+    console.log(`[upcoming src1] featured: +${items.length - before} items`);
   } catch (e) { console.error('[upcoming src1]', e.message); }
 
   // Source 2 : recherche Steam "comingsoon" — jeux (category1=998)
   try {
-    const r = await fetch('https://store.steampowered.com/search/results/?filter=comingsoon&sort_by=Release_Date&cc=FR&l=french&json=1&count=100&category1=998', {
+    const r = await fetch('https://store.steampowered.com/search/results/?filter=comingsoon&sort_by=Release_Date&cc=FR&l=english&json=1&count=100&category1=998', {
       headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json, text/javascript' },
     });
     const d = await r.json();
-    for (const it of parseSteamSearchHtml(d.results_html || '')) {
+    const parsed = parseSteamSearchHtml(d.results_html || '');
+    const before = items.length;
+    for (const it of parsed) {
       if (!seen.has(it.id)) { seen.add(it.id); items.push(it); }
     }
+    console.log(`[upcoming src2] games search: parsed=${parsed.length} +${items.length - before} new`);
   } catch (e) { console.error('[upcoming src2]', e.message); }
 
   // Source 3 : recherche Steam "comingsoon" — DLC (category1=21)
   try {
-    const r = await fetch('https://store.steampowered.com/search/results/?filter=comingsoon&sort_by=Release_Date&cc=FR&l=french&json=1&count=100&category1=21', {
+    const r = await fetch('https://store.steampowered.com/search/results/?filter=comingsoon&sort_by=Release_Date&cc=FR&l=english&json=1&count=100&category1=21', {
       headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json, text/javascript' },
     });
     const d = await r.json();
-    for (const it of parseSteamSearchHtml(d.results_html || '')) {
+    const parsed = parseSteamSearchHtml(d.results_html || '');
+    const before = items.length;
+    for (const it of parsed) {
       if (!seen.has(it.id)) { seen.add(it.id); items.push(it); }
     }
+    console.log(`[upcoming src3] dlc search: parsed=${parsed.length} +${items.length - before} new`);
   } catch (e) { console.error('[upcoming src3]', e.message); }
 
   return items;
