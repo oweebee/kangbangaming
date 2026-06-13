@@ -27,16 +27,22 @@ export default function GameModal({ game, onClose, api, token, onPatchGame, defa
   const [dueDate,   setDueDate]   = useState(game.dueDate   || '');
   const [startDate, setStartDate] = useState(game.startDate || '');
   const [endDate,   setEndDate]   = useState(game.endDate   || '');
+  const [dueTime,   setDueTime]   = useState(game.dueTime   || '');
+  const [startTime, setStartTime] = useState(game.startTime || '');
+  const [endTime,   setEndTime]   = useState(game.endTime   || '');
 
   const handleDateModeChange = (mode) => {
     setDateMode(mode);
-    if (mode === 'none')   { setDueDate(''); setStartDate(''); setEndDate(''); if (onPatchGame) onPatchGame(game.appid, { dueDate: null, startDate: null, endDate: null }); }
-    if (mode === 'single') { setStartDate(''); setEndDate(''); }
-    if (mode === 'period') { setDueDate(''); }
+    if (mode === 'none')   { setDueDate(''); setStartDate(''); setEndDate(''); setDueTime(''); setStartTime(''); setEndTime(''); if (onPatchGame) onPatchGame(game.appid, { dueDate: null, startDate: null, endDate: null, dueTime: null, startTime: null, endTime: null }); }
+    if (mode === 'single') { setStartDate(''); setEndDate(''); setStartTime(''); setEndTime(''); }
+    if (mode === 'period') { setDueDate(''); setDueTime(''); }
   };
   const handleDueDateChange   = (v) => { setDueDate(v);   if (onPatchGame) onPatchGame(game.appid, { dueDate: v || null }); };
   const handleStartDateChange = (v) => { setStartDate(v); if (onPatchGame) onPatchGame(game.appid, { startDate: v || null }); };
   const handleEndDateChange   = (v) => { setEndDate(v);   if (onPatchGame) onPatchGame(game.appid, { endDate: v || null }); };
+  const handleDueTimeChange   = (v) => { setDueTime(v);   if (onPatchGame) onPatchGame(game.appid, { dueTime: v || null }); };
+  const handleStartTimeChange = (v) => { setStartTime(v); if (onPatchGame) onPatchGame(game.appid, { startTime: v || null }); };
+  const handleEndTimeChange   = (v) => { setEndTime(v);   if (onPatchGame) onPatchGame(game.appid, { endTime: v || null }); };
 
   useEffect(() => {
     async function load() {
@@ -189,10 +195,16 @@ export default function GameModal({ game, onClose, api, token, onPatchGame, defa
                 onDateModeChange={handleDateModeChange}
                 dueDate={dueDate}
                 onDueDateChange={handleDueDateChange}
+                dueTime={dueTime}
+                onDueTimeChange={handleDueTimeChange}
                 startDate={startDate}
                 onStartDateChange={handleStartDateChange}
+                startTime={startTime}
+                onStartTimeChange={handleStartTimeChange}
                 endDate={endDate}
                 onEndDateChange={handleEndDateChange}
+                endTime={endTime}
+                onEndTimeChange={handleEndTimeChange}
               />
               {/* Infos */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

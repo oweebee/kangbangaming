@@ -86,8 +86,33 @@ export function StatusToggles({ isDone, onToggleDone, isUrgent, onToggleUrgent }
   );
 }
 
+// ── Sélecteur d'heure (créneaux de 1h) ───────────────────────────────────────
+function TimeSelect({ value, onChange }) {
+  const hours = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0') + ':00');
+  return (
+    <select
+      value={value || ''}
+      onChange={e => onChange(e.target.value || null)}
+      style={{
+        background: 'var(--surface2)', border: '1px solid var(--border)',
+        borderRadius: 8, color: value ? 'var(--text)' : 'var(--text-muted)',
+        fontSize: 13, padding: '7px 10px', cursor: 'pointer',
+        outline: 'none', width: '100%', colorScheme: 'dark',
+      }}
+    >
+      <option value="">⏰ Heure (optionnel)</option>
+      {hours.map(h => <option key={h} value={h}>{h}</option>)}
+    </select>
+  );
+}
+
 // ── Sélecteur de date / période ───────────────────────────────────────────────
-export function DatePicker({ dateMode, onDateModeChange, dueDate, onDueDateChange, startDate, onStartDateChange, endDate, onEndDateChange }) {
+export function DatePicker({
+  dateMode, onDateModeChange,
+  dueDate, onDueDateChange, dueTime, onDueTimeChange,
+  startDate, onStartDateChange, startTime, onStartTimeChange,
+  endDate, onEndDateChange, endTime, onEndTimeChange,
+}) {
   return (
     <div>
       <label style={{ display: 'block', fontSize: 14, color: 'var(--text-muted)', marginBottom: 10 }}>
@@ -116,16 +141,35 @@ export function DatePicker({ dateMode, onDateModeChange, dueDate, onDueDateChang
       </div>
 
       {dateMode === 'single' && (
-        <input type="date" value={dueDate} onChange={e => onDueDateChange(e.target.value)}
-          style={{ ...inputStyle, colorScheme: 'dark' }} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <input type="date" value={dueDate} onChange={e => onDueDateChange(e.target.value)}
+            style={{ ...inputStyle, colorScheme: 'dark' }} />
+          {dueDate && onDueTimeChange && (
+            <TimeSelect value={dueTime} onChange={onDueTimeChange} />
+          )}
+        </div>
       )}
+
       {dateMode === 'period' && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <input type="date" value={startDate} onChange={e => onStartDateChange(e.target.value)}
-            style={{ ...inputStyle, flex: 1, colorScheme: 'dark' }} />
-          <span style={{ color: 'var(--text-muted)', fontSize: 20, flexShrink: 0 }}>→</span>
-          <input type="date" value={endDate} onChange={e => onEndDateChange(e.target.value)}
-            style={{ ...inputStyle, flex: 1, colorScheme: 'dark' }} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <input type="date" value={startDate} onChange={e => onStartDateChange(e.target.value)}
+              style={{ ...inputStyle, flex: 1, colorScheme: 'dark' }} />
+            <span style={{ color: 'var(--text-muted)', fontSize: 20, flexShrink: 0 }}>→</span>
+            <input type="date" value={endDate} onChange={e => onEndDateChange(e.target.value)}
+              style={{ ...inputStyle, flex: 1, colorScheme: 'dark' }} />
+          </div>
+          {(startDate || endDate) && (onStartTimeChange || onEndTimeChange) && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ flex: 1 }}>
+                {startDate && onStartTimeChange && <TimeSelect value={startTime} onChange={onStartTimeChange} />}
+              </div>
+              <span style={{ color: 'var(--text-muted)', fontSize: 20, flexShrink: 0 }}>→</span>
+              <div style={{ flex: 1 }}>
+                {endDate && onEndTimeChange && <TimeSelect value={endTime} onChange={onEndTimeChange} />}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -135,7 +179,7 @@ export function DatePicker({ dateMode, onDateModeChange, dueDate, onDueDateChang
           background: 'rgba(180,140,10,0.12)', border: '1px solid rgba(180,140,10,0.35)',
           fontSize: 13, color: 'var(--text-muted)',
         }}>
-          📅 Échéance : <strong style={{ color: '#d4b020' }}>{formatDateLabel(dueDate)}</strong>
+          📅 Échéance : <strong style={{ color: '#d4b020' }}>{formatDateLabel(dueDate)}{dueTime ? ` à ${dueTime}` : ''}</strong>
         </div>
       )}
       {dateMode === 'period' && (startDate || endDate) && (
@@ -144,9 +188,9 @@ export function DatePicker({ dateMode, onDateModeChange, dueDate, onDueDateChang
           background: 'rgba(40,100,200,0.12)', border: '1px solid rgba(60,130,220,0.35)',
           fontSize: 13, color: 'var(--text-muted)',
         }}>
-          📅 {startDate ? <strong style={{ color: '#80b8f0' }}>{formatDateLabel(startDate)}</strong> : '…'}
+          📅 {startDate ? <strong style={{ color: '#80b8f0' }}>{formatDateLabel(startDate)}{startTime ? ` ${startTime}` : ''}</strong> : '…'}
           {' → '}
-          {endDate ? <strong style={{ color: '#80b8f0' }}>{formatDateLabel(endDate)}</strong> : '…'}
+          {endDate ? <strong style={{ color: '#80b8f0' }}>{formatDateLabel(endDate)}{endTime ? ` ${endTime}` : ''}</strong> : '…'}
         </div>
       )}
     </div>

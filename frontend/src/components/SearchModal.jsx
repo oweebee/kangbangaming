@@ -58,6 +58,9 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
   const [dueDate,    setDueDate]    = useState(initialGame?.dueDate    || '');
   const [startDate,  setStartDate]  = useState(initialGame?.startDate  || '');
   const [endDate,    setEndDate]    = useState(initialGame?.endDate    || '');
+  const [dueTime,    setDueTime]    = useState(initialGame?.dueTime    || '');
+  const [startTime,  setStartTime]  = useState(initialGame?.startTime  || '');
+  const [endTime,    setEndTime]    = useState(initialGame?.endTime    || '');
 
   // Extra fields
   const [urgent,    setUrgent]    = useState(!!initialGame?.urgent);
@@ -113,6 +116,9 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
       dueDate:   dateMode === 'single' ? (dueDate || null) : null,
       startDate: dateMode === 'period' ? (startDate || null) : null,
       endDate:   dateMode === 'period' ? (endDate || null) : null,
+      dueTime:   dateMode === 'single' ? (dueTime || null) : null,
+      startTime: dateMode === 'period' ? (startTime || null) : null,
+      endTime:   dateMode === 'period' ? (endTime || null) : null,
       urgent,
       done,
       assignees,
@@ -400,10 +406,16 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
               onDateModeChange={setDateMode}
               dueDate={dueDate}
               onDueDateChange={setDueDate}
+              dueTime={dueTime}
+              onDueTimeChange={setDueTime}
               startDate={startDate}
               onStartDateChange={setStartDate}
+              startTime={startTime}
+              onStartTimeChange={setStartTime}
               endDate={endDate}
               onEndDateChange={setEndDate}
+              endTime={endTime}
+              onEndTimeChange={setEndTime}
             />
 
             {/* ── Terminée + Urgent ── */}

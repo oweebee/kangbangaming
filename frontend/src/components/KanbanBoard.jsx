@@ -103,7 +103,7 @@ function ColumnHeader({ col, onRename, onDelete, onSetEmoji, onColDragStart, onC
   );
 }
 
-export default function KanbanBoard({ columns, byColumn, dragging, setDragging, moveGame, onCardClick, onArchiveGame, onUnarchiveGame, onDeleteGame, onEditGame, onRenameColumn, onDeleteColumn, onSetEmoji, onReorderColumns, onAddToColumn, onReorderGames, isTaskBoard, appUsers = [], compactView = false, leftOffset = 0, rightOffset = 0, onToggleDone, onToggleUrgent, onUpdateAssignees, onClickNotes, genreColors = {} }) {
+export default function KanbanBoard({ columns, byColumn, dragging, setDragging, moveGame, onCardClick, onArchiveGame, onUnarchiveGame, onDeleteGame, onEditGame, onRenameColumn, onDeleteColumn, onSetEmoji, onReorderColumns, onAddToColumn, onReorderGames, isTaskBoard, appUsers = [], compactView = false, leftOffset = 0, rightOffset = 0, onToggleDone, onToggleUrgent, onUpdateAssignees, onClickNotes, genreColors = {}, hiddenCardIds = new Set(), showHiddenCards = false, onHideCard, onUnhideCard }) {
   const [draggingColId, setDraggingColId] = useState(null);
   const [dragOverColId, setDragOverColId] = useState(null);
   const [dragInsert, setDragInsert] = useState(null); // { colId, beforeAppid: string|null }
@@ -242,6 +242,9 @@ export default function KanbanBoard({ columns, byColumn, dragging, setDragging, 
                       onUpdateAssignees={onUpdateAssignees ? (assignees) => onUpdateAssignees(game.appid, assignees) : undefined}
                       onClickNotes={onClickNotes ? () => onClickNotes(game) : undefined}
                       genreColor={steamColor}
+                      isHidden={hiddenCardIds.has(String(game.appid))}
+                      onHide={onHideCard ? () => onHideCard(game.appid) : undefined}
+                      onUnhide={onUnhideCard ? () => onUnhideCard(game.appid) : undefined}
                     />
                   </div>
                 );

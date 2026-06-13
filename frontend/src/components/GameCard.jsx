@@ -15,7 +15,7 @@ function formatPlaytime(minutes) {
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 
-export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArchive, onUnarchive, onDelete, onEdit, isDragging, readOnly, isTaskBoard, compact = false, assignees = [], appUsers = [], onToggleDone, onToggleUrgent, onUpdateAssignees, onClickNotes, genreColor = null }) {
+export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArchive, onUnarchive, onDelete, onEdit, isDragging, readOnly, isTaskBoard, compact = false, assignees = [], appUsers = [], onToggleDone, onToggleUrgent, onUpdateAssignees, onClickNotes, genreColor = null, isHidden = false, onHide, onUnhide }) {
   const [imgError, setImgError] = useState(false);
   const [ttImgError, setTtImgError] = useState(false);
   const isCustom   = game.type === 'custom';
@@ -40,10 +40,10 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
         borderRadius: 8,
         overflow: 'hidden',
         cursor: readOnly || isArchived ? 'default' : 'grab',
-        opacity: isDragging ? 0.4 : isArchived ? 0.6 : 1,
+        opacity: isDragging ? 0.4 : isArchived ? 0.6 : isHidden ? 0.5 : 1,
         transition: 'opacity 0.15s, transform 0.15s, box-shadow 0.15s',
         userSelect: 'none',
-        filter: isArchived ? 'saturate(0.3)' : 'none',
+        filter: isArchived ? 'saturate(0.3)' : isHidden ? 'saturate(0.4) brightness(0.75)' : 'none',
       }}
       onMouseEnter={readOnly || isArchived ? undefined : e => {
         e.currentTarget.style.transform = 'translateY(-1px)';
@@ -256,6 +256,29 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
                 >
                   <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
+                  </svg>
+                </button>
+              )}
+
+              {/* Masquer / Réafficher — uniquement hors archive, hors compact */}
+              {!isArchived && !compact && (isHidden ? onUnhide : onHide) && (
+                <button
+                  onClick={e => { e.stopPropagation(); isHidden ? onUnhide() : onHide(); }}
+                  title={isHidden ? 'Réafficher' : 'Masquer'}
+                  style={{
+                    background: isHidden ? 'rgba(60,150,240,0.18)' : 'rgba(255,255,255,0.10)',
+                    border: `1px solid ${isHidden ? 'rgba(60,150,240,0.55)' : 'rgba(255,255,255,0.28)'}`,
+                    borderRadius: 4, width: 20, height: 20, padding: 0,
+                    cursor: 'pointer', flexShrink: 0,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: isHidden ? '#70b8ff' : 'rgba(255,255,255,0.65)',
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    {isHidden
+                      ? <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>
+                      : <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></>
+                    }
                   </svg>
                 </button>
               )}

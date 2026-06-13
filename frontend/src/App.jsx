@@ -243,6 +243,12 @@ export default function App() {
   const [selectedGameDefaultTab, setSelectedGameDefaultTab] = useState('infos');
   const [editingGame,  setEditingGame]  = useState(null);
   const [showArchived, setShowArchived] = useState(false);
+  // ── Masquage cartes (localStorage par user+board) ──────────────────────────
+  const [hiddenCardIds, setHiddenCardIds] = useState(() => new Set());
+  const [showHiddenCards, setShowHiddenCards] = useState(false);
+  // ── Masquage boards (localStorage par user) ────────────────────────────────
+  const [hiddenBoardIds, setHiddenBoardIds] = useState(() => new Set());
+  const [showHiddenBoards, setShowHiddenBoards] = useState(false);
   const [infoPanelLocked, setInfoPanelLockedRaw] = useState(() => {
     try { return JSON.parse(localStorage.getItem('infoPanelLocked') || 'false'); } catch { return false; }
   });
@@ -465,6 +471,7 @@ export default function App() {
       fetchBoards(); fetchFavorites(); fetchPersonalFavorites();
       try { const saved = JSON.parse(localStorage.getItem(`boardOrder_${currentUser.id}`) || 'null'); if (Array.isArray(saved)) setBoardOrder(saved); } catch {}
       try { const saved = JSON.parse(localStorage.getItem(`favOrder_${currentUser.id}`) || 'null'); if (Array.isArray(saved)) setFavOrder(saved); } catch {}
+      try { const saved = JSON.parse(localStorage.getItem(`hiddenBoards_${currentUser.id}`) || '[]'); setHiddenBoardIds(new Set(saved)); } catch {}
     }
   }, [token]);
   useEffect(() => {
@@ -510,6 +517,52 @@ export default function App() {
       fetchGenre(appid);
     });
   }, [boards, favBoards, games, token]);
+
+  // Charger cartes masquées quand le board actif change
+  useEffect(() => {
+    if (!currentUser?.id || !activeBoardId) { setHiddenCardIds(new Set()); setShowHiddenCards(false); return; }
+    try {
+      const saved = JSON.parse(localStorage.getItem(`hiddenCards_${currentUser.id}_${activeBoardId}`) || '[]');
+      setHiddenCardIds(new Set(saved));
+    } catch { setHiddenCardIds(new Set()); }
+    setShowHiddenCards(false);
+  }, [currentUser?.id, activeBoardId]);
+
+  // Helpers masquage cartes
+  const hideCard = (appid) => {
+    if (!currentUser?.id || !activeBoardId) return;
+    setHiddenCardIds(prev => {
+      const next = new Set(prev); next.add(String(appid));
+      try { localStorage.setItem(`hiddenCards_${currentUser.id}_${activeBoardId}`, JSON.stringify([...next])); } catch {}
+      return next;
+    });
+  };
+  const unhideCard = (appid) => {
+    if (!currentUser?.id || !activeBoardId) return;
+    setHiddenCardIds(prev => {
+      const next = new Set(prev); next.delete(String(appid));
+      try { localStorage.setItem(`hiddenCards_${currentUser.id}_${activeBoardId}`, JSON.stringify([...next])); } catch {}
+      return next;
+    });
+  };
+
+  // Helpers masquage boards
+  const hideBoard = (boardId) => {
+    if (!currentUser?.id) return;
+    setHiddenBoardIds(prev => {
+      const next = new Set(prev); next.add(boardId);
+      try { localStorage.setItem(`hiddenBoards_${currentUser.id}`, JSON.stringify([...next])); } catch {}
+      return next;
+    });
+  };
+  const unhideBoard = (boardId) => {
+    if (!currentUser?.id) return;
+    setHiddenBoardIds(prev => {
+      const next = new Set(prev); next.delete(boardId);
+      try { localStorage.setItem(`hiddenBoards_${currentUser.id}`, JSON.stringify([...next])); } catch {}
+      return next;
+    });
+  };
 
   // Memoize Steam appId — only changes when board identity/image changes, NOT on every card update.
   // Having games in a useMemo (vs useEffect) means the effect only re-fires when the *string value* changes.
@@ -729,7 +782,11 @@ export default function App() {
   }
 
   const filtered = games.filter(g => g.name?.toLowerCase().includes(search.toLowerCase()));
-  const filteredForBoard = filtered.filter(g => showArchived ? true : !g.archived);
+  const filteredForBoard = filtered.filter(g => {
+    if (!showArchived && g.archived) return false;
+    if (!showHiddenCards && hiddenCardIds.has(String(g.appid))) return false;
+    return true;
+  });
   const byColumn = columns.reduce((acc, col) => {
     acc[col.id] = filteredForBoard
       .filter(g => g.column === col.id)
@@ -751,6 +808,7 @@ export default function App() {
   const orphans = filteredForBoard.filter(g => !knownColIds.has(g.column));
   if (orphans.length > 0 && columns[0]) byColumn[columns[0].id] = [...(byColumn[columns[0].id] || []), ...orphans];
   const archiveCount = games.filter(g => g.archived).length;
+  const hiddenCount  = hiddenCardIds.size;
 
   // Reactive displayed game — stays in sync when patchGame mutates the games array
   const displayedGame = selectedGame
@@ -1096,7 +1154,7 @@ export default function App() {
               <svg viewBox="0 0 24 24" width="8" height="8" fill="#f5c518" stroke="#f5c518" strokeWidth="1.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
               Épinglés
             </div>
-            {sortedBoards.filter(b => personalFavIds.includes(b.id)).map(b => (
+            {sortedBoards.filter(b => personalFavIds.includes(b.id)).filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).map(b => (
           <div key={b.id}
             draggable
             onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; setBoardDragId(b.id); }}
@@ -1131,7 +1189,7 @@ export default function App() {
                 )}
               </div>
             )}
-            <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 14, fontWeight: 700 }}>{b.name}</span>
+            <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 14, fontWeight: 700, opacity: hiddenBoardIds.has(b.id) ? 0.45 : 1 }}>{b.name}</span>
             {/* Public toggle */}
             <button
               onClick={e => { e.stopPropagation(); toggleBoardPublic(b.id, !b.public); }}
@@ -1142,6 +1200,12 @@ export default function App() {
                 <circle cx="10" cy="7" r="4"/><path d="M4 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M15 3.13a4 4 0 0 1 0 7.75"/><path d="M20 21v-2a4 4 0 0 0-3-3.85"/>
               </svg>
             ) : '🔒'}</button>
+            {/* Masquer/afficher board */}
+            <button onClick={e => { e.stopPropagation(); hiddenBoardIds.has(b.id) ? unhideBoard(b.id) : hideBoard(b.id); }} title={hiddenBoardIds.has(b.id) ? 'Réafficher ce board' : 'Masquer ce board'} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', flexShrink: 0, opacity: hiddenBoardIds.has(b.id) ? 0.9 : 0.3, color: hiddenBoardIds.has(b.id) ? '#70b8ff' : 'var(--text-muted)', lineHeight: 1 }}>
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                {hiddenBoardIds.has(b.id) ? <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></> : <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></>}
+              </svg>
+            </button>
             <button onClick={e => { e.stopPropagation(); deleteBoard(b.id); }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 11, padding: 0, opacity: 0.4, cursor: 'pointer', flexShrink: 0 }}>✕</button>
           </div>
             ))}
@@ -1158,7 +1222,7 @@ export default function App() {
         )}
 
         {/* Non-pinned boards */}
-        {sortedBoards.filter(b => !personalFavIds.includes(b.id)).map(b => (
+        {sortedBoards.filter(b => !personalFavIds.includes(b.id)).filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).map(b => (
           <div key={b.id}
             draggable
             onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; setBoardDragId(b.id); }}
@@ -1203,9 +1267,35 @@ export default function App() {
                 <circle cx="10" cy="7" r="4"/><path d="M4 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M15 3.13a4 4 0 0 1 0 7.75"/><path d="M20 21v-2a4 4 0 0 0-3-3.85"/>
               </svg>
             ) : '🔒'}</button>
+            {/* Masquer/afficher board */}
+            <button onClick={e => { e.stopPropagation(); hiddenBoardIds.has(b.id) ? unhideBoard(b.id) : hideBoard(b.id); }} title={hiddenBoardIds.has(b.id) ? 'Réafficher ce board' : 'Masquer ce board'} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', flexShrink: 0, opacity: hiddenBoardIds.has(b.id) ? 0.9 : 0.3, color: hiddenBoardIds.has(b.id) ? '#70b8ff' : 'var(--text-muted)', lineHeight: 1 }}>
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                {hiddenBoardIds.has(b.id) ? <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></> : <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></>}
+              </svg>
+            </button>
             <button onClick={e => { e.stopPropagation(); deleteBoard(b.id); }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 11, padding: 0, opacity: 0.4, cursor: 'pointer', flexShrink: 0 }}>✕</button>
           </div>
         ))}
+
+        {/* Bouton boards masqués */}
+        {hiddenBoardIds.size > 0 && (
+          <button
+            onClick={() => setShowHiddenBoards(v => !v)}
+            style={{
+              width: '100%', marginTop: 4, padding: '5px 8px',
+              background: showHiddenBoards ? 'rgba(40,120,200,0.18)' : 'none',
+              border: showHiddenBoards ? '1px solid rgba(60,150,240,0.5)' : '1px dashed rgba(255,255,255,0.12)',
+              borderRadius: 6, color: showHiddenBoards ? '#70b8ff' : 'var(--text-muted)',
+              fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5,
+              fontWeight: showHiddenBoards ? 700 : 400,
+            }}
+          >
+            <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              {showHiddenBoards ? <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></> : <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></>}
+            </svg>
+            Boards masqués ({hiddenBoardIds.size})
+          </button>
+        )}
       </div>
 
       {/* Followed public boards */}
@@ -1215,7 +1305,7 @@ export default function App() {
             <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
             Boards publics suivis
           </div>
-          {sortedFavBoards.map(b => (
+          {sortedFavBoards.filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).map(b => (
             <div key={b.id}
               draggable
               onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; setFavDragId(b.id); }}
@@ -1243,7 +1333,13 @@ export default function App() {
                   <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>{b.emoji || '🎮'}</div>
                 </div>
               )}
-              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 14, fontWeight: 700 }}>{b.name}</span>
+              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 14, fontWeight: 700, opacity: hiddenBoardIds.has(b.id) ? 0.45 : 1 }}>{b.name}</span>
+              {/* Masquer/afficher board suivi */}
+              <button onClick={e => { e.stopPropagation(); hiddenBoardIds.has(b.id) ? unhideBoard(b.id) : hideBoard(b.id); }} title={hiddenBoardIds.has(b.id) ? 'Réafficher ce board' : 'Masquer ce board'} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', flexShrink: 0, opacity: hiddenBoardIds.has(b.id) ? 0.9 : 0.3, color: hiddenBoardIds.has(b.id) ? '#70b8ff' : 'var(--text-muted)', lineHeight: 1 }}>
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  {hiddenBoardIds.has(b.id) ? <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></> : <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></>}
+                </svg>
+              </button>
               <svg viewBox="0 0 24 24" width="10" height="10" fill="var(--accent)" stroke="var(--accent)" strokeWidth="1.5" style={{ flexShrink: 0, opacity: 0.7 }}><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
             </div>
           ))}
@@ -1383,18 +1479,38 @@ export default function App() {
           loading ? (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Chargement...</div>
           ) : (
-            <MobileBoard columns={columns} byColumn={byColumn} onCardClick={g => { setSelectedGameDefaultTab('infos'); setSelectedGame(g); }} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} isTaskBoard={isTaskBoard} onToggleDone={(appid, done) => patchGame(appid, { done })} onToggleUrgent={(appid, urgent) => patchGame(appid, { urgent })} onUpdateAssignees={(appid, assignees) => patchGame(appid, { assignees })} onClickNotes={handleCardNotesClick} genreColors={boardGenreColors} />
+            <MobileBoard columns={columns} byColumn={byColumn} onCardClick={g => { setSelectedGameDefaultTab('infos'); setSelectedGame(g); }} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} isTaskBoard={isTaskBoard} onToggleDone={(appid, done) => patchGame(appid, { done })} onToggleUrgent={(appid, urgent) => patchGame(appid, { urgent })} onUpdateAssignees={(appid, assignees) => patchGame(appid, { assignees })} onClickNotes={handleCardNotesClick} genreColors={boardGenreColors} hiddenCardIds={hiddenCardIds} showHiddenCards={showHiddenCards} onHideCard={hideCard} onUnhideCard={unhideCard} />
           )
         ) : !activeBoardId ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Crée un board pour commencer</div>
         ) : loading ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Chargement...</div>
         ) : (
-          <MobileBoard columns={columns} byColumn={byColumn} onCardClick={g => { setSelectedGameDefaultTab('infos'); setSelectedGame(g); }} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} isTaskBoard={isTaskBoard} onToggleDone={(appid, done) => patchGame(appid, { done })} onToggleUrgent={(appid, urgent) => patchGame(appid, { urgent })} onUpdateAssignees={(appid, assignees) => patchGame(appid, { assignees })} onClickNotes={handleCardNotesClick} genreColors={boardGenreColors} />
+          <MobileBoard columns={columns} byColumn={byColumn} onCardClick={g => { setSelectedGameDefaultTab('infos'); setSelectedGame(g); }} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} isTaskBoard={isTaskBoard} onToggleDone={(appid, done) => patchGame(appid, { done })} onToggleUrgent={(appid, urgent) => patchGame(appid, { urgent })} onUpdateAssignees={(appid, assignees) => patchGame(appid, { assignees })} onClickNotes={handleCardNotesClick} genreColors={boardGenreColors} hiddenCardIds={hiddenCardIds} showHiddenCards={showHiddenCards} onHideCard={hideCard} onUnhideCard={unhideCard} />
         )}
         {(activeBoardId || publicBoardMode) && (
           <div style={{ background: 'var(--surface)', borderTop: '1px solid var(--border)', padding: '8px 12px', display: 'flex', gap: 8, flexShrink: 0 }}>
             <button onClick={addColumn} style={{ flex: 1, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '8px', color: 'var(--text-muted)', fontSize: 12 }}>+ Colonne</button>
+            {hiddenCount > 0 && (
+              <button
+                onClick={() => setShowHiddenCards(v => !v)}
+                style={{
+                  background: showHiddenCards ? 'rgba(40,120,200,0.22)' : 'var(--surface2)',
+                  border: showHiddenCards ? '1px solid rgba(60,150,240,0.6)' : '1px solid var(--border)',
+                  borderRadius: 6, padding: '8px 10px', color: showHiddenCards ? '#70b8ff' : 'var(--text-muted)',
+                  fontSize: 11, cursor: 'pointer', fontWeight: showHiddenCards ? 700 : 400, flexShrink: 0,
+                  display: 'flex', alignItems: 'center', gap: 4,
+                }}
+              >
+                <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  {showHiddenCards
+                    ? <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>
+                    : <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></>
+                  }
+                </svg>
+                {hiddenCount}
+              </button>
+            )}
             {archiveCount > 0 && (
               <button
                 onClick={() => setShowArchived(v => !v)}
@@ -1547,6 +1663,27 @@ export default function App() {
               <div style={{ flex: '1 1 0', display: 'flex', justifyContent: 'center', minWidth: gameInfo ? 200 : 0, minHeight: 0 }}>
                 <SteamEncart gameInfo={gameInfo} />
               </div>
+              {(activeBoardId || publicBoardMode) && hiddenCount > 0 && (
+                <button
+                  onClick={() => setShowHiddenCards(v => !v)}
+                  style={{
+                    background: showHiddenCards ? 'rgba(40,120,200,0.22)' : 'var(--surface2)',
+                    border: showHiddenCards ? '1px solid rgba(60,150,240,0.6)' : '1px solid var(--border)',
+                    borderRadius: 6, padding: '5px 10px', color: showHiddenCards ? '#70b8ff' : 'var(--text-muted)',
+                    fontSize: 11, cursor: 'pointer', flexShrink: 0, fontWeight: showHiddenCards ? 700 : 400,
+                    display: 'flex', alignItems: 'center', gap: 5,
+                  }}
+                  title={showHiddenCards ? 'Masquer les tâches masquées' : 'Afficher les tâches masquées'}
+                >
+                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    {showHiddenCards
+                      ? <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>
+                      : <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></>
+                    }
+                  </svg>
+                  Masquées ({hiddenCount})
+                </button>
+              )}
               {(activeBoardId || publicBoardMode) && archiveCount > 0 && (
                 <button
                   onClick={() => setShowArchived(v => !v)}
@@ -1576,14 +1713,14 @@ export default function App() {
           loading ? (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Chargement...</div>
           ) : (
-            <KanbanBoard columns={columns} byColumn={byColumn} dragging={dragging} setDragging={setDragging} moveGame={moveGame} onCardClick={g => { setSelectedGameDefaultTab('infos'); setSelectedGame(g); }} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} onRenameColumn={renameColumn} onDeleteColumn={deleteColumn} onSetEmoji={setColumnEmoji} onReorderColumns={reorderColumns} onAddToColumn={colId => { setSearchTargetCol(colId); setShowSearch(true); }} onReorderGames={reorderGamesInColumn} isTaskBoard={isTaskBoard} appUsers={appUsers} compactView={compactView} leftOffset={infoPanelLocked && infoPanelSide === 'left' ? GAME_INFO_PANEL_WIDTH : 0} rightOffset={infoPanelLocked && infoPanelSide === 'right' ? GAME_INFO_PANEL_WIDTH : 0} onToggleDone={(appid, done) => patchGame(appid, { done })} onToggleUrgent={(appid, urgent) => patchGame(appid, { urgent })} onUpdateAssignees={(appid, assignees) => patchGame(appid, { assignees })} onClickNotes={handleCardNotesClick} genreColors={boardGenreColors} />
+            <KanbanBoard columns={columns} byColumn={byColumn} dragging={dragging} setDragging={setDragging} moveGame={moveGame} onCardClick={g => { setSelectedGameDefaultTab('infos'); setSelectedGame(g); }} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} onRenameColumn={renameColumn} onDeleteColumn={deleteColumn} onSetEmoji={setColumnEmoji} onReorderColumns={reorderColumns} onAddToColumn={colId => { setSearchTargetCol(colId); setShowSearch(true); }} onReorderGames={reorderGamesInColumn} isTaskBoard={isTaskBoard} appUsers={appUsers} compactView={compactView} leftOffset={infoPanelLocked && infoPanelSide === 'left' ? GAME_INFO_PANEL_WIDTH : 0} rightOffset={infoPanelLocked && infoPanelSide === 'right' ? GAME_INFO_PANEL_WIDTH : 0} onToggleDone={(appid, done) => patchGame(appid, { done })} onToggleUrgent={(appid, urgent) => patchGame(appid, { urgent })} onUpdateAssignees={(appid, assignees) => patchGame(appid, { assignees })} onClickNotes={handleCardNotesClick} genreColors={boardGenreColors} hiddenCardIds={hiddenCardIds} showHiddenCards={showHiddenCards} onHideCard={hideCard} onUnhideCard={unhideCard} />
           )
         ) : !activeBoardId ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Crée un board pour commencer</div>
         ) : loading ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Chargement...</div>
         ) : (
-          <KanbanBoard columns={columns} byColumn={byColumn} dragging={dragging} setDragging={setDragging} moveGame={moveGame} onCardClick={g => { setSelectedGameDefaultTab('infos'); setSelectedGame(g); }} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} onRenameColumn={renameColumn} onDeleteColumn={deleteColumn} onSetEmoji={setColumnEmoji} onReorderColumns={reorderColumns} onAddToColumn={colId => { setSearchTargetCol(colId); setShowSearch(true); }} onReorderGames={reorderGamesInColumn} isTaskBoard={isTaskBoard} appUsers={appUsers} compactView={compactView} leftOffset={infoPanelLocked && infoPanelSide === 'left' ? GAME_INFO_PANEL_WIDTH : 0} rightOffset={infoPanelLocked && infoPanelSide === 'right' ? GAME_INFO_PANEL_WIDTH : 0} onToggleDone={(appid, done) => patchGame(appid, { done })} onToggleUrgent={(appid, urgent) => patchGame(appid, { urgent })} onUpdateAssignees={(appid, assignees) => patchGame(appid, { assignees })} onClickNotes={handleCardNotesClick} genreColors={boardGenreColors} />
+          <KanbanBoard columns={columns} byColumn={byColumn} dragging={dragging} setDragging={setDragging} moveGame={moveGame} onCardClick={g => { setSelectedGameDefaultTab('infos'); setSelectedGame(g); }} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} onRenameColumn={renameColumn} onDeleteColumn={deleteColumn} onSetEmoji={setColumnEmoji} onReorderColumns={reorderColumns} onAddToColumn={colId => { setSearchTargetCol(colId); setShowSearch(true); }} onReorderGames={reorderGamesInColumn} isTaskBoard={isTaskBoard} appUsers={appUsers} compactView={compactView} leftOffset={infoPanelLocked && infoPanelSide === 'left' ? GAME_INFO_PANEL_WIDTH : 0} rightOffset={infoPanelLocked && infoPanelSide === 'right' ? GAME_INFO_PANEL_WIDTH : 0} onToggleDone={(appid, done) => patchGame(appid, { done })} onToggleUrgent={(appid, urgent) => patchGame(appid, { urgent })} onUpdateAssignees={(appid, assignees) => patchGame(appid, { assignees })} onClickNotes={handleCardNotesClick} genreColors={boardGenreColors} hiddenCardIds={hiddenCardIds} showHiddenCards={showHiddenCards} onHideCard={hideCard} onUnhideCard={unhideCard} />
         )}
         </div>
       </div>
