@@ -32,7 +32,7 @@ function LibraryBadge() {
 //   initialGame  — when set, opens in edit mode (pre-fills fields)
 //   onSave       — called with updated game object in edit mode
 
-export default function SearchModal({ api, token, boardGames, onAdd, onRemove, onClose, customOnly, initialGame, onSave, isTaskBoard, appUsers = [] }) {
+export default function SearchModal({ api, token, boardGames, onAdd, onRemove, onClose, customOnly, initialGame, onSave, isTaskBoard, appUsers = [], currentUser }) {
   const isEditMode = !!initialGame;
 
   const [tab, setTab] = useState(customOnly || isEditMode ? 'custom' : 'steam');
@@ -474,7 +474,7 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
           {/* ── Sous-onglet Notes ── */}
           {customSubTab === 'notes' && (
             <div style={{ flex: 1, overflowY: 'auto', padding: '16px 22px' }}>
-              <NotesSection notes={notes} onSave={setNotes} onDraftChange={setNotesDraft} compact={false} token={token} />
+              <NotesSection notes={notes} onSave={setNotes} onDraftChange={setNotesDraft} compact={false} token={token} currentUser={currentUser} appUsers={appUsers} />
             </div>
           )}
 

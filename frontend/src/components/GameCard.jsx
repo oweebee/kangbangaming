@@ -257,7 +257,7 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
 
       {/* ── Compact : colonne de boutons absolue haut-droite ── */}
       {compact && !readOnly && (
-        <div style={{ position: 'absolute', top: 4, right: 4, display: 'flex', flexDirection: 'column', gap: 2, zIndex: 5 }}>
+        <div style={{ position: 'absolute', top: 4, right: 4, display: 'flex', flexDirection: 'row', gap: 2, zIndex: 5 }}>
           {!isArchived && onToggleDone && (
             <button onClick={e => { e.stopPropagation(); onToggleDone(!isDone); }} title={isDone ? 'Marquer non terminée' : 'Marquer terminée'}
               style={{ background: isDone ? 'rgba(61,184,106,0.22)' : 'rgba(255,255,255,0.10)', border: `1px solid ${isDone ? '#3db86a' : 'rgba(255,255,255,0.28)'}`, borderRadius: 3, width: 16, height: 16, padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: isDone ? '#3db86a' : 'rgba(255,255,255,0.65)', flexShrink: 0 }}>

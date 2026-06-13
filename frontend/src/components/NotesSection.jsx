@@ -34,15 +34,23 @@ function formatNoteDate(isoStr) {
 }
 
 // Props:
-//   notes   – array of {id, text, createdAt, editedAt}
-//   onSave  – called with full updated notes array on any change
-//   compact – compact styling (SearchModal)
-export default function NotesSection({ notes: externalNotes = [], onSave, onDraftChange, compact = false, token }) {
+//   notes       – array of {id, text, createdAt, editedAt, authorId?}
+//   onSave      – called with full updated notes array on any change
+//   compact     – compact styling (SearchModal)
+//   currentUser – { id, role } — used to control edit/delete permissions
+//   appUsers    – array of user objects (for avatar lookup)
+export default function NotesSection({ notes: externalNotes = [], onSave, onDraftChange, compact = false, token, currentUser, appUsers = [] }) {
   const [notes, setNotes]         = useState(externalNotes);
   const [newNote, setNewNote]     = useState('');
   const [editingId, setEditingId] = useState(null);
   const [editText, setEditText]   = useState('');
   const [expanded, setExpanded]   = useState(false);
+
+  const isAdmin = currentUser?.role === 'admin';
+  // Peut modifier/supprimer : admin OU auteur de la note
+  // Notes sans authorId (legacy) : admin seulement
+  const canModify = (note) =>
+    isAdmin || (note.authorId && note.authorId === currentUser?.id);
 
   useEffect(() => {
     setNotes(externalNotes);
@@ -63,8 +71,13 @@ export default function NotesSection({ notes: externalNotes = [], onSave, onDraf
     push([...notes, {
       id: `note_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
       text, createdAt: new Date().toISOString(), editedAt: null,
+      authorId: currentUser?.id ?? null,
     }]);
     setNewNoteWithDraft('');
+  };
+
+  const deleteNote = (id) => {
+    push(notes.filter(n => n.id !== id));
   };
 
   const saveEdit = () => {
@@ -128,7 +141,11 @@ export default function NotesSection({ notes: externalNotes = [], onSave, onDraf
       {/* ── Existing notes — newest first ── */}
       {notes.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {visible.map(note => (
+          {visible.map(note => {
+            const author = note.authorId ? appUsers.find(u => u.id === note.authorId) : null;
+            const initials = author?.username?.[0]?.toUpperCase() || '?';
+            const modifiable = canModify(note);
+            return (
             <div key={note.id} style={{
               background: 'var(--surface2)', border: '1px solid var(--border)',
               borderRadius: 7, padding: '9px 11px',
@@ -152,28 +169,48 @@ export default function NotesSection({ notes: externalNotes = [], onSave, onDraf
                 </div>
               ) : (
                 <>
-                  <div style={{ fontSize: compact ? 13 : 12, color: 'var(--text)', marginBottom: 5 }}>
-                    <NoteText text={note.text} token={token} />
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
-                    <span style={{ fontSize: 10, color: 'var(--text-muted)', opacity: 0.7 }}>
+                  {/* En-tête note : avatar auteur + actions */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 6 }}>
+                    {/* Avatar */}
+                    {note.authorId && (
+                      author?.steamAvatar
+                        ? <img src={author.steamAvatar} alt={author.username || ''} title={author.steamPersonaName || author.username || ''} style={{ width: 22, height: 22, borderRadius: '50%', border: '1.5px solid var(--border)', flexShrink: 0, objectFit: 'cover' }} />
+                        : <div title={author?.username || 'Utilisateur inconnu'} style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: '#fff', flexShrink: 0, border: '1.5px solid var(--border)' }}>{initials}</div>
+                    )}
+                    <span style={{ fontSize: 10, color: 'var(--text-muted)', opacity: 0.7, flex: 1 }}>
                       {formatNoteDate(note.createdAt)}
                       {note.editedAt && <span style={{ marginLeft: 5, fontStyle: 'italic' }}>(modifié)</span>}
                     </span>
-                    <button
-                      onClick={e => { e.stopPropagation(); setEditingId(note.id); setEditText(note.text); }}
-                      style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', opacity: 0.5, padding: '2px 4px', lineHeight: 1, display: 'flex', alignItems: 'center' }}
-                      title="Modifier"
-                    >
-                      <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
-                      </svg>
-                    </button>
+                    {/* Boutons edit / delete — uniquement si autorisé */}
+                    {modifiable && (<>
+                      <button
+                        onClick={e => { e.stopPropagation(); setEditingId(note.id); setEditText(note.text); }}
+                        style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', opacity: 0.55, padding: '2px 4px', lineHeight: 1, display: 'flex', alignItems: 'center', flexShrink: 0 }}
+                        title="Modifier"
+                      >
+                        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
+                        </svg>
+                      </button>
+                      <button
+                        onClick={e => { e.stopPropagation(); if (window.confirm('Supprimer cette note ?')) deleteNote(note.id); }}
+                        style={{ background: 'none', border: 'none', color: '#c05050', cursor: 'pointer', opacity: 0.6, padding: '2px 4px', lineHeight: 1, display: 'flex', alignItems: 'center', flexShrink: 0 }}
+                        title="Supprimer"
+                      >
+                        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+                        </svg>
+                      </button>
+                    </>)}
+                  </div>
+                  <div style={{ fontSize: compact ? 13 : 12, color: 'var(--text)' }}>
+                    <NoteText text={note.text} token={token} />
                   </div>
                 </>
               )}
             </div>
-          ))}
+            );
+          })}
           {hiddenCount > 0 && (
             <button onClick={() => setExpanded(true)}
               style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: 11, cursor: 'pointer', padding: '3px 0', textAlign: 'left', fontWeight: 600 }}

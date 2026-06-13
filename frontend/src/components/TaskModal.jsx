@@ -156,7 +156,7 @@ function AssigneeRow({ assignees = [], appUsers = [], borderColor = 'var(--borde
 
 // ── TaskModal ─────────────────────────────────────────────────────────────────
 
-export default function TaskModal({ game, onClose, onEdit, appUsers = [], onPatchGame, isTaskBoard, token, defaultTab = 'infos' }) {
+export default function TaskModal({ game, onClose, onEdit, appUsers = [], onPatchGame, isTaskBoard, token, defaultTab = 'infos', currentUser }) {
   const tt        = game.taskType ? getTaskType(game.taskType) : null;
   const TtIcon    = tt?.FallbackIcon;
   const [ttImgError, setTtImgError] = useState(false);
@@ -407,6 +407,8 @@ export default function TaskModal({ game, onClose, onEdit, appUsers = [], onPatc
               onSave={handleSaveNotes}
               compact={false}
               token={token}
+              currentUser={currentUser}
+              appUsers={appUsers}
             />
           )}
         </div>

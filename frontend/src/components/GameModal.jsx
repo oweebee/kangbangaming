@@ -10,7 +10,7 @@ function formatPlaytime(minutes) {
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 
-export default function GameModal({ game, onClose, api, token, onPatchGame, defaultTab = 'achievements' }) {
+export default function GameModal({ game, onClose, api, token, onPatchGame, defaultTab = 'achievements', currentUser, appUsers = [] }) {
   const [achievements, setAchievements] = useState(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState(defaultTab);
@@ -229,6 +229,8 @@ export default function GameModal({ game, onClose, api, token, onPatchGame, defa
                 onSave={handleSaveNotes}
                 compact={false}
                 token={token}
+                currentUser={currentUser}
+                appUsers={appUsers}
               />
             </div>
           )}
