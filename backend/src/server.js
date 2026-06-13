@@ -479,19 +479,43 @@ function parseReleaseDate(str) {
 }
 
 // Parse les résultats depuis le HTML de Steam search
-// Chaque <a href=".../app/APPID/..."> contient un <span class="title">NOM</span>
+// Découpe par section <a ...> et extrait appid + titre + date de sortie
 function parseSteamSearchHtml(html) {
   const results = [];
-  // Match chaque bloc <a href="...app/APPID/...">...</a> et extrait appid + titre
-  const rowRx = /href="[^"]*\/app\/(\d+)\/[^"]*"[^>]*>([\s\S]*?)<\/a>/g;
-  for (const m of html.matchAll(rowRx)) {
-    const id = parseInt(m[1]);
-    const inner = m[2];
-    const titleMatch = inner.match(/<span[^>]*class="[^"]*title[^"]*"[^>]*>([^<]+)<\/span>/);
-    const name = titleMatch ? titleMatch[1].trim() : '';
-    if (id && name) results.push({ id, name, capsuleImage: null, finalPrice: null });
+  // Découpe par balise ouvrante <a pour isoler chaque ligne de résultat
+  const sections = html.split(/(?=<a\s)/);
+  for (const section of sections) {
+    const appidMatch = section.match(/\/app\/(\d+)\//);
+    if (!appidMatch) continue;
+    const id = parseInt(appidMatch[1]);
+    const titleMatch = section.match(/<span[^>]*class="[^"]*title[^"]*"[^>]*>([\s\S]*?)<\/span>/);
+    const dateMatch = section.match(/search_released[^>]*>([\s\S]*?)<\/div>/);
+    const imgMatch = section.match(/<img[^>]+src="([^"]+capsule[^"]+)"/);
+    const name = titleMatch ? titleMatch[1].replace(/<[^>]+>/g, '').trim() : '';
+    const dateStr = dateMatch ? dateMatch[1].replace(/<[^>]+>/g, '').trim() : '';
+    if (id && name) results.push({ id, name, dateStr, capsuleImage: imgMatch?.[1] || null, finalPrice: null });
   }
   return results;
+}
+
+async function steamSearchUpcoming(category) {
+  const headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:120.0) Gecko/20100101 Firefox/120.0',
+    'Accept': 'text/javascript, text/html, application/xml, text/xml, */*',
+    'Accept-Language': 'en-US,en;q=0.5',
+    'X-Requested-With': 'XMLHttpRequest',
+    'X-Prototype-Version': '1.7',
+  };
+  const url = `https://store.steampowered.com/search/results/?filter=comingsoon&sort_by=Release_Date&cc=FR&l=english&json=1&count=100&category1=${category}`;
+  const r = await fetch(url, { headers });
+  const text = await r.text();
+  // Tenter JSON d'abord (format attendu), sinon HTML brut
+  let html = text;
+  try {
+    const d = JSON.parse(text);
+    html = d.results_html || text;
+  } catch {}
+  return parseSteamSearchHtml(html);
 }
 
 // Récupère et déduplique les items depuis plusieurs endpoints Steam
@@ -507,41 +531,53 @@ async function fetchSteamUpcomingItems() {
     const d = await r.json();
     const before = items.length;
     for (const it of (d.coming_soon?.items || [])) {
-      if (!seen.has(it.id)) { seen.add(it.id); items.push({ id: it.id, name: it.name, capsuleImage: it.large_capsule_image || it.small_capsule_image || null, finalPrice: it.final_price }); }
+      if (!seen.has(it.id)) { seen.add(it.id); items.push({ id: it.id, name: it.name, dateStr: it.release_string || '', capsuleImage: it.large_capsule_image || it.small_capsule_image || null, finalPrice: it.final_price }); }
     }
     console.log(`[upcoming src1] featured: +${items.length - before} items`);
   } catch (e) { console.error('[upcoming src1]', e.message); }
 
   // Source 2 : recherche Steam "comingsoon" — jeux (category1=998)
   try {
-    const r = await fetch('https://store.steampowered.com/search/results/?filter=comingsoon&sort_by=Release_Date&cc=FR&l=english&json=1&count=100&category1=998', {
-      headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json, text/javascript' },
-    });
-    const d = await r.json();
-    const parsed = parseSteamSearchHtml(d.results_html || '');
+    const parsed = await steamSearchUpcoming(998);
     const before = items.length;
     for (const it of parsed) {
       if (!seen.has(it.id)) { seen.add(it.id); items.push(it); }
     }
-    console.log(`[upcoming src2] games search: parsed=${parsed.length} +${items.length - before} new`);
+    console.log(`[upcoming src2] games: parsed=${parsed.length} +${items.length - before} new`);
   } catch (e) { console.error('[upcoming src2]', e.message); }
 
   // Source 3 : recherche Steam "comingsoon" — DLC (category1=21)
   try {
-    const r = await fetch('https://store.steampowered.com/search/results/?filter=comingsoon&sort_by=Release_Date&cc=FR&l=english&json=1&count=100&category1=21', {
-      headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json, text/javascript' },
-    });
-    const d = await r.json();
-    const parsed = parseSteamSearchHtml(d.results_html || '');
+    const parsed = await steamSearchUpcoming(21);
     const before = items.length;
     for (const it of parsed) {
       if (!seen.has(it.id)) { seen.add(it.id); items.push(it); }
     }
-    console.log(`[upcoming src3] dlc search: parsed=${parsed.length} +${items.length - before} new`);
+    console.log(`[upcoming src3] dlc: parsed=${parsed.length} +${items.length - before} new`);
   } catch (e) { console.error('[upcoming src3]', e.message); }
 
   return items;
 }
+
+// Debug : voir le HTML brut retourné par Steam search (admin only)
+app.get('/api/debug/steam-search', requireAuth, async (req, res) => {
+  try {
+    const category = req.query.cat || 998;
+    const url = `https://store.steampowered.com/search/results/?filter=comingsoon&sort_by=Release_Date&cc=FR&l=english&json=1&count=10&category1=${category}`;
+    const r = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:120.0) Gecko/20100101 Firefox/120.0',
+        'Accept': 'text/javascript, text/html, application/xml, text/xml, */*',
+        'Accept-Language': 'en-US,en;q=0.5',
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+    });
+    const text = await r.text();
+    res.json({ status: r.status, length: text.length, snippet: text.slice(0, 2000) });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
 
 app.get('/api/steam/upcoming', requireAuth, async (req, res) => {
   const now = Date.now();
