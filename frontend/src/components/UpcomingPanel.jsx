@@ -100,7 +100,7 @@ function FeaturedCard({ token, wishlist = new Set() }) {
 
   return (
     <div style={{ padding: '0 10px 0' }}>
-      <
+      <a
         href={`https://store.steampowered.com/app/${game.appid}/`}
         target="_blank" rel="noreferrer"
         style={{
