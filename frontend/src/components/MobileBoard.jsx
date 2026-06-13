@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import GameCard from './GameCard.jsx';
 
-export default function MobileBoard({ columns, byColumn, onCardClick, onArchiveGame, onUnarchiveGame, onDeleteGame, onEditGame, isTaskBoard, onToggleDone, onToggleUrgent, onUpdateAssignees, onClickNotes }) {
+export default function MobileBoard({ columns, byColumn, onCardClick, onArchiveGame, onUnarchiveGame, onDeleteGame, onEditGame, isTaskBoard, onToggleDone, onToggleUrgent, onUpdateAssignees, onClickNotes, genreColors = {}, hiddenCardIds = new Set(), showHiddenCards = false, onHideCard, onUnhideCard }) {
   const [activeColId, setActiveColId] = useState(columns[0]?.id || null);
 
   // Si la colonne active a disparu (ex: supprimée), prendre la première
   const currentColId = columns.find(c => c.id === activeColId)?.id || columns[0]?.id || null;
-  const games = byColumn[currentColId] || [];
+  const allGames = byColumn[currentColId] || [];
+  const games = allGames.filter(g => showHiddenCards ? true : !hiddenCardIds.has(String(g.appid)));
 
   if (columns.length === 0) {
     return (
@@ -89,6 +90,10 @@ export default function MobileBoard({ columns, byColumn, onCardClick, onArchiveG
             onToggleUrgent={onToggleUrgent ? (urgent) => onToggleUrgent(game.appid, urgent) : undefined}
             onUpdateAssignees={onUpdateAssignees ? (assignees) => onUpdateAssignees(game.appid, assignees) : undefined}
             onClickNotes={onClickNotes ? () => onClickNotes(game) : undefined}
+            genreColor={game.type !== 'custom' ? (genreColors[String(game.appid)] || '#66c0f4') : null}
+            isHidden={hiddenCardIds.has(String(game.appid))}
+            onHide={onHideCard ? () => onHideCard(game.appid) : undefined}
+            onUnhide={onUnhideCard ? () => onUnhideCard(game.appid) : undefined}
           />
         ))}
       </div>

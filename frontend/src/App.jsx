@@ -93,7 +93,7 @@ function getSteamGenreColor(genres) {
 
 const API = import.meta.env.VITE_API_URL || '/api';
 
-function HomeBoardCard({ board, isPublic, isFav, onToggleFav, onClick, typeColor = '#66c0f4' }) {
+function HomeBoardCard({ board, isPublic, isFav, onToggleFav, onClick, typeColor = '#66c0f4', isHidden = false, onHide, onUnhide }) {
   const [favHover, setFavHover] = useState(false);
   return (
     <div
@@ -102,6 +102,9 @@ function HomeBoardCard({ board, isPublic, isFav, onToggleFav, onClick, typeColor
         border: `2px solid ${isFav ? (isPublic ? '#3db86a' : '#f5c518') : typeColor}`,
         borderRadius: 12, overflow: 'hidden',
         display: 'flex', flexDirection: 'column',
+        opacity: isHidden ? 0.55 : 1,
+        filter: isHidden ? 'saturate(0.4)' : 'none',
+        transition: 'opacity .15s, filter .15s',
       }}
     >
       {/* Banner — clickable */}
@@ -133,6 +136,26 @@ function HomeBoardCard({ board, isPublic, isFav, onToggleFav, onClick, typeColor
             onClick={onClick}
             style={{ flex: 1, background: 'var(--accent)', border: 'none', borderRadius: 6, padding: '5px 0', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
           >▶ Afficher</button>
+          {(onHide || onUnhide) && (
+            <button
+              onClick={e => { e.stopPropagation(); isHidden ? onUnhide() : onHide(); }}
+              title={isHidden ? 'Réafficher ce board' : 'Masquer ce board'}
+              style={{
+                background: isHidden ? 'rgba(60,150,240,0.18)' : 'var(--surface2)',
+                border: isHidden ? '1px solid rgba(60,150,240,0.55)' : '1px solid var(--border)',
+                borderRadius: 6, padding: '5px 8px', cursor: 'pointer',
+                color: isHidden ? '#70b8ff' : 'var(--text-muted)',
+                display: 'flex', alignItems: 'center', flexShrink: 0,
+              }}
+            >
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                {isHidden
+                  ? <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>
+                  : <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></>
+                }
+              </svg>
+            </button>
+          )}
           <button
             onClick={e => { e.stopPropagation(); onToggleFav(isFav); }}
             onMouseEnter={() => setFavHover(true)}
@@ -1014,7 +1037,10 @@ export default function App() {
                     isFav={favBoards.some(f => f.id === b.id)}
                     onToggleFav={(cur) => toggleFavorite(b.id, b, cur)}
                     onClick={() => openPublicBoard(b)}
-                    typeColor={getBoardTypeColor(b)} />
+                    typeColor={getBoardTypeColor(b)}
+                    isHidden={hiddenBoardIds.has(b.id)}
+                    onHide={() => hideBoard(b.id)}
+                    onUnhide={() => unhideBoard(b.id)} />
                 </div>
               ))}
             </div>
@@ -1048,7 +1074,7 @@ export default function App() {
                         onDrop={e => { e.preventDefault(); handleHomeDrop('fav', b.id, setHomeFavOrder, 'homeFavOrder'); }}
                         style={{ opacity: homeDragId === b.id ? 0.4 : 1, outline: homeDragOver === `fav_${b.id}` && homeDragId !== b.id ? '2px dashed #f5c518' : 'none', borderRadius: 12, cursor: 'grab' }}
                       >
-                        <HomeBoardCard board={b} isFav onToggleFav={(cur) => togglePersonalFavorite(b.id, cur)} onClick={() => openBoard(b)} typeColor={getBoardTypeColor(b)} />
+                        <HomeBoardCard board={b} isFav onToggleFav={(cur) => togglePersonalFavorite(b.id, cur)} onClick={() => openBoard(b)} typeColor={getBoardTypeColor(b)} isHidden={hiddenBoardIds.has(b.id)} onHide={() => hideBoard(b.id)} onUnhide={() => unhideBoard(b.id)} />
                       </div>
                     ))}
                   </div>
@@ -1075,7 +1101,7 @@ export default function App() {
                         onDrop={e => { e.preventDefault(); handleHomeDrop('other', b.id, setHomeOtherOrder, 'homeOtherOrder'); }}
                         style={{ opacity: homeDragId === b.id ? 0.4 : 1, outline: homeDragOver === `other_${b.id}` && homeDragId !== b.id ? '2px dashed #f5a500' : 'none', borderRadius: 12, cursor: 'grab' }}
                       >
-                        <HomeBoardCard board={b} isFav={false} onToggleFav={(cur) => togglePersonalFavorite(b.id, cur)} onClick={() => openBoard(b)} typeColor={getBoardTypeColor(b)} />
+                        <HomeBoardCard board={b} isFav={false} onToggleFav={(cur) => togglePersonalFavorite(b.id, cur)} onClick={() => openBoard(b)} typeColor={getBoardTypeColor(b)} isHidden={hiddenBoardIds.has(b.id)} onHide={() => hideBoard(b.id)} onUnhide={() => unhideBoard(b.id)} />
                       </div>
                     ))}
                   </div>
@@ -1201,7 +1227,7 @@ export default function App() {
               </svg>
             ) : '🔒'}</button>
             {/* Masquer/afficher board */}
-            <button onClick={e => { e.stopPropagation(); hiddenBoardIds.has(b.id) ? unhideBoard(b.id) : hideBoard(b.id); }} title={hiddenBoardIds.has(b.id) ? 'Réafficher ce board' : 'Masquer ce board'} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', flexShrink: 0, opacity: hiddenBoardIds.has(b.id) ? 0.9 : 0.3, color: hiddenBoardIds.has(b.id) ? '#70b8ff' : 'var(--text-muted)', lineHeight: 1 }}>
+            <button onClick={e => { e.stopPropagation(); hiddenBoardIds.has(b.id) ? unhideBoard(b.id) : hideBoard(b.id); }} title={hiddenBoardIds.has(b.id) ? 'Réafficher ce board' : 'Masquer ce board'} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', flexShrink: 0, opacity: hiddenBoardIds.has(b.id) ? 0.9 : 0.65, color: hiddenBoardIds.has(b.id) ? '#70b8ff' : 'var(--text-muted)', lineHeight: 1 }}>
               <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 {hiddenBoardIds.has(b.id) ? <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></> : <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></>}
               </svg>
@@ -1268,7 +1294,7 @@ export default function App() {
               </svg>
             ) : '🔒'}</button>
             {/* Masquer/afficher board */}
-            <button onClick={e => { e.stopPropagation(); hiddenBoardIds.has(b.id) ? unhideBoard(b.id) : hideBoard(b.id); }} title={hiddenBoardIds.has(b.id) ? 'Réafficher ce board' : 'Masquer ce board'} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', flexShrink: 0, opacity: hiddenBoardIds.has(b.id) ? 0.9 : 0.3, color: hiddenBoardIds.has(b.id) ? '#70b8ff' : 'var(--text-muted)', lineHeight: 1 }}>
+            <button onClick={e => { e.stopPropagation(); hiddenBoardIds.has(b.id) ? unhideBoard(b.id) : hideBoard(b.id); }} title={hiddenBoardIds.has(b.id) ? 'Réafficher ce board' : 'Masquer ce board'} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', flexShrink: 0, opacity: hiddenBoardIds.has(b.id) ? 0.9 : 0.65, color: hiddenBoardIds.has(b.id) ? '#70b8ff' : 'var(--text-muted)', lineHeight: 1 }}>
               <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 {hiddenBoardIds.has(b.id) ? <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></> : <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></>}
               </svg>
@@ -1335,7 +1361,7 @@ export default function App() {
               )}
               <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 14, fontWeight: 700, opacity: hiddenBoardIds.has(b.id) ? 0.45 : 1 }}>{b.name}</span>
               {/* Masquer/afficher board suivi */}
-              <button onClick={e => { e.stopPropagation(); hiddenBoardIds.has(b.id) ? unhideBoard(b.id) : hideBoard(b.id); }} title={hiddenBoardIds.has(b.id) ? 'Réafficher ce board' : 'Masquer ce board'} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', flexShrink: 0, opacity: hiddenBoardIds.has(b.id) ? 0.9 : 0.3, color: hiddenBoardIds.has(b.id) ? '#70b8ff' : 'var(--text-muted)', lineHeight: 1 }}>
+              <button onClick={e => { e.stopPropagation(); hiddenBoardIds.has(b.id) ? unhideBoard(b.id) : hideBoard(b.id); }} title={hiddenBoardIds.has(b.id) ? 'Réafficher ce board' : 'Masquer ce board'} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', flexShrink: 0, opacity: hiddenBoardIds.has(b.id) ? 0.9 : 0.65, color: hiddenBoardIds.has(b.id) ? '#70b8ff' : 'var(--text-muted)', lineHeight: 1 }}>
                 <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                   {hiddenBoardIds.has(b.id) ? <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></> : <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></>}
                 </svg>

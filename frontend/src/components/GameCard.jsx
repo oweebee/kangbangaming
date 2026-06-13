@@ -260,8 +260,8 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
                 </button>
               )}
 
-              {/* Masquer / Réafficher — uniquement hors archive, hors compact */}
-              {!isArchived && !compact && (isHidden ? onUnhide : onHide) && (
+              {/* Masquer / Réafficher — uniquement hors archive */}
+              {!isArchived && (isHidden ? onUnhide : onHide) && (
                 <button
                   onClick={e => { e.stopPropagation(); isHidden ? onUnhide() : onHide(); }}
                   title={isHidden ? 'Réafficher' : 'Masquer'}
