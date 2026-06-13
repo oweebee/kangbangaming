@@ -461,6 +461,81 @@ app.delete('/api/admin/boards/:userId/:boardId', requireAdmin, (req, res) => {
   res.json({ ok: true });
 });
 
+// ── Steam upcoming releases ───────────────────────────────────────────────────
+
+let upcomingCache = { data: null, fetchedAt: 0 };
+const UPCOMING_TTL = 2 * 60 * 60 * 1000; // 2h
+
+function parseReleaseDate(str) {
+  if (!str) return null;
+  const lower = str.toLowerCase();
+  if (lower.includes('soon') || lower.startsWith('q') || lower.includes('tba') || lower.includes('tbd') || lower.includes('2026') || lower.includes('2027')) return null;
+  // Formats: "28 Jun, 2025" / "Jun 28, 2025" / "28 June 2025"
+  const cleaned = str.replace(',', '').replace(/(\d+)\s+(\w+)\s+(\d{4})/, '$2 $1 $3');
+  const d = new Date(cleaned);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+app.get('/api/steam/upcoming', requireAuth, async (req, res) => {
+  const now = Date.now();
+  if (upcomingCache.data && now - upcomingCache.fetchedAt < UPCOMING_TTL) {
+    return res.json(upcomingCache.data);
+  }
+  try {
+    const catRes = await fetch('https://store.steampowered.com/api/featuredcategories?cc=FR&l=english', {
+      headers: { 'User-Agent': 'Mozilla/5.0' },
+    });
+    if (!catRes.ok) throw new Error('Steam API error');
+    const catData = await catRes.json();
+    const items = catData.coming_soon?.items || [];
+
+    // Fetch appdetails for each to get precise release_date
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const maxDate = new Date(today.getTime() + 45 * 24 * 60 * 60 * 1000);
+
+    const results = await Promise.allSettled(
+      items.slice(0, 25).map(async item => {
+        try {
+          const r = await fetch(`https://store.steampowered.com/api/appdetails?appids=${item.id}&filters=release_date,basic&cc=FR&l=french`, {
+            headers: { 'User-Agent': 'Mozilla/5.0' },
+          });
+          const d = await r.json();
+          const info = d?.[item.id]?.data;
+          const rawDate = info?.release_date?.date || item.release_string || '';
+          const releaseDate = parseReleaseDate(rawDate);
+          const comingSoon = info?.release_date?.coming_soon ?? true;
+          return {
+            appid: item.id,
+            name: info?.name || item.name,
+            releaseDate: releaseDate ? releaseDate.toISOString() : null,
+            releaseDateStr: rawDate,
+            comingSoon,
+            headerImage: info?.header_image || `https://cdn.akamai.steamstatic.com/steam/apps/${item.id}/header.jpg`,
+            capsuleImage: item.large_capsule_image || item.small_capsule_image || null,
+            price: item.final_price != null ? (item.final_price / 100).toFixed(2) : null,
+          };
+        } catch { return null; }
+      })
+    );
+
+    const games = results
+      .map(r => r.status === 'fulfilled' ? r.value : null)
+      .filter(g => g && g.releaseDate)
+      .filter(g => {
+        const d = new Date(g.releaseDate);
+        return d >= today && d <= maxDate;
+      })
+      .sort((a, b) => new Date(a.releaseDate) - new Date(b.releaseDate));
+
+    upcomingCache = { data: games, fetchedAt: now };
+    res.json(games);
+  } catch (e) {
+    console.error('[upcoming]', e.message);
+    if (upcomingCache.data) return res.json(upcomingCache.data); // Retour cache périmé si erreur
+    res.status(500).json({ error: 'Failed to fetch upcoming games' });
+  }
+});
+
 // ── Steam game info (players + reviews) ──────────────────────────────────────
 
 const gameInfoCache = new Map(); // appid -> { data, fetchedAt }

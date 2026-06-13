@@ -123,7 +123,22 @@ export default function AdminPanel({ token, currentUser, onClose }) {
             )}
             {!showApprove && u.id !== 'admin' && (
               <>
-                {(u.status || 'active') === 'active' ? (
+                {/* Toggle rôle admin — seulement si pas le super-admin */}
+                {u.role === 'admin' ? (
+                  <button onClick={() => { if (confirm(`Retirer les droits admin à ${u.username} ?`)) patch(u.id, { role: 'user' }); }} disabled={saving}
+                    title="Retirer les droits admin"
+                    style={{ background: 'rgba(245,165,0,.15)', border: '1px solid rgba(245,165,0,.4)', borderRadius: 6, padding: '5px 10px', color: '#f5a500', fontSize: 11, cursor: 'pointer', fontWeight: 700 }}>
+                    👑 Retirer admin
+                  </button>
+                ) : (
+                  <button onClick={() => { if (confirm(`Passer ${u.username} en admin ? Il aura accès au panneau admin.`)) patch(u.id, { role: 'admin', status: 'active' }); }} disabled={saving}
+                    title="Donner les droits admin"
+                    style={{ background: 'rgba(245,165,0,.08)', border: '1px solid rgba(245,165,0,.2)', borderRadius: 6, padding: '5px 10px', color: 'var(--text-muted)', fontSize: 11, cursor: 'pointer' }}>
+                    👑 Admin
+                  </button>
+                )}
+                {/* Suspendre/Réactiver — désactivé pour les admins */}
+                {u.role !== 'admin' && ((u.status || 'active') === 'active' ? (
                   <button onClick={() => patch(u.id, { status: 'suspended' })} disabled={saving}
                     style={{ background: 'rgba(220,50,50,.1)', border: '1px solid rgba(220,50,50,.25)', borderRadius: 6, padding: '5px 10px', color: '#f88', fontSize: 11, cursor: 'pointer' }}>
                     Suspendre
@@ -133,7 +148,7 @@ export default function AdminPanel({ token, currentUser, onClose }) {
                     style={{ background: 'rgba(60,200,100,.1)', border: '1px solid rgba(60,200,100,.25)', borderRadius: 6, padding: '5px 10px', color: '#4cd882', fontSize: 11, cursor: 'pointer' }}>
                     Réactiver
                   </button>
-                )}
+                ))}
                 <button onClick={() => { setEditingId(editingId === u.id ? null : u.id); setEditPwd(''); }}
                   style={{ background: 'var(--surface3)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 10px', color: 'var(--text)', fontSize: 11, cursor: 'pointer' }}>
                   🔑 MDP

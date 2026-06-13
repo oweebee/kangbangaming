@@ -167,6 +167,10 @@ export default function TaskModal({ game, onClose, onEdit, appUsers = [], onPatc
   const notesCount = (game.notes || []).length;
   const cardBorderColor = isDone ? 'rgba(61,184,106,0.6)' : isUrgent ? 'rgba(220,60,60,0.6)' : tt ? tt.border : 'var(--border)';
 
+  // Couleur de la carte (boards personnalisés uniquement)
+  const [cardColor,  setCardColor]  = useState(game.color || '#66c0f4');
+  const handleColorChange = (c) => { setCardColor(c); if (onPatchGame) onPatchGame(game.appid, { color: c }); };
+
   // Date state — éditable directement depuis la modal
   const [dateMode,   setDateMode]   = useState(game.startDate ? 'period' : game.dueDate ? 'single' : 'none');
   const [dueDate,    setDueDate]    = useState(game.dueDate    || '');
@@ -358,6 +362,31 @@ export default function TaskModal({ game, onClose, onEdit, appUsers = [], onPatc
                 onChange={handleSaveProgress}
               />
             </div>
+
+            {/* Couleur de la carte — uniquement boards personnalisés */}
+            {!isTaskBoard && (
+              <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 9, padding: '10px 14px' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: 10 }}>
+                  🎨 Couleur de la carte
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  <input
+                    type="color"
+                    value={cardColor}
+                    onChange={e => handleColorChange(e.target.value)}
+                    style={{ width: 36, height: 30, padding: 2, background: 'var(--surface3)', border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer' }}
+                  />
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {['#66c0f4','#f5c518','#3db86a','#e05555','#c090f0','#f0a030','#55b8e0','#e87890'].map(c => (
+                      <button key={c} onClick={() => handleColorChange(c)}
+                        style={{ width: 22, height: 22, borderRadius: '50%', background: c, border: cardColor === c ? '2.5px solid #fff' : '2px solid transparent', cursor: 'pointer', padding: 0, flexShrink: 0 }}
+                      />
+                    ))}
+                  </div>
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'monospace' }}>{cardColor}</span>
+                </div>
+              </div>
+            )}
 
             {/* Meta row — emoji only for untyped cards */}
             {!game.taskType && game.emoji && (

@@ -14,6 +14,7 @@ import GlobalSearch from './components/GlobalSearch.jsx';
 import SteamEncart from './components/SteamEncart.jsx';
 import GameInfoPanel, { GAME_INFO_PANEL_WIDTH } from './components/GameInfoPanel.jsx';
 import DeadlinePanel from './components/DeadlinePanel.jsx';
+import UpcomingPanel from './components/UpcomingPanel.jsx';
 
 const DISCORD_ICON_URL = 'https://cdn.discordapp.com/icons/983316258302877747/ebcf20448ef8818f93e8f31afad9f8d9.webp?size=64';
 
@@ -252,6 +253,12 @@ export default function App() {
   });
   const homeSplitterDragging = useRef(false);
   const homeSplitterRef = useRef(null);
+  // Resizable splitter between boards and UpcomingPanel
+  const [homeUpcomingWidth, setHomeUpcomingWidth] = useState(() => {
+    try { return parseFloat(localStorage.getItem('homeUpcomingWidth') || '280'); } catch { return 280; }
+  });
+  const homeUpcomingSplitterDragging = useRef(false);
+  const homeUpcomingSplitterRef = useRef(null);
 
   // Board state
   const [boards, setBoards] = useState([]);
@@ -338,7 +345,20 @@ export default function App() {
 
   useEffect(() => {
     const saved = getSavedAuth();
-    if (saved) { setCurrentUser(saved.user); setToken(saved.token); }
+    if (!saved) return;
+    setCurrentUser(saved.user);
+    setToken(saved.token);
+    // Rafraîchir le rôle depuis le serveur (ex: si un admin a changé le rôle pendant la session)
+    fetch('/api/auth/me', { headers: { Authorization: `Bearer ${saved.token}` } })
+      .then(r => r.ok ? r.json() : null)
+      .then(fresh => {
+        if (fresh && fresh.role !== saved.user.role) {
+          const updated = { ...saved.user, role: fresh.role };
+          setCurrentUser(updated);
+          localStorage.setItem('user', JSON.stringify({ user: updated, token: saved.token }));
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const handleLogin = (user, tok) => { setCurrentUser(user); setToken(tok); };
@@ -1033,7 +1053,7 @@ export default function App() {
         </div>
       </div>
 
-      {/* ── Colonne droite : Boards ── */}
+      {/* ── Colonne centrale : Boards ── */}
       <div style={{ flex: 1, minWidth: 0, overflowY: 'auto', padding: '28px 28px' }}>
       <div style={{ maxWidth: 960, margin: '0 auto' }}>
         {/* Toggle boards masqués — apparaît si des boards sont masqués */}
@@ -1161,6 +1181,57 @@ export default function App() {
         })()}
       </div>
       </div>
+
+      {/* ── Séparateur 2 : Boards / Sorties à venir ── */}
+      <div
+        ref={homeUpcomingSplitterRef}
+        onMouseDown={e => {
+          e.preventDefault();
+          homeUpcomingSplitterDragging.current = true;
+          const container = homeUpcomingSplitterRef.current?.parentElement;
+          const onMove = mv => {
+            if (!homeUpcomingSplitterDragging.current || !container) return;
+            const rect = container.getBoundingClientRect();
+            const fromRight = rect.right - mv.clientX;
+            const clamped = Math.max(180, Math.min(480, fromRight));
+            setHomeUpcomingWidth(clamped);
+            try { localStorage.setItem('homeUpcomingWidth', String(clamped)); } catch {}
+          };
+          const onUp = () => {
+            homeUpcomingSplitterDragging.current = false;
+            window.removeEventListener('mousemove', onMove);
+            window.removeEventListener('mouseup', onUp);
+          };
+          window.addEventListener('mousemove', onMove);
+          window.addEventListener('mouseup', onUp);
+        }}
+        style={{
+          width: 6, flexShrink: 0, cursor: 'col-resize',
+          background: 'var(--border)',
+          position: 'relative',
+          transition: 'background .15s',
+          userSelect: 'none',
+        }}
+        onMouseEnter={e => e.currentTarget.style.background = 'var(--accent)'}
+        onMouseLeave={e => { if (!homeUpcomingSplitterDragging.current) e.currentTarget.style.background = 'var(--border)'; }}
+      >
+        <div style={{
+          position: 'absolute', top: '50%', left: '50%',
+          transform: 'translate(-50%, -50%)',
+          display: 'flex', flexDirection: 'column', gap: 3,
+          pointerEvents: 'none',
+        }}>
+          {[0,1,2].map(i => (
+            <div key={i} style={{ width: 2, height: 2, borderRadius: '50%', background: 'var(--text-muted)', opacity: 0.5 }} />
+          ))}
+        </div>
+      </div>
+
+      {/* ── Colonne droite : Sorties à venir ── */}
+      <div style={{ width: homeUpcomingWidth, flexShrink: 0, overflow: 'hidden' }}>
+        <UpcomingPanel token={token} />
+      </div>
+
     </div>
   );
 
