@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { getTaskType } from '../taskTypes.jsx';
 import NotesSection from './NotesSection.jsx';

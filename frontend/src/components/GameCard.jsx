@@ -22,9 +22,9 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
   const isArchived = !!game.archived;
   const isUrgent   = !!game.urgent;
   const isDone     = !!game.done;
-  const customColor = isCustom && !tt ? (game.color || '#66c0f4') : null;
   const notesCount = (game.notes || []).length;
   const tt         = game.taskType ? getTaskType(game.taskType) : null;
+  const customColor = isCustom && !tt ? (game.color || '#66c0f4') : null;
   const TtFallback = tt?.FallbackIcon;
   const dateInfo  = getDateInfo(game);
 
