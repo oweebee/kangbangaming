@@ -142,7 +142,10 @@ export default function NotesSection({ notes: externalNotes = [], onSave, onDraf
       {notes.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {visible.map(note => {
-            const author = note.authorId ? appUsers.find(u => u.id === note.authorId) : null;
+            // Priorité à currentUser pour ses propres notes (données Steam toujours dispo)
+            const author = note.authorId
+              ? (note.authorId === currentUser?.id ? currentUser : appUsers.find(u => u.id === note.authorId))
+              : null;
             const initials = author?.username?.[0]?.toUpperCase() || '?';
             const modifiable = canModify(note);
             return (
