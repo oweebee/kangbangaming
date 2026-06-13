@@ -509,13 +509,40 @@ async function steamSearchUpcoming(category) {
   const url = `https://store.steampowered.com/search/results/?filter=comingsoon&sort_by=Release_Date&cc=FR&l=english&json=1&count=100&category1=${category}`;
   const r = await fetch(url, { headers });
   const text = await r.text();
-  // Tenter JSON d'abord (format attendu), sinon HTML brut
-  let html = text;
+
   try {
     const d = JSON.parse(text);
-    html = d.results_html || text;
-  } catch {}
-  return parseSteamSearchHtml(html);
+
+    // Format A : [{desc, items: [{id, name, logo, release_string, ...}]}]
+    // C'est le format retourné par Steam pour ce endpoint
+    if (Array.isArray(d)) {
+      const results = [];
+      for (const section of d) {
+        for (const item of (section.items || [])) {
+          const id = item.id || parseInt((item.logo || item.large_capsule_image || '').match(/\/apps\/(\d+)\//)?.[1] || '0');
+          if (!id) continue;
+          results.push({
+            id,
+            name: item.name || '',
+            dateStr: item.release_string || '',
+            capsuleImage: item.large_capsule_image || item.small_capsule_image || item.logo || null,
+            finalPrice: item.final_price ?? null,
+          });
+        }
+      }
+      return results;
+    }
+
+    // Format B : {results_html: "..."} (ancien format AJAX)
+    if (d.results_html) {
+      return parseSteamSearchHtml(d.results_html);
+    }
+  } catch (e) {
+    console.error('[steamSearchUpcoming] parse error:', e.message);
+  }
+
+  // Fallback HTML
+  return parseSteamSearchHtml(text);
 }
 
 // Récupère et déduplique les items depuis plusieurs endpoints Steam
