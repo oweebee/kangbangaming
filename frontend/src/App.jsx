@@ -484,25 +484,23 @@ export default function App() {
   }, [activeBoardId]);
 
   // Lazy-fetch genre colors pour les boards Steam (cached côté serveur)
+  const fetchedGenreIds = useRef(new Set());
   useEffect(() => {
     if (!token) return;
     const steamBoards = [...boards, ...favBoards].filter(b => b.gameIcon);
     steamBoards.forEach(b => {
       const appid = getSteamAppId(b.gameIcon);
-      if (!appid) return;
-      setBoardGenreColors(prev => {
-        if (prev[appid]) return prev; // déjà fetché
-        fetch(`${API}/steam/gameinfo/${appid}`, { headers: { Authorization: `Bearer ${token}` } })
-          .then(r => r.json())
-          .then(info => {
-            if (info.genres?.length) {
-              const color = getSteamGenreColor(info.genres[0]);
-              setBoardGenreColors(p => ({ ...p, [appid]: color }));
-            }
-          })
-          .catch(() => {});
-        return prev;
-      });
+      if (!appid || fetchedGenreIds.current.has(appid)) return;
+      fetchedGenreIds.current.add(appid);
+      fetch(`${API}/steam/gameinfo/${appid}`, { headers: { Authorization: `Bearer ${token}` } })
+        .then(r => r.json())
+        .then(info => {
+          if (info.genres?.length) {
+            const color = getSteamGenreColor(info.genres[0]);
+            setBoardGenreColors(prev => ({ ...prev, [appid]: color }));
+          }
+        })
+        .catch(() => { fetchedGenreIds.current.delete(appid); }); // retry possible en cas d'erreur
     });
   }, [boards, favBoards, token]);
 
@@ -856,6 +854,13 @@ export default function App() {
     setHomeDragOver(null);
   }
 
+  // ── Couleur de type pour les boards (genre Steam ou violet perso) ────────────
+  const getBoardTypeColor = (b) => {
+    if (!b?.gameIcon) return '#6b3fa0'; // board perso = violet foncé
+    const appid = getSteamAppId(b.gameIcon);
+    return (appid && boardGenreColors[appid]) ? boardGenreColors[appid] : '#66c0f4';
+  };
+
   const homeView = (
     <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
 
@@ -1016,13 +1021,6 @@ export default function App() {
       </div>
     </div>
   );
-
-  // ── Couleur de type pour les boards (genre Steam ou violet perso) ────────────
-  const getBoardTypeColor = (b) => {
-    if (!b?.gameIcon) return '#6b3fa0'; // board perso = violet foncé
-    const appid = getSteamAppId(b.gameIcon);
-    return (appid && boardGenreColors[appid]) ? boardGenreColors[appid] : '#66c0f4';
-  };
 
   // ── Sidebar ───────────────────────────────────────────────────────────────
 
