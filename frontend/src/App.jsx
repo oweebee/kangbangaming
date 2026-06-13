@@ -7,7 +7,6 @@ import SearchModal from './components/SearchModal.jsx';
 import LoginPage from './components/LoginPage.jsx';
 import RegisterPage from './components/RegisterPage.jsx';
 import AdminPanel from './components/AdminPanel.jsx';
-import SteamSettings from './components/SteamSettings.jsx';
 import ProfilePage from './components/ProfilePage.jsx';
 import GameStatsWidget from './components/GameStatsWidget.jsx';
 import GlobalSearch from './components/GlobalSearch.jsx';
@@ -246,7 +245,6 @@ export default function App() {
 
   // Modals
   const [showAdmin, setShowAdmin] = useState(false);
-  const [showSteamSettings, setShowSteamSettings] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
 
   // Favorites (public boards pinned to sidebar)
@@ -1561,9 +1559,9 @@ export default function App() {
                     <input autoFocus value={boardSearchQuery} onChange={e => handleBoardSearchInput(e.target.value)} placeholder="Rechercher un jeu..."
                       style={{ width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 8px', color: 'var(--text)', fontSize: 12, outline: 'none', boxSizing: 'border-box' }} />
                     {(boardSearchLoading || boardSearchResults.length > 0) && (
-                      <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 200, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, marginTop: 2, boxShadow: '0 8px 20px rgba(0,0,0,.5)', maxHeight: 200, overflowY: 'auto' }}>
+                      <div style={{ position: 'absolute', bottom: '100%', left: 0, right: 0, zIndex: 200, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, marginBottom: 2, boxShadow: '0 -8px 20px rgba(0,0,0,.5)', maxHeight: 200, overflowY: 'auto' }}>
                         {boardSearchLoading && <div style={{ padding: '8px 10px', fontSize: 11, color: 'var(--text-muted)' }}>Recherche...</div>}
-                        {boardSearchResults.map(g => (
+                        {[...boardSearchResults].reverse().map(g => (
                           <div key={g.appid} onClick={() => selectBoardGame(g)}
                             style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', cursor: 'pointer', borderBottom: '1px solid var(--border)' }}
                             onMouseEnter={e => e.currentTarget.style.background = 'var(--surface3)'}
@@ -1598,10 +1596,10 @@ export default function App() {
       {/* User footer */}
       <div style={{ padding: '8px 10px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 5 }}>
         {currentUser.steamAvatar ? (
-          <img src={currentUser.steamAvatar} alt="" style={{ width: 28, height: 28, borderRadius: 4, border: '1px solid var(--border)', flexShrink: 0, cursor: 'pointer' }} onClick={() => setShowSteamSettings(true)} title="Paramètres Steam" />
+          <img src={currentUser.steamAvatar} alt="" style={{ width: 28, height: 28, borderRadius: 4, border: '1px solid var(--border)', flexShrink: 0, cursor: 'pointer' }} onClick={() => setShowProfile(true)} title="Mon profil" />
         ) : (
-          <div style={{ width: 28, height: 28, borderRadius: 4, background: 'var(--surface3)', border: '1px solid var(--border)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} onClick={() => setShowSteamSettings(true)} title="Configurer Steam">
-            <svg viewBox="0 0 496 512" xmlns="http://www.w3.org/2000/svg" style={{ width: 14, height: 14, fill: 'var(--text-muted)' }}><path d="M496 256c0 137-111.2 248-248.4 248-113.8 0-209.7-76.3-239-180.4l95.2 39.3c6.4 32.1 34.9 56.4 68.9 56.4 38.2 0 69.1-31.1 68.9-69.3l84.5-60.2c52.1 1.3 95.8-40.9 95.8-93.5 0-51.6-42-93.5-93.7-93.5s-93.7 42-93.7 93.5v1.2L176.6 279c-15.5-.9-30.7 3.4-43.5 12.1L0 236.1C10.2 108.4 117.1 8 247.6 8 384.8 8 496 119 496 256z"/></svg>
+          <div style={{ width: 28, height: 28, borderRadius: 4, background: 'var(--surface3)', border: '1px solid var(--border)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 14 }} onClick={() => setShowProfile(true)} title="Mon profil">
+            👤
           </div>
         )}
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -1611,15 +1609,15 @@ export default function App() {
           {currentUser.role === 'admin' && <div style={{ fontSize: 9, color: '#f5a500', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>admin</div>}
         </div>
         <button onClick={() => setShowProfile(true)} title="Mon profil" style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 5, padding: '4px 7px', color: 'var(--text-muted)', fontSize: 11, cursor: 'pointer', flexShrink: 0, fontWeight: 600 }}>Profil</button>
-        <button onClick={() => setShowSteamSettings(true)} title="Paramètres Steam" style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 5, padding: '4px 7px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>
-          <svg viewBox="0 0 496 512" xmlns="http://www.w3.org/2000/svg" style={{ width: 12, height: 12, fill: 'currentColor', display: 'block' }}>
-            <path d="M496 256c0 137-111.2 248-248.4 248-113.8 0-209.7-76.3-239-180.4l95.2 39.3c6.4 32.1 34.9 56.4 68.9 56.4 38.2 0 69.1-31.1 68.9-69.3l84.5-60.2c52.1 1.3 95.8-40.9 95.8-93.5 0-51.6-42-93.5-93.7-93.5s-93.7 42-93.7 93.5v1.2L176.6 279c-15.5-.9-30.7 3.4-43.5 12.1L0 236.1C10.2 108.4 117.1 8 247.6 8 384.8 8 496 119 496 256z"/>
-          </svg>
-        </button>
         {currentUser.role === 'admin' && (
           <button onClick={() => setShowAdmin(true)} title="Panneau admin" style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 5, padding: '4px 7px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>⚙️</button>
         )}
-        <button onClick={handleLogout} title="Déconnexion" style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 5, padding: '4px 7px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>↪</button>
+        <button onClick={handleLogout} title="Déconnexion" style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 5, padding: '4px 7px', color: 'var(--text-muted)', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M18.36 6.64a9 9 0 1 1-12.73 0"/>
+            <line x1="12" y1="2" x2="12" y2="12"/>
+          </svg>
+        </button>
       </div>
     </>
   );
@@ -1676,38 +1674,18 @@ export default function App() {
           loading ? (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Chargement...</div>
           ) : (
-            <MobileBoard columns={columns} byColumn={byColumn} onCardClick={g => { setSelectedGameDefaultTab('infos'); setSelectedGame(g); }} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} isTaskBoard={isTaskBoard} onToggleDone={(appid, done) => patchGame(appid, { done })} onToggleUrgent={(appid, urgent) => patchGame(appid, { urgent })} onUpdateAssignees={(appid, assignees) => patchGame(appid, { assignees })} onClickNotes={handleCardNotesClick} genreColors={boardGenreColors} hiddenCardIds={isTaskBoard ? hiddenCardIds : new Set()} showHiddenCards={showHiddenCards} onHideCard={isTaskBoard ? hideCard : undefined} onUnhideCard={isTaskBoard ? unhideCard : undefined} />
+            <MobileBoard columns={columns} byColumn={byColumn} onCardClick={g => { setSelectedGameDefaultTab('infos'); setSelectedGame(g); }} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} isTaskBoard={isTaskBoard} onToggleDone={(appid, done) => patchGame(appid, { done })} onToggleUrgent={(appid, urgent) => patchGame(appid, { urgent })} onUpdateAssignees={(appid, assignees) => patchGame(appid, { assignees })} onClickNotes={handleCardNotesClick} genreColors={boardGenreColors} hiddenCardIds={new Set()} showHiddenCards={false} onHideCard={undefined} onUnhideCard={undefined} />
           )
         ) : !activeBoardId ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Crée un board pour commencer</div>
         ) : loading ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Chargement...</div>
         ) : (
-          <MobileBoard columns={columns} byColumn={byColumn} onCardClick={g => { setSelectedGameDefaultTab('infos'); setSelectedGame(g); }} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} isTaskBoard={isTaskBoard} onToggleDone={(appid, done) => patchGame(appid, { done })} onToggleUrgent={(appid, urgent) => patchGame(appid, { urgent })} onUpdateAssignees={(appid, assignees) => patchGame(appid, { assignees })} onClickNotes={handleCardNotesClick} genreColors={boardGenreColors} hiddenCardIds={isTaskBoard ? hiddenCardIds : new Set()} showHiddenCards={showHiddenCards} onHideCard={isTaskBoard ? hideCard : undefined} onUnhideCard={isTaskBoard ? unhideCard : undefined} />
+          <MobileBoard columns={columns} byColumn={byColumn} onCardClick={g => { setSelectedGameDefaultTab('infos'); setSelectedGame(g); }} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} isTaskBoard={isTaskBoard} onToggleDone={(appid, done) => patchGame(appid, { done })} onToggleUrgent={(appid, urgent) => patchGame(appid, { urgent })} onUpdateAssignees={(appid, assignees) => patchGame(appid, { assignees })} onClickNotes={handleCardNotesClick} genreColors={boardGenreColors} hiddenCardIds={new Set()} showHiddenCards={false} onHideCard={undefined} onUnhideCard={undefined} />
         )}
         {(activeBoardId || publicBoardMode) && (
           <div style={{ background: 'var(--surface)', borderTop: '1px solid var(--border)', padding: '8px 12px', display: 'flex', gap: 8, flexShrink: 0 }}>
             <button onClick={addColumn} style={{ flex: 1, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '8px', color: 'var(--text-muted)', fontSize: 12 }}>+ Colonne</button>
-            {isTaskBoard && hiddenCount > 0 && (
-              <button
-                onClick={() => setShowHiddenCards(v => !v)}
-                style={{
-                  background: showHiddenCards ? 'rgba(120,80,160,0.25)' : 'var(--surface2)',
-                  border: showHiddenCards ? '1px solid rgba(160,100,220,0.6)' : '1px solid var(--border)',
-                  borderRadius: 6, padding: '8px 12px', color: showHiddenCards ? '#c090f0' : 'var(--text-muted)',
-                  fontSize: 11, cursor: 'pointer', fontWeight: showHiddenCards ? 700 : 400, flexShrink: 0,
-                  display: 'flex', alignItems: 'center', gap: 5,
-                }}
-              >
-                <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  {showHiddenCards
-                    ? <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>
-                    : <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></>
-                  }
-                </svg>
-                {hiddenCount}
-              </button>
-            )}
             {archiveCount > 0 && (
               <button
                 onClick={() => setShowArchived(v => !v)}
@@ -1731,9 +1709,9 @@ export default function App() {
           : displayedGame && <GameModal game={displayedGame} onClose={() => { setSelectedGame(null); setSelectedGameDefaultTab('infos'); }} api={API} token={token} onPatchGame={patchGame} defaultTab={selectedGameDefaultTab === 'notes' ? 'notes' : 'achievements'} currentUser={currentUser} appUsers={appUsers} />
         }
         {showAdmin && <AdminPanel token={token} currentUser={currentUser} onClose={() => setShowAdmin(false)} />}
-        {showSteamSettings && <SteamSettings token={token} onSave={handleSteamSave} onClose={() => setShowSteamSettings(false)} />}
 
-        {showProfile && <ProfilePage token={token} currentUser={currentUser} onClose={() => setShowProfile(false)} />}
+
+        {showProfile && <ProfilePage token={token} currentUser={currentUser} onClose={() => setShowProfile(false)} onSaveSteam={handleSteamSave} />}
       </div>
     );
   }
@@ -1860,27 +1838,6 @@ export default function App() {
               <div style={{ flex: '1 1 0', display: 'flex', justifyContent: 'center', minWidth: gameInfo ? 200 : 0, minHeight: 0 }}>
                 <SteamEncart gameInfo={gameInfo} />
               </div>
-              {isTaskBoard && (activeBoardId || publicBoardMode) && hiddenCount > 0 && (
-                <button
-                  onClick={() => setShowHiddenCards(v => !v)}
-                  style={{
-                    background: showHiddenCards ? 'rgba(40,120,200,0.22)' : 'var(--surface2)',
-                    border: showHiddenCards ? '1px solid rgba(60,150,240,0.6)' : '1px solid var(--border)',
-                    borderRadius: 6, padding: '5px 10px', color: showHiddenCards ? '#70b8ff' : 'var(--text-muted)',
-                    fontSize: 11, cursor: 'pointer', flexShrink: 0, fontWeight: showHiddenCards ? 700 : 400,
-                    display: 'flex', alignItems: 'center', gap: 5,
-                  }}
-                  title={showHiddenCards ? 'Masquer les tâches masquées' : 'Afficher les tâches masquées'}
-                >
-                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    {showHiddenCards
-                      ? <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>
-                      : <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></>
-                    }
-                  </svg>
-                  Masquées ({hiddenCount})
-                </button>
-              )}
               {(activeBoardId || publicBoardMode) && archiveCount > 0 && (
                 <button
                   onClick={() => setShowArchived(v => !v)}
@@ -1910,14 +1867,14 @@ export default function App() {
           loading ? (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Chargement...</div>
           ) : (
-            <KanbanBoard columns={columns} byColumn={byColumn} dragging={dragging} setDragging={setDragging} moveGame={moveGame} onCardClick={g => { setSelectedGameDefaultTab('infos'); setSelectedGame(g); }} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} onRenameColumn={renameColumn} onDeleteColumn={deleteColumn} onSetEmoji={setColumnEmoji} onReorderColumns={reorderColumns} onAddToColumn={colId => { setSearchTargetCol(colId); setShowSearch(true); }} onReorderGames={reorderGamesInColumn} isTaskBoard={isTaskBoard} appUsers={appUsers} compactView={compactView} leftOffset={infoPanelLocked && infoPanelSide === 'left' ? GAME_INFO_PANEL_WIDTH : 0} rightOffset={infoPanelLocked && infoPanelSide === 'right' ? GAME_INFO_PANEL_WIDTH : 0} onToggleDone={(appid, done) => patchGame(appid, { done })} onToggleUrgent={(appid, urgent) => patchGame(appid, { urgent })} onUpdateAssignees={(appid, assignees) => patchGame(appid, { assignees })} onClickNotes={handleCardNotesClick} genreColors={boardGenreColors} hiddenCardIds={isTaskBoard ? hiddenCardIds : new Set()} showHiddenCards={showHiddenCards} onHideCard={isTaskBoard ? hideCard : undefined} onUnhideCard={isTaskBoard ? unhideCard : undefined} />
+            <KanbanBoard columns={columns} byColumn={byColumn} dragging={dragging} setDragging={setDragging} moveGame={moveGame} onCardClick={g => { setSelectedGameDefaultTab('infos'); setSelectedGame(g); }} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} onRenameColumn={renameColumn} onDeleteColumn={deleteColumn} onSetEmoji={setColumnEmoji} onReorderColumns={reorderColumns} onAddToColumn={colId => { setSearchTargetCol(colId); setShowSearch(true); }} onReorderGames={reorderGamesInColumn} isTaskBoard={isTaskBoard} appUsers={appUsers} compactView={compactView} leftOffset={infoPanelLocked && infoPanelSide === 'left' ? GAME_INFO_PANEL_WIDTH : 0} rightOffset={infoPanelLocked && infoPanelSide === 'right' ? GAME_INFO_PANEL_WIDTH : 0} onToggleDone={(appid, done) => patchGame(appid, { done })} onToggleUrgent={(appid, urgent) => patchGame(appid, { urgent })} onUpdateAssignees={(appid, assignees) => patchGame(appid, { assignees })} onClickNotes={handleCardNotesClick} genreColors={boardGenreColors} hiddenCardIds={new Set()} showHiddenCards={false} onHideCard={undefined} onUnhideCard={undefined} />
           )
         ) : !activeBoardId ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Crée un board pour commencer</div>
         ) : loading ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Chargement...</div>
         ) : (
-          <KanbanBoard columns={columns} byColumn={byColumn} dragging={dragging} setDragging={setDragging} moveGame={moveGame} onCardClick={g => { setSelectedGameDefaultTab('infos'); setSelectedGame(g); }} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} onRenameColumn={renameColumn} onDeleteColumn={deleteColumn} onSetEmoji={setColumnEmoji} onReorderColumns={reorderColumns} onAddToColumn={colId => { setSearchTargetCol(colId); setShowSearch(true); }} onReorderGames={reorderGamesInColumn} isTaskBoard={isTaskBoard} appUsers={appUsers} compactView={compactView} leftOffset={infoPanelLocked && infoPanelSide === 'left' ? GAME_INFO_PANEL_WIDTH : 0} rightOffset={infoPanelLocked && infoPanelSide === 'right' ? GAME_INFO_PANEL_WIDTH : 0} onToggleDone={(appid, done) => patchGame(appid, { done })} onToggleUrgent={(appid, urgent) => patchGame(appid, { urgent })} onUpdateAssignees={(appid, assignees) => patchGame(appid, { assignees })} onClickNotes={handleCardNotesClick} genreColors={boardGenreColors} hiddenCardIds={isTaskBoard ? hiddenCardIds : new Set()} showHiddenCards={showHiddenCards} onHideCard={isTaskBoard ? hideCard : undefined} onUnhideCard={isTaskBoard ? unhideCard : undefined} />
+          <KanbanBoard columns={columns} byColumn={byColumn} dragging={dragging} setDragging={setDragging} moveGame={moveGame} onCardClick={g => { setSelectedGameDefaultTab('infos'); setSelectedGame(g); }} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} onRenameColumn={renameColumn} onDeleteColumn={deleteColumn} onSetEmoji={setColumnEmoji} onReorderColumns={reorderColumns} onAddToColumn={colId => { setSearchTargetCol(colId); setShowSearch(true); }} onReorderGames={reorderGamesInColumn} isTaskBoard={isTaskBoard} appUsers={appUsers} compactView={compactView} leftOffset={infoPanelLocked && infoPanelSide === 'left' ? GAME_INFO_PANEL_WIDTH : 0} rightOffset={infoPanelLocked && infoPanelSide === 'right' ? GAME_INFO_PANEL_WIDTH : 0} onToggleDone={(appid, done) => patchGame(appid, { done })} onToggleUrgent={(appid, urgent) => patchGame(appid, { urgent })} onUpdateAssignees={(appid, assignees) => patchGame(appid, { assignees })} onClickNotes={handleCardNotesClick} genreColors={boardGenreColors} hiddenCardIds={new Set()} showHiddenCards={false} onHideCard={undefined} onUnhideCard={undefined} />
         )}
         </div>
       </div>
@@ -1934,7 +1891,7 @@ export default function App() {
       }
       {showAdmin && <AdminPanel token={token} currentUser={currentUser} onClose={() => setShowAdmin(false)} />}
       {showSteamSettings && <SteamSettings token={token} onSave={handleSteamSave} onClose={() => setShowSteamSettings(false)} />}
-      {showProfile && <ProfilePage token={token} currentUser={currentUser} onClose={() => setShowProfile(false)} />}
+      {showProfile && <ProfilePage token={token} currentUser={currentUser} onClose={() => setShowProfile(false)} onSaveSteam={handleSteamSave} />}
       {/* Game stats widget — shown only when viewing a Steam-based board */}
       {isTaskBoard && !showHome && !isMobile && (
         <GameStatsWidget

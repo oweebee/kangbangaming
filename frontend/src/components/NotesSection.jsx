@@ -44,7 +44,6 @@ export default function NotesSection({ notes: externalNotes = [], onSave, onDraf
   const [newNote, setNewNote]     = useState('');
   const [editingId, setEditingId] = useState(null);
   const [editText, setEditText]   = useState('');
-  const [expanded, setExpanded]   = useState(false);
 
   const isAdmin = currentUser?.role === 'admin';
   // Peut modifier/supprimer : admin OU auteur de la note
@@ -54,7 +53,6 @@ export default function NotesSection({ notes: externalNotes = [], onSave, onDraf
 
   useEffect(() => {
     setNotes(externalNotes);
-    setExpanded(false);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [externalNotes.length, externalNotes.map(n => n.id).join(',')]);
 
@@ -89,8 +87,6 @@ export default function NotesSection({ notes: externalNotes = [], onSave, onDraf
 
   // Display newest first — sort by createdAt descending (handles both old and new data)
   const sorted = [...notes].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  const visible    = expanded ? sorted : sorted.slice(0, 3);
-  const hiddenCount = sorted.length - visible.length;
 
   const labelStyle = {
     display: 'block', fontSize: compact ? 14 : 12,
@@ -138,10 +134,10 @@ export default function NotesSection({ notes: externalNotes = [], onSave, onDraf
         }}
       >+ Ajouter la note</button>
 
-      {/* ── Existing notes — newest first ── */}
+      {/* ── Existing notes — newest first, scroll auto si trop de notes ── */}
       {notes.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {visible.map(note => {
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: compact ? 320 : 260, overflowY: 'auto', paddingRight: 2 }}>
+          {sorted.map(note => {
             // Priorité à currentUser pour ses propres notes (données Steam toujours dispo)
             const author = note.authorId
               ? (note.authorId === currentUser?.id ? currentUser : appUsers.find(u => u.id === note.authorId))
@@ -220,16 +216,6 @@ export default function NotesSection({ notes: externalNotes = [], onSave, onDraf
             </div>
             );
           })}
-          {hiddenCount > 0 && (
-            <button onClick={() => setExpanded(true)}
-              style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: 11, cursor: 'pointer', padding: '3px 0', textAlign: 'left', fontWeight: 600 }}
-            >↓ Voir les {hiddenCount} note{hiddenCount > 1 ? 's' : ''} plus ancienne{hiddenCount > 1 ? 's' : ''}</button>
-          )}
-          {expanded && notes.length > 3 && (
-            <button onClick={() => setExpanded(false)}
-              style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 11, cursor: 'pointer', padding: '2px 0', textAlign: 'left' }}
-            >↑ Réduire</button>
-          )}
         </div>
       )}
     </div>
