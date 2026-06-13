@@ -34,10 +34,11 @@ export default function UpcomingPanel({ token }) {
 
   const h = { Authorization: `Bearer ${token}` };
 
-  const fetchUpcoming = useCallback(async () => {
+  const fetchUpcoming = useCallback(async (force = false) => {
     setLoading(true); setError('');
     try {
-      const res = await fetch(`${API}/steam/upcoming`, { headers: h });
+      const url = force ? `${API}/steam/upcoming?force=1` : `${API}/steam/upcoming`;
+      const res = await fetch(url, { headers: h });
       if (!res.ok) throw new Error('Erreur API');
       const data = await res.json();
       setGames(data);
@@ -70,9 +71,9 @@ export default function UpcomingPanel({ token }) {
             )}
           </div>
           <button
-            onClick={fetchUpcoming}
+            onClick={() => fetchUpcoming(true)}
             disabled={loading}
-            title="Actualiser"
+            title="Forcer le rechargement"
             style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: loading ? 'default' : 'pointer', padding: 2, display: 'flex', alignItems: 'center', opacity: loading ? 0.4 : 0.7, transition: 'opacity .15s' }}
           >
             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"

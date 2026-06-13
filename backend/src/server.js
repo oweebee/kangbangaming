@@ -478,6 +478,20 @@ function parseReleaseDate(str) {
   return isNaN(d.getTime()) ? null : d;
 }
 
+// Parse les appids depuis le HTML de résultats Steam search
+function parseSteamSearchHtml(html) {
+  const results = [];
+  // Chaque résultat : data-ds-appid="XXXXX" ... <span class="title">NOM</span>
+  const appidRx = /data-ds-appid="(\d+)"/g;
+  const titleRx = /<span class="title">([^<]+)<\/span>/g;
+  const appids = [...html.matchAll(appidRx)].map(m => parseInt(m[1]));
+  const titles = [...html.matchAll(titleRx)].map(m => m[1].trim());
+  for (let i = 0; i < appids.length; i++) {
+    results.push({ id: appids[i], name: titles[i] || '', capsuleImage: null, finalPrice: null });
+  }
+  return results;
+}
+
 // Récupère et déduplique les items depuis plusieurs endpoints Steam
 async function fetchSteamUpcomingItems() {
   const seen = new Set();
@@ -485,37 +499,47 @@ async function fetchSteamUpcomingItems() {
 
   // Source 1 : featured coming_soon (jeux mis en avant)
   try {
-    const r = await fetch('https://store.steampowered.com/api/featuredcategories?cc=FR&l=english', {
+    const r = await fetch('https://store.steampowered.com/api/featuredcategories?cc=FR&l=french', {
       headers: { 'User-Agent': 'Mozilla/5.0' },
     });
     const d = await r.json();
     for (const it of (d.coming_soon?.items || [])) {
       if (!seen.has(it.id)) { seen.add(it.id); items.push({ id: it.id, name: it.name, capsuleImage: it.large_capsule_image || it.small_capsule_image || null, finalPrice: it.final_price }); }
     }
-  } catch {}
+  } catch (e) { console.error('[upcoming src1]', e.message); }
 
-  // Source 2 : recherche Steam "comingsoon" triée par date (inclut DLC et sorties moyennes)
+  // Source 2 : recherche Steam "comingsoon" — jeux (category1=998)
   try {
-    const r = await fetch('https://store.steampowered.com/search/results/?filter=comingsoon&sort_by=Release_Date&cc=FR&l=french&json=1&count=100', {
-      headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' },
+    const r = await fetch('https://store.steampowered.com/search/results/?filter=comingsoon&sort_by=Release_Date&cc=FR&l=french&json=1&count=100&category1=998', {
+      headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json, text/javascript' },
     });
     const d = await r.json();
-    // results_html contient des <a> data-ds-appid
-    const matches = (d.results_html || '').matchAll(/data-ds-appid="(\d+)"[^>]*>[\s\S]*?class="title"[^>]*>([^<]+)/g);
-    for (const m of matches) {
-      const id = parseInt(m[1]);
-      if (!seen.has(id)) { seen.add(id); items.push({ id, name: m[2].trim(), capsuleImage: null, finalPrice: null }); }
+    for (const it of parseSteamSearchHtml(d.results_html || '')) {
+      if (!seen.has(it.id)) { seen.add(it.id); items.push(it); }
     }
-  } catch {}
+  } catch (e) { console.error('[upcoming src2]', e.message); }
+
+  // Source 3 : recherche Steam "comingsoon" — DLC (category1=21)
+  try {
+    const r = await fetch('https://store.steampowered.com/search/results/?filter=comingsoon&sort_by=Release_Date&cc=FR&l=french&json=1&count=100&category1=21', {
+      headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json, text/javascript' },
+    });
+    const d = await r.json();
+    for (const it of parseSteamSearchHtml(d.results_html || '')) {
+      if (!seen.has(it.id)) { seen.add(it.id); items.push(it); }
+    }
+  } catch (e) { console.error('[upcoming src3]', e.message); }
 
   return items;
 }
 
 app.get('/api/steam/upcoming', requireAuth, async (req, res) => {
   const now = Date.now();
-  if (upcomingCache.data && now - upcomingCache.fetchedAt < UPCOMING_TTL) {
+  const force = req.query.force === '1';
+  if (!force && upcomingCache.data && now - upcomingCache.fetchedAt < UPCOMING_TTL) {
     return res.json(upcomingCache.data);
   }
+  if (force) upcomingCache = { data: null, fetchedAt: 0 };
   try {
     const items = await fetchSteamUpcomingItems();
 
