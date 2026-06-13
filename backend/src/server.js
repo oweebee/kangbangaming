@@ -582,25 +582,30 @@ app.get('/api/steam/upcoming', requireAuth, async (req, res) => {
     const results = await Promise.allSettled(
       items.slice(0, 60).map(async item => {
         try {
-          const r = await fetch(`https://store.steampowered.com/api/appdetails?appids=${item.id}&filters=release_date,basic,price_overview&cc=FR&l=english`, {
-            headers: { 'User-Agent': 'Mozilla/5.0' },
-          });
-          const d = await r.json();
-          const info = d?.[item.id]?.data;
+          const hdrs = { 'User-Agent': 'Mozilla/5.0' };
+          const [detailsRes, reviewsRes] = await Promise.allSettled([
+            fetch(`https://store.steampowered.com/api/appdetails?appids=${item.id}&filters=release_date,basic&cc=FR&l=english`, { headers: hdrs }),
+            fetch(`https://store.steampowered.com/appreviews/${item.id}?json=1&language=all&purchase_type=all&num_per_page=0`, { headers: hdrs }),
+          ]);
+          const info = detailsRes.status === 'fulfilled' ? (await detailsRes.value.json())?.[item.id]?.data : null;
+          const reviewData = reviewsRes.status === 'fulfilled' ? (await reviewsRes.value.json())?.query_summary : null;
           const rawDate = info?.release_date?.date || '';
           const releaseDate = parseReleaseDate(rawDate);
-          const comingSoon = info?.release_date?.coming_soon ?? true;
-          const priceVal = info?.price_overview?.final ?? (item.finalPrice ?? null);
           return {
             appid: item.id,
             name: info?.name || item.name,
             type: info?.type || 'game',
             releaseDate: releaseDate ? releaseDate.toISOString() : null,
             releaseDateStr: rawDate,
-            comingSoon,
+            comingSoon: info?.release_date?.coming_soon ?? true,
             headerImage: info?.header_image || `https://cdn.akamai.steamstatic.com/steam/apps/${item.id}/header.jpg`,
             capsuleImage: item.capsuleImage || null,
-            price: priceVal != null ? (priceVal / 100).toFixed(2) : null,
+            shortDescription: info?.short_description || '',
+            developers: info?.developers || [],
+            genres: (info?.genres || []).map(g => g.description).slice(0, 3),
+            reviewScore: reviewData?.review_score ?? null,
+            reviewScoreDesc: reviewData?.review_score_desc || '',
+            reviewTotal: reviewData?.total_reviews ?? 0,
           };
         } catch { return null; }
       })

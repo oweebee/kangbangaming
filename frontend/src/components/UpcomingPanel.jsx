@@ -12,6 +12,20 @@ function formatDate(isoDate) {
   return new Date(isoDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
 }
 
+const REVIEW_FR = { 'Overwhelmingly Positive': 'Vraiment positif', 'Very Positive': 'Très positif', 'Positive': 'Positif', 'Mostly Positive': 'Plutôt positif', 'Mixed': 'Mitigé', 'Mostly Negative': 'Plutôt négatif', 'Negative': 'Négatif', 'Very Negative': 'Très négatif', 'Overwhelmingly Negative': 'Extrêmement négatif' };
+
+function ReviewBadge({ score, desc, total }) {
+  if (!desc || !total) return null;
+  const s = score ?? 0;
+  const color = s >= 8 ? '#4cd882' : s >= 5 ? '#f5c518' : '#f87575';
+  const fr = REVIEW_FR[desc] || desc;
+  return (
+    <span style={{ fontSize: 9, color, background: `${color}15`, border: `1px solid ${color}35`, borderRadius: 3, padding: '1px 5px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+      ★ {fr}
+    </span>
+  );
+}
+
 function DaysBadge({ days }) {
   let bg, color, label;
   if (days === 0) { bg = 'rgba(30,120,50,0.25)'; color = '#4cd882'; label = "Aujourd'hui !"; }
@@ -126,7 +140,64 @@ export default function UpcomingPanel({ token }) {
         {!loading && !error && games.map((game, idx) => {
           const days = daysUntil(game.releaseDate);
           const isToday = days === 0;
-          const isVeryClose = days <= 3;
+          const isVeryClose = days <= 3 && !isToday;
+
+          // Carte élargie pour les sorties du jour
+          if (isToday) {
+            return (
+              <a
+                key={game.appid}
+                href={`https://store.steampowered.com/app/${game.appid}/`}
+                target="_blank"
+                rel="noreferrer"
+                style={{ display: 'block', textDecoration: 'none', borderBottom: idx < games.length - 1 ? '1px solid var(--border)' : 'none' }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(30,120,50,0.14)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'rgba(30,120,50,0.07)'}
+              >
+                {/* Bannière image */}
+                <div style={{ width: '100%', height: 90, overflow: 'hidden', position: 'relative', background: 'var(--surface2)' }}>
+                  <img src={game.headerImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.85 }} onError={e => { e.target.style.display = 'none'; }} />
+                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.7) 100%)' }} />
+                  {/* Badge aujourd'hui */}
+                  <div style={{ position: 'absolute', top: 7, right: 8 }}>
+                    <DaysBadge days={0} />
+                  </div>
+                  {game.type === 'dlc' && (
+                    <span style={{ position: 'absolute', top: 7, left: 8, fontSize: 8, fontWeight: 800, background: 'rgba(90,60,160,0.85)', color: '#d0b0ff', borderRadius: 3, padding: '2px 5px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>DLC</span>
+                  )}
+                  {/* Nom par-dessus l'image */}
+                  <div style={{ position: 'absolute', bottom: 7, left: 10, right: 10, fontSize: 12, fontWeight: 700, color: '#fff', textShadow: '0 1px 4px rgba(0,0,0,0.8)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {game.name}
+                  </div>
+                </div>
+                {/* Détails */}
+                <div style={{ padding: '7px 12px 9px', background: 'rgba(30,120,50,0.07)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, marginBottom: 4 }}>
+                    {game.developers?.length > 0 && (
+                      <div style={{ fontSize: 10, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        👤 {game.developers[0]}
+                      </div>
+                    )}
+                    <ReviewBadge score={game.reviewScore} desc={game.reviewScoreDesc} total={game.reviewTotal} />
+                  </div>
+                  {game.genres?.length > 0 && (
+                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 5 }}>
+                      {game.genres.map(g => (
+                        <span key={g} style={{ fontSize: 9, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 3, padding: '1px 5px', color: 'var(--text-muted)' }}>{g}</span>
+                      ))}
+                    </div>
+                  )}
+                  {game.shortDescription && (
+                    <div style={{ fontSize: 10, color: 'var(--text-muted)', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                      {game.shortDescription}
+                    </div>
+                  )}
+                </div>
+              </a>
+            );
+          }
+
+          // Carte compacte pour les autres jours
           return (
             <a
               key={game.appid}
@@ -138,25 +209,17 @@ export default function UpcomingPanel({ token }) {
                 padding: '7px 12px',
                 textDecoration: 'none',
                 borderBottom: idx < games.length - 1 ? '1px solid var(--border)' : 'none',
-                background: isToday ? 'rgba(30,120,50,0.08)' : isVeryClose ? 'rgba(61,184,106,0.04)' : 'transparent',
+                background: isVeryClose ? 'rgba(61,184,106,0.04)' : 'transparent',
                 transition: 'background .12s',
               }}
-              onMouseEnter={e => e.currentTarget.style.background = isToday ? 'rgba(30,120,50,0.15)' : 'var(--surface2)'}
-              onMouseLeave={e => e.currentTarget.style.background = isToday ? 'rgba(30,120,50,0.08)' : isVeryClose ? 'rgba(61,184,106,0.04)' : 'transparent'}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--surface2)'}
+              onMouseLeave={e => e.currentTarget.style.background = isVeryClose ? 'rgba(61,184,106,0.04)' : 'transparent'}
             >
-              {/* Capsule image */}
               <div style={{ width: 56, height: 36, borderRadius: 5, overflow: 'hidden', flexShrink: 0, background: 'var(--surface2)' }}>
-                <img
-                  src={game.capsuleImage || game.headerImage}
-                  alt=""
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  onError={e => { e.target.style.display = 'none'; }}
-                />
+                <img src={game.capsuleImage || game.headerImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none'; }} />
               </div>
-
-              {/* Info */}
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 3 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 2 }}>
                   {game.type === 'dlc' && (
                     <span style={{ fontSize: 8, fontWeight: 800, background: 'rgba(90,60,160,0.3)', color: '#b090f0', borderRadius: 3, padding: '1px 4px', flexShrink: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>DLC</span>
                   )}
@@ -164,14 +227,17 @@ export default function UpcomingPanel({ token }) {
                     {game.name}
                   </div>
                 </div>
+                {game.developers?.length > 0 && (
+                  <div style={{ fontSize: 9, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 2, opacity: 0.8 }}>
+                    {game.developers[0]}{game.genres?.length > 0 ? ` · ${game.genres[0]}` : ''}
+                  </div>
+                )}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                  <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
-                    📅 {formatDate(game.releaseDate)}
-                  </span>
+                  <span style={{ fontSize: 9, color: 'var(--text-muted)' }}>📅 {formatDate(game.releaseDate)}</span>
                   <DaysBadge days={days} />
+                  <ReviewBadge score={game.reviewScore} desc={game.reviewScoreDesc} total={game.reviewTotal} />
                 </div>
               </div>
-
             </a>
           );
         })}
