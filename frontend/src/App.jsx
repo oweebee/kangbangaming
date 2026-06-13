@@ -68,15 +68,36 @@ function BoardEmojiPicker({ current, onSelect, onClose }) {
   );
 }
 
+// ── Helpers couleurs genre Steam ─────────────────────────────────────────────
+function getSteamGenreColor(genre) {
+  const g = (genre || '').toLowerCase();
+  if (g.includes('action') || g.includes('shooter'))  return '#e8573a';
+  if (g.includes('rpg') || g.includes('role'))        return '#9455cc';
+  if (g.includes('strategy'))                         return '#2ea86e';
+  if (g.includes('simulation') || g.includes('sim'))  return '#3da8c8';
+  if (g.includes('sport'))                            return '#40c840';
+  if (g.includes('racing'))                           return '#e87820';
+  if (g.includes('adventure'))                        return '#d4a020';
+  if (g.includes('puzzle') || g.includes('casual'))   return '#e040b0';
+  if (g.includes('horror'))                           return '#882299';
+  if (g.includes('indie'))                            return '#5090d0';
+  if (g.includes('mmo') || g.includes('massively'))   return '#2870b0';
+  if (g.includes('fighting'))                         return '#e06020';
+  return '#66c0f4'; // fallback Steam bleu
+}
+function getSteamAppId(gameIconUrl) {
+  return gameIconUrl?.match(/apps\/(\d+)\//)?.[1] || null;
+}
+
 const API = import.meta.env.VITE_API_URL || '/api';
 
-function HomeBoardCard({ board, isPublic, isFav, onToggleFav, onClick }) {
+function HomeBoardCard({ board, isPublic, isFav, onToggleFav, onClick, typeColor = '#66c0f4' }) {
   const [favHover, setFavHover] = useState(false);
   return (
     <div
       style={{
         background: 'var(--surface1)',
-        border: `2px solid ${isFav ? '#f5c518' : 'var(--border)'}`,
+        border: `2px solid ${isFav ? (isPublic ? '#3db86a' : '#f5c518') : typeColor}`,
         borderRadius: 12, overflow: 'hidden',
         display: 'flex', flexDirection: 'column',
       }}
@@ -256,6 +277,9 @@ export default function App() {
 
   // Global search: pending game to open after board loads
   const [pendingOpenGameId, setPendingOpenGameId] = useState(null);
+
+  // Genre colors per Steam appid — lazy-fetched
+  const [boardGenreColors, setBoardGenreColors] = useState({});
 
   // Board game search
   const [boardSearchQuery, setBoardSearchQuery] = useState('');
@@ -458,6 +482,29 @@ export default function App() {
     fetchGames(activeBoardId);
     setInfoPanelLocked(false);
   }, [activeBoardId]);
+
+  // Lazy-fetch genre colors pour les boards Steam (cached côté serveur)
+  useEffect(() => {
+    if (!token) return;
+    const steamBoards = [...boards, ...favBoards].filter(b => b.gameIcon);
+    steamBoards.forEach(b => {
+      const appid = getSteamAppId(b.gameIcon);
+      if (!appid) return;
+      setBoardGenreColors(prev => {
+        if (prev[appid]) return prev; // déjà fetché
+        fetch(`${API}/steam/gameinfo/${appid}`, { headers: { Authorization: `Bearer ${token}` } })
+          .then(r => r.json())
+          .then(info => {
+            if (info.genres?.length) {
+              const color = getSteamGenreColor(info.genres[0]);
+              setBoardGenreColors(p => ({ ...p, [appid]: color }));
+            }
+          })
+          .catch(() => {});
+        return prev;
+      });
+    });
+  }, [boards, favBoards, token]);
 
   // Memoize Steam appId — only changes when board identity/image changes, NOT on every card update.
   // Having games in a useMemo (vs useEffect) means the effect only re-fires when the *string value* changes.
@@ -894,7 +941,8 @@ export default function App() {
                   <HomeBoardCard board={b} isPublic
                     isFav={favBoards.some(f => f.id === b.id)}
                     onToggleFav={(cur) => toggleFavorite(b.id, b, cur)}
-                    onClick={() => openPublicBoard(b)} />
+                    onClick={() => openPublicBoard(b)}
+                    typeColor={getBoardTypeColor(b)} />
                 </div>
               ))}
             </div>
@@ -928,7 +976,7 @@ export default function App() {
                         onDrop={e => { e.preventDefault(); handleHomeDrop('fav', b.id, setHomeFavOrder, 'homeFavOrder'); }}
                         style={{ opacity: homeDragId === b.id ? 0.4 : 1, outline: homeDragOver === `fav_${b.id}` && homeDragId !== b.id ? '2px dashed #f5c518' : 'none', borderRadius: 12, cursor: 'grab' }}
                       >
-                        <HomeBoardCard board={b} isFav onToggleFav={(cur) => togglePersonalFavorite(b.id, cur)} onClick={() => openBoard(b)} />
+                        <HomeBoardCard board={b} isFav onToggleFav={(cur) => togglePersonalFavorite(b.id, cur)} onClick={() => openBoard(b)} typeColor={getBoardTypeColor(b)} />
                       </div>
                     ))}
                   </div>
@@ -955,7 +1003,7 @@ export default function App() {
                         onDrop={e => { e.preventDefault(); handleHomeDrop('other', b.id, setHomeOtherOrder, 'homeOtherOrder'); }}
                         style={{ opacity: homeDragId === b.id ? 0.4 : 1, outline: homeDragOver === `other_${b.id}` && homeDragId !== b.id ? '2px dashed #f5a500' : 'none', borderRadius: 12, cursor: 'grab' }}
                       >
-                        <HomeBoardCard board={b} isFav={false} onToggleFav={(cur) => togglePersonalFavorite(b.id, cur)} onClick={() => openBoard(b)} />
+                        <HomeBoardCard board={b} isFav={false} onToggleFav={(cur) => togglePersonalFavorite(b.id, cur)} onClick={() => openBoard(b)} typeColor={getBoardTypeColor(b)} />
                       </div>
                     ))}
                   </div>
@@ -1053,13 +1101,17 @@ export default function App() {
             }}
           >
             {b.gameIcon ? (
-              <img src={b.gameIcon} alt="" style={{ width: 34, height: 34, objectFit: 'cover', borderRadius: '50%', flexShrink: 0, border: '1.5px solid white' }} />
+              <div style={{ width: 38, height: 38, borderRadius: '50%', background: `linear-gradient(90deg, #f5c518 50%, ${getBoardTypeColor(b)} 50%)`, padding: 2, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <img src={b.gameIcon} alt="" style={{ width: 34, height: 34, objectFit: 'cover', borderRadius: '50%', display: 'block' }} />
+              </div>
             ) : (
               <div style={{ position: 'relative' }}>
-                <button
-                  onClick={e => { e.stopPropagation(); setEmojiPickerFor(emojiPickerFor === b.id ? null : b.id); }}
-                  style={{ background: b.emoji ? 'transparent' : 'var(--surface3)', border: '1.5px solid white', borderRadius: 4, width: 34, height: 34, fontSize: b.emoji ? 18 : 11, cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
-                >{b.emoji || '+'}</button>
+                <div style={{ width: 38, height: 38, borderRadius: '50%', background: `linear-gradient(90deg, #f5c518 50%, ${getBoardTypeColor(b)} 50%)`, padding: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <button
+                    onClick={e => { e.stopPropagation(); setEmojiPickerFor(emojiPickerFor === b.id ? null : b.id); }}
+                    style={{ background: 'var(--surface2)', border: 'none', borderRadius: '50%', width: 34, height: 34, fontSize: b.emoji ? 18 : 11, cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  >{b.emoji || '+'}</button>
+                </div>
                 {emojiPickerFor === b.id && (
                   <BoardEmojiPicker current={b.emoji || ''} onSelect={emoji => { setBoardEmoji(b.id, emoji); setEmojiPickerFor(null); }} onClose={() => setEmojiPickerFor(null)} />
                 )}
@@ -1111,13 +1163,17 @@ export default function App() {
             }}
           >
             {b.gameIcon ? (
-              <img src={b.gameIcon} alt="" style={{ width: 34, height: 34, objectFit: 'cover', borderRadius: '50%', flexShrink: 0, border: '1.5px solid white' }} />
+              <div style={{ width: 38, height: 38, borderRadius: '50%', background: getBoardTypeColor(b), padding: 2, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <img src={b.gameIcon} alt="" style={{ width: 34, height: 34, objectFit: 'cover', borderRadius: '50%', display: 'block' }} />
+              </div>
             ) : (
               <div style={{ position: 'relative' }}>
-                <button
-                  onClick={e => { e.stopPropagation(); setEmojiPickerFor(emojiPickerFor === b.id ? null : b.id); }}
-                  style={{ background: b.emoji ? 'transparent' : 'var(--surface3)', border: '1.5px solid white', borderRadius: 4, width: 34, height: 34, fontSize: b.emoji ? 18 : 11, cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
-                >{b.emoji || '+'}</button>
+                <div style={{ width: 38, height: 38, borderRadius: '50%', background: getBoardTypeColor(b), padding: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <button
+                    onClick={e => { e.stopPropagation(); setEmojiPickerFor(emojiPickerFor === b.id ? null : b.id); }}
+                    style={{ background: 'var(--surface2)', border: 'none', borderRadius: '50%', width: 34, height: 34, fontSize: b.emoji ? 18 : 11, cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  >{b.emoji || '+'}</button>
+                </div>
                 {emojiPickerFor === b.id && (
                   <BoardEmojiPicker current={b.emoji || ''} onSelect={emoji => { setBoardEmoji(b.id, emoji); setEmojiPickerFor(null); }} onClose={() => setEmojiPickerFor(null)} />
                 )}
@@ -1165,9 +1221,13 @@ export default function App() {
               onMouseLeave={e => { if (favDragOverId !== b.id) e.currentTarget.style.background = 'transparent'; }}
             >
               {b.gameIcon ? (
-                <img src={b.gameIcon} alt="" style={{ width: 34, height: 34, objectFit: 'cover', borderRadius: '50%', flexShrink: 0, border: '1.5px solid white', opacity: 0.85 }} />
+                <div style={{ width: 38, height: 38, borderRadius: '50%', background: `linear-gradient(90deg, #3db86a 50%, ${getBoardTypeColor(b)} 50%)`, padding: 2, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <img src={b.gameIcon} alt="" style={{ width: 34, height: 34, objectFit: 'cover', borderRadius: '50%', display: 'block' }} />
+                </div>
               ) : (
-                <span style={{ fontSize: 20, flexShrink: 0 }}>{b.emoji || '🎮'}</span>
+                <div style={{ width: 38, height: 38, borderRadius: '50%', background: `linear-gradient(90deg, #3db86a 50%, ${getBoardTypeColor(b)} 50%)`, padding: 2, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>{b.emoji || '🎮'}</div>
+                </div>
               )}
               <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 14, fontWeight: 700 }}>{b.name}</span>
               <svg viewBox="0 0 24 24" width="10" height="10" fill="var(--accent)" stroke="var(--accent)" strokeWidth="1.5" style={{ flexShrink: 0, opacity: 0.7 }}><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
@@ -1350,6 +1410,13 @@ export default function App() {
       </div>
     );
   }
+
+  // ── Couleur de type pour les boards (genre Steam ou violet perso) ────────────
+  const getBoardTypeColor = (b) => {
+    if (!b?.gameIcon) return '#6b3fa0'; // board perso = violet foncé
+    const appid = getSteamAppId(b.gameIcon);
+    return (appid && boardGenreColors[appid]) ? boardGenreColors[appid] : '#66c0f4';
+  };
 
   // ── Desktop layout ────────────────────────────────────────────────────────
 

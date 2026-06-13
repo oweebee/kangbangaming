@@ -22,53 +22,66 @@ const inputStyle = {
 export function StatusToggles({ isDone, onToggleDone, isUrgent, onToggleUrgent }) {
   return (
     <div style={{ display: 'flex', gap: 10 }}>
+
+      {/* ── Terminée ── */}
       <button
         type="button"
         onClick={onToggleDone}
         style={{
-          flex: 1, display: 'flex', alignItems: 'center', gap: 8,
+          flex: 1, display: 'flex', alignItems: 'center', gap: 10,
           background: isDone ? 'rgba(61,184,106,0.12)' : 'var(--surface2)',
           border: `1.5px solid ${isDone ? '#3db86a' : 'var(--border)'}`,
           borderRadius: 9, padding: '11px 14px', cursor: 'pointer',
           transition: 'all .15s', textAlign: 'left',
-          boxShadow: isDone ? '0 0 10px rgba(61,184,106,0.2)' : 'none',
+          boxShadow: isDone ? '0 0 12px rgba(61,184,106,0.18)' : 'none',
         }}
       >
+        {/* Cercle indicateur */}
         <div style={{
-          width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
-          border: `2px solid ${isDone ? '#3db86a' : 'rgba(255,255,255,0.25)'}`,
+          width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
+          border: `2px solid ${isDone ? '#3db86a' : 'rgba(255,255,255,0.2)'}`,
           background: isDone ? '#3db86a' : 'transparent',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           transition: 'all .15s',
         }}>
-          {isDone && (
-            <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="20 6 9 17 4 12"/>
-            </svg>
-          )}
+          {isDone
+            ? <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            : <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          }
         </div>
         <span style={{ fontSize: 13, fontWeight: 700, color: isDone ? '#3db86a' : 'var(--text)' }}>
-          {isDone ? 'Terminée ✓' : 'Terminée'}
+          Terminée
         </span>
       </button>
 
+      {/* ── Urgent ── */}
       <button
         type="button"
         onClick={onToggleUrgent}
         style={{
-          flex: 1, display: 'flex', alignItems: 'center', gap: 8,
+          flex: 1, display: 'flex', alignItems: 'center', gap: 10,
           background: isUrgent ? 'rgba(220,40,40,0.12)' : 'var(--surface2)',
           border: `1.5px solid ${isUrgent ? 'rgba(220,60,60,0.6)' : 'var(--border)'}`,
           borderRadius: 9, padding: '11px 14px', cursor: 'pointer',
           transition: 'all .15s', textAlign: 'left',
-          boxShadow: isUrgent ? '0 0 10px rgba(220,40,40,0.25)' : 'none',
+          boxShadow: isUrgent ? '0 0 12px rgba(220,40,40,0.2)' : 'none',
         }}
       >
-        <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>⚠</span>
-        <span style={{ fontSize: 13, fontWeight: 700, color: isUrgent ? '#ff6060' : 'var(--text-muted)' }}>
-          {isUrgent ? 'Urgent !' : 'Urgent'}
+        {/* Cercle indicateur */}
+        <div style={{
+          width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
+          border: `2px solid ${isUrgent ? '#dc3c3c' : 'rgba(255,255,255,0.2)'}`,
+          background: isUrgent ? '#dc3c3c' : 'transparent',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          transition: 'all .15s',
+          fontSize: 13, fontWeight: 900, lineHeight: 1,
+          color: isUrgent ? '#fff' : 'rgba(255,255,255,0.25)',
+        }}>!</div>
+        <span style={{ fontSize: 13, fontWeight: 700, color: isUrgent ? '#ff6060' : 'var(--text)' }}>
+          Urgent
         </span>
       </button>
+
     </div>
   );
 }
