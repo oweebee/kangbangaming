@@ -68,11 +68,17 @@ function BoardEmojiPicker({ current, onSelect, onClose }) {
   );
 }
 
-// ── Helpers couleurs genre Steam ─────────────────────────────────────────────
-function getSteamGenreColor(genre) {
-  const g = (genre || '').toLowerCase();
-  if (g.includes('action') || g.includes('shooter'))  return '#e8573a';
+// ── Helpers boards ────────────────────────────────────────────────────────────
+function getSteamAppId(gameIconUrl) {
+  return gameIconUrl?.match(/apps\/(\d+)\//)?.[1] || null;
+}
+// Couleur basée sur les genres Steam officiels (tous testés ensemble)
+function getSteamGenreColor(genres) {
+  const g = (Array.isArray(genres) ? genres.join(' ') : (genres || '')).toLowerCase();
+  if (g.includes('mmo') || g.includes('massively'))   return '#2870b0';
   if (g.includes('rpg') || g.includes('role'))        return '#9455cc';
+  if (g.includes('hack') || g.includes('slash'))      return '#c03030';
+  if (g.includes('action') || g.includes('shooter'))  return '#e8573a';
   if (g.includes('strategy'))                         return '#2ea86e';
   if (g.includes('simulation') || g.includes('sim'))  return '#3da8c8';
   if (g.includes('sport'))                            return '#40c840';
@@ -80,13 +86,9 @@ function getSteamGenreColor(genre) {
   if (g.includes('adventure'))                        return '#d4a020';
   if (g.includes('puzzle') || g.includes('casual'))   return '#e040b0';
   if (g.includes('horror'))                           return '#882299';
-  if (g.includes('indie'))                            return '#5090d0';
-  if (g.includes('mmo') || g.includes('massively'))   return '#2870b0';
   if (g.includes('fighting'))                         return '#e06020';
-  return '#66c0f4'; // fallback Steam bleu
-}
-function getSteamAppId(gameIconUrl) {
-  return gameIconUrl?.match(/apps\/(\d+)\//)?.[1] || null;
+  if (g.includes('indie'))                            return '#5090d0';
+  return null; // genre inconnu → le caller utilisera le fallback Steam blue
 }
 
 const API = import.meta.env.VITE_API_URL || '/api';
@@ -278,8 +280,9 @@ export default function App() {
   // Global search: pending game to open after board loads
   const [pendingOpenGameId, setPendingOpenGameId] = useState(null);
 
-  // Genre colors per Steam appid — lazy-fetched
+  // Couleurs de genre Steam par appid (lazy-fetched)
   const [boardGenreColors, setBoardGenreColors] = useState({});
+  const fetchedGenreIds = useRef(new Set());
 
   // Board game search
   const [boardSearchQuery, setBoardSearchQuery] = useState('');
@@ -483,24 +486,21 @@ export default function App() {
     setInfoPanelLocked(false);
   }, [activeBoardId]);
 
-  // Lazy-fetch genre colors pour les boards Steam (cached côté serveur)
-  const fetchedGenreIds = useRef(new Set());
+
+  // Fetch genres Steam pour colorier les liserets des boards
   useEffect(() => {
     if (!token) return;
-    const steamBoards = [...boards, ...favBoards].filter(b => b.gameIcon);
-    steamBoards.forEach(b => {
+    [...boards, ...favBoards].forEach(b => {
       const appid = getSteamAppId(b.gameIcon);
       if (!appid || fetchedGenreIds.current.has(appid)) return;
       fetchedGenreIds.current.add(appid);
       fetch(`${API}/steam/gameinfo/${appid}`, { headers: { Authorization: `Bearer ${token}` } })
         .then(r => r.json())
         .then(info => {
-          if (info.genres?.length) {
-            const color = getSteamGenreColor(info.genres[0]);
-            setBoardGenreColors(prev => ({ ...prev, [appid]: color }));
-          }
+          const color = getSteamGenreColor(info.genres);
+          if (color) setBoardGenreColors(prev => ({ ...prev, [appid]: color }));
         })
-        .catch(() => { fetchedGenreIds.current.delete(appid); }); // retry possible en cas d'erreur
+        .catch(() => { fetchedGenreIds.current.delete(appid); });
     });
   }, [boards, favBoards, token]);
 
@@ -854,11 +854,12 @@ export default function App() {
     setHomeDragOver(null);
   }
 
-  // ── Couleur de type pour les boards (genre Steam ou violet perso) ────────────
+  // ── Couleur de type pour les boards ──────────────────────────────────────────
+  // Board perso → violet | Steam → couleur genre si connue, sinon bleu Steam
   const getBoardTypeColor = (b) => {
-    if (!b?.gameIcon) return '#6b3fa0'; // board perso = violet foncé
+    if (!b?.gameIcon) return '#6b3fa0';
     const appid = getSteamAppId(b.gameIcon);
-    return (appid && boardGenreColors[appid]) ? boardGenreColors[appid] : '#66c0f4';
+    return (appid && boardGenreColors[appid]) || '#66c0f4';
   };
 
   const homeView = (
