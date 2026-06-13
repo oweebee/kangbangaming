@@ -31,6 +31,22 @@ function genreColor(genres) {
   return '#66c0f4';
 }
 
+// Catégories Steam → label FR court
+const CAT_FR = {
+  'Single-player': 'Solo', 'Multi-player': 'Multi', 'Co-op': 'Co-op',
+  'Online Co-op': 'Co-op en ligne', 'Local Co-op': 'Co-op local',
+  'PvP': 'PvP', 'Online PvP': 'PvP en ligne', 'Local PvP': 'PvP local',
+  'Cross-Platform Multiplayer': 'Multi multi-plateforme',
+  'Shared/Split Screen Co-op': 'Écran partagé', 'Shared/Split Screen PvP': 'Écran partagé',
+  'MMO': 'MMO',
+};
+const CAT_PRIORITY = ['Single-player','Multi-player','Co-op','Online Co-op','Local Co-op','PvP','Online PvP','MMO'];
+
+function playerTags(categories) {
+  if (!categories?.length) return [];
+  return CAT_PRIORITY.filter(c => categories.includes(c)).map(c => CAT_FR[c]).slice(0, 3);
+}
+
 const REVIEW_FR = { 'Overwhelmingly Positive': 'Vraiment positif', 'Very Positive': 'Très positif', 'Positive': 'Positif', 'Mostly Positive': 'Plutôt positif', 'Mixed': 'Mitigé', 'Mostly Negative': 'Plutôt négatif', 'Negative': 'Négatif', 'Very Negative': 'Très négatif', 'Overwhelmingly Negative': 'Extrêmement négatif' };
 
 function ReviewBadge({ score, desc, total }) {
@@ -39,7 +55,7 @@ function ReviewBadge({ score, desc, total }) {
   const color = s >= 8 ? '#4cd882' : s >= 5 ? '#f5c518' : '#f87575';
   const fr = REVIEW_FR[desc] || desc;
   return (
-    <span style={{ fontSize: 9, color, background: `${color}15`, border: `1px solid ${color}35`, borderRadius: 3, padding: '1px 5px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+    <span style={{ fontSize: 10, color, background: `${color}15`, border: `1px solid ${color}35`, borderRadius: 3, padding: '1px 6px', whiteSpace: 'nowrap', flexShrink: 0 }}>
       ★ {fr}
     </span>
   );
@@ -53,7 +69,7 @@ function DaysBadge({ days }) {
   else if (days <= 14) { bg = 'rgba(180,100,10,0.2)'; color = '#f0a030'; label = `Dans ${days}j`; }
   else { bg = 'rgba(100,100,100,0.18)'; color = 'var(--text-muted)'; label = `Dans ${days}j`; }
   return (
-    <span style={{ background: bg, color, borderRadius: 4, padding: '1px 5px', fontSize: 9, fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0 }}>
+    <span style={{ background: bg, color, borderRadius: 4, padding: '1px 6px', fontSize: 10, fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0 }}>
       {label}
     </span>
   );
@@ -206,15 +222,18 @@ export default function UpcomingPanel({ token }) {
                       )}
                       <ReviewBadge score={game.reviewScore} desc={game.reviewScoreDesc} total={game.reviewTotal} />
                     </div>
-                    {game.genres?.length > 0 && (
+                    {(game.genres?.length > 0 || playerTags(game.categories).length > 0) && (
                       <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 5 }}>
-                        {game.genres.map(g => (
-                          <span key={g} style={{ fontSize: 9, background: `${gc}20`, border: `1px solid ${gc}50`, borderRadius: 3, padding: '1px 5px', color: gc }}>{g}</span>
+                        {game.genres?.map(g => (
+                          <span key={g} style={{ fontSize: 10, background: `${gc}20`, border: `1px solid ${gc}50`, borderRadius: 3, padding: '2px 6px', color: gc }}>{g}</span>
+                        ))}
+                        {playerTags(game.categories).map(t => (
+                          <span key={t} style={{ fontSize: 10, background: 'rgba(102,192,244,0.12)', border: '1px solid rgba(102,192,244,0.35)', borderRadius: 3, padding: '2px 6px', color: '#66c0f4' }}>{t}</span>
                         ))}
                       </div>
                     )}
                     {game.shortDescription && (
-                      <div style={{ fontSize: 10, color: 'var(--text-muted)', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                         {game.shortDescription}
                       </div>
                     )}
@@ -254,19 +273,22 @@ export default function UpcomingPanel({ token }) {
                     </div>
                   </div>
                   {game.developers?.length > 0 && (
-                    <div style={{ fontSize: 9, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 2, opacity: 0.8 }}>
+                    <div style={{ fontSize: 10, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 3, opacity: 0.8 }}>
                       {game.developers[0]}
                     </div>
                   )}
-                  {game.genres?.length > 0 && (
-                    <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', marginBottom: 3 }}>
-                      {game.genres.map(g => (
-                        <span key={g} style={{ fontSize: 8, background: `${gc}20`, border: `1px solid ${gc}50`, borderRadius: 3, padding: '1px 4px', color: gc, whiteSpace: 'nowrap' }}>{g}</span>
+                  {(game.genres?.length > 0 || playerTags(game.categories).length > 0) && (
+                    <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', marginBottom: 4 }}>
+                      {game.genres?.map(g => (
+                        <span key={g} style={{ fontSize: 10, background: `${gc}20`, border: `1px solid ${gc}50`, borderRadius: 3, padding: '1px 5px', color: gc, whiteSpace: 'nowrap' }}>{g}</span>
+                      ))}
+                      {playerTags(game.categories).map(t => (
+                        <span key={t} style={{ fontSize: 10, background: 'rgba(102,192,244,0.12)', border: '1px solid rgba(102,192,244,0.35)', borderRadius: 3, padding: '1px 5px', color: '#66c0f4', whiteSpace: 'nowrap' }}>{t}</span>
                       ))}
                     </div>
                   )}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                    <span style={{ fontSize: 9, color: 'var(--text-muted)' }}>📅 {formatDate(game.releaseDate)}</span>
+                    <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>📅 {formatDate(game.releaseDate)}</span>
                     <DaysBadge days={days} />
                     <ReviewBadge score={game.reviewScore} desc={game.reviewScoreDesc} total={game.reviewTotal} />
                   </div>

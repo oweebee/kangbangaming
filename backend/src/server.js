@@ -584,7 +584,7 @@ app.get('/api/steam/upcoming', requireAuth, async (req, res) => {
         try {
           const hdrs = { 'User-Agent': 'Mozilla/5.0' };
           const [detailsRes, reviewsRes] = await Promise.allSettled([
-            fetch(`https://store.steampowered.com/api/appdetails?appids=${item.id}&filters=release_date,basic,genres,developers&cc=FR&l=english`, { headers: hdrs }),
+            fetch(`https://store.steampowered.com/api/appdetails?appids=${item.id}&filters=release_date,basic,genres,developers,categories&cc=FR&l=english`, { headers: hdrs }),
             fetch(`https://store.steampowered.com/appreviews/${item.id}?json=1&language=all&purchase_type=all&num_per_page=0`, { headers: hdrs }),
           ]);
           const info = detailsRes.status === 'fulfilled' ? (await detailsRes.value.json())?.[item.id]?.data : null;
@@ -603,6 +603,7 @@ app.get('/api/steam/upcoming', requireAuth, async (req, res) => {
             shortDescription: info?.short_description || '',
             developers: info?.developers || [],
             genres: (info?.genres || []).map(g => g.description).slice(0, 3),
+            categories: (info?.categories || []).map(c => c.description),
             reviewScore: reviewData?.review_score ?? null,
             reviewScoreDesc: reviewData?.review_score_desc || '',
             reviewTotal: reviewData?.total_reviews ?? 0,
