@@ -498,63 +498,36 @@ function parseSteamSearchHtml(html) {
   return results;
 }
 
-async function steamSearchUpcoming(category) {
-  const headers = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:120.0) Gecko/20100101 Firefox/120.0',
-    'Accept': 'text/javascript, text/html, application/xml, text/xml, */*',
-    'Accept-Language': 'en-US,en;q=0.5',
-    'X-Requested-With': 'XMLHttpRequest',
-    'X-Prototype-Version': '1.7',
-  };
-  const url = `https://store.steampowered.com/search/results/?filter=comingsoon&sort_by=Release_Date&cc=FR&l=english&json=1&count=100&category1=${category}`;
-  const r = await fetch(url, { headers });
-  const text = await r.text();
-
-  try {
-    const d = JSON.parse(text);
-
-    // Format A : [{desc, items: [{id, name, logo, release_string, ...}]}]
-    // C'est le format retourné par Steam pour ce endpoint
-    if (Array.isArray(d)) {
-      const results = [];
-      for (const section of d) {
-        for (const item of (section.items || [])) {
-          const id = item.id || parseInt((item.logo || item.large_capsule_image || '').match(/\/apps\/(\d+)\//)?.[1] || '0');
-          if (!id) continue;
-          results.push({
-            id,
-            name: item.name || '',
-            dateStr: item.release_string || '',
-            capsuleImage: item.large_capsule_image || item.small_capsule_image || item.logo || null,
-            finalPrice: item.final_price ?? null,
-          });
-        }
-      }
-      return results;
-    }
-
-    // Format B : {results_html: "..."} (ancien format AJAX)
-    if (d.results_html) {
-      return parseSteamSearchHtml(d.results_html);
-    }
-  } catch (e) {
-    console.error('[steamSearchUpcoming] parse error:', e.message);
+// Parse les appids depuis le HTML des pages Steam Charts
+function parseChartsHtml(html) {
+  // Extraire tous les /app/XXXXX/ uniques (nav links, capsules, etc.)
+  const allIds = [...html.matchAll(/\/app\/(\d+)\//g)].map(m => parseInt(m[1]));
+  // Dédupliquer tout en gardant l'ordre d'apparition
+  const seen = new Set();
+  const ids = [];
+  for (const id of allIds) {
+    if (!seen.has(id)) { seen.add(id); ids.push(id); }
   }
-
-  // Fallback HTML
-  return parseSteamSearchHtml(text);
+  // Les premiers IDs dans la page sont souvent des liens de nav → prendre les suivants
+  // Les IDs de jeux réels apparaissent généralement plusieurs fois (image + lien + data)
+  // On refiltre pour garder ceux qui apparaissent au moins 2 fois
+  const counts = {};
+  for (const id of allIds) counts[id] = (counts[id] || 0) + 1;
+  return ids.filter(id => counts[id] >= 2).map(id => ({ id, name: '', dateStr: '', capsuleImage: null, finalPrice: null }));
 }
 
 // Récupère et déduplique les items depuis plusieurs endpoints Steam
 async function fetchSteamUpcomingItems() {
   const seen = new Set();
   const items = [];
+  const hdrs = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:120.0) Gecko/20100101 Firefox/120.0',
+    'Accept-Language': 'en-US,en;q=0.5',
+  };
 
-  // Source 1 : featured coming_soon (jeux mis en avant)
+  // Source 1 : featured coming_soon (jeux mis en avant, avec images/dates incluses)
   try {
-    const r = await fetch('https://store.steampowered.com/api/featuredcategories?cc=FR&l=english', {
-      headers: { 'User-Agent': 'Mozilla/5.0' },
-    });
+    const r = await fetch('https://store.steampowered.com/api/featuredcategories?cc=FR&l=english', { headers: hdrs });
     const d = await r.json();
     const before = items.length;
     for (const it of (d.coming_soon?.items || [])) {
@@ -563,50 +536,34 @@ async function fetchSteamUpcomingItems() {
     console.log(`[upcoming src1] featured: +${items.length - before} items`);
   } catch (e) { console.error('[upcoming src1]', e.message); }
 
-  // Source 2 : recherche Steam "comingsoon" — jeux (category1=998)
+  // Source 2 : Steam Charts "Most Anticipated" (top jeux les plus wishlistés à venir)
   try {
-    const parsed = await steamSearchUpcoming(998);
+    const r = await fetch('https://store.steampowered.com/charts/mostanticipated/', { headers: hdrs });
+    const html = await r.text();
+    const parsed = parseChartsHtml(html);
     const before = items.length;
     for (const it of parsed) {
       if (!seen.has(it.id)) { seen.add(it.id); items.push(it); }
     }
-    console.log(`[upcoming src2] games: parsed=${parsed.length} +${items.length - before} new`);
+    console.log(`[upcoming src2] mostAnticipated: parsed=${parsed.length} +${items.length - before} new`);
   } catch (e) { console.error('[upcoming src2]', e.message); }
 
-  // Source 3 : recherche Steam "comingsoon" — DLC (category1=21)
+  // Source 3 : Steam Charts "Top Upcoming" (top ventes à venir)
   try {
-    const parsed = await steamSearchUpcoming(21);
+    const r = await fetch('https://store.steampowered.com/charts/topupcoming/', { headers: hdrs });
+    const html = await r.text();
+    const parsed = parseChartsHtml(html);
     const before = items.length;
     for (const it of parsed) {
       if (!seen.has(it.id)) { seen.add(it.id); items.push(it); }
     }
-    console.log(`[upcoming src3] dlc: parsed=${parsed.length} +${items.length - before} new`);
+    console.log(`[upcoming src3] topUpcoming: parsed=${parsed.length} +${items.length - before} new`);
   } catch (e) { console.error('[upcoming src3]', e.message); }
 
   return items;
 }
 
 // Debug : voir le HTML brut retourné par Steam search (admin only)
-app.get('/api/debug/steam-search', async (req, res) => {
-  const hdrs = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:120.0) Gecko/20100101 Firefox/120.0', 'Accept-Language': 'en-US,en;q=0.5' };
-  const results = {};
-  const endpoints = {
-    mostAnticipated: 'https://store.steampowered.com/charts/mostanticipated/?json=1&cc=FR',
-    topUpcoming:     'https://store.steampowered.com/charts/topupcoming/?json=1&cc=FR',
-    salePageTop:     'https://store.steampowered.com/api/salepage/querysalepagedata?cc=FR&l=english&start=0&count=25&sort=asc&filter=comingsoon',
-    storeSearch:     'https://store.steampowered.com/api/storesearch/?term=&cc=FR&l=english&filter=comingsoon&count=20',
-  };
-  for (const [key, url] of Object.entries(endpoints)) {
-    try {
-      const r = await fetch(url, { headers: hdrs });
-      const text = await r.text();
-      results[key] = { status: r.status, length: text.length, snippet: text.slice(0, 400) };
-    } catch (e) {
-      results[key] = { error: e.message };
-    }
-  }
-  res.json(results);
-});
 
 app.get('/api/steam/upcoming', requireAuth, async (req, res) => {
   const now = Date.now();
