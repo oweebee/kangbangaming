@@ -195,7 +195,9 @@ app.get('/api/deadlines', requireAuth, (req, res) => {
     const boardIcon = board.gameIcon || null;
     const boardHeaderImg = board.headerImg || null;
     for (const [gameId, game] of Object.entries(board.games || {})) {
-      if (!game.dueDate && !game.startDate && !game.endDate) continue;
+      const hasDates = !!(game.dueDate || game.startDate || game.endDate);
+      const urgentOnly = !hasDates && !!game.urgent && !game.done && !game.archived;
+      if (!hasDates && !urgentOnly) continue;
       if (game.archived) continue;
       results.push({
         boardId, boardName, boardIcon, boardHeaderImg,
@@ -209,6 +211,7 @@ app.get('/api/deadlines', requireAuth, (req, res) => {
         done: !!game.done,
         progress: game.progress ?? null,
         urgent: !!game.urgent,
+        urgentOnly,
         taskType: game.taskType || null,
         header_img: game.header_img || null,
         icon_img: game.icon_img || null,

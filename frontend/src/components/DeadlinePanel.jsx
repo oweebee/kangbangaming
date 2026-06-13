@@ -69,11 +69,19 @@ function categorize(task) {
 }
 
 const CAT_META = {
-  overdue:  { label: 'Échues',                 color: '#e05555', icon: '⚠'  },
+  overdue:  { label: 'Attention !',            color: '#e05555', icon: null },
   active:   { label: "Aujourd'hui / En cours", color: '#3db86a', icon: '📍' },
   tomorrow: { label: 'Demain',                 color: '#e09020', icon: '📅' },
   upcoming: { label: 'Dans moins de 3 jours',  color: '#c9a010', icon: '🕐' },
 };
+
+const OverdueIcon = () => (
+  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#e05555" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" fill="rgba(224,85,85,0.2)"/>
+    <line x1="12" y1="9" x2="12" y2="13"/>
+    <line x1="12" y1="17" x2="12.01" y2="17"/>
+  </svg>
+);
 
 // ── Convertit un task API → objet game attendu par GameCard ───────────────────
 function taskToGame(task) {
@@ -142,7 +150,7 @@ function Section({ cat, tasks, onOpenTask, hiddenDeadlineIds, showHiddenDeadline
         onClick={() => setCollapsed(v => !v)}
         style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: collapsed ? 0 : 10, cursor: 'pointer', userSelect: 'none' }}
       >
-        <span style={{ fontSize: 11 }}>{meta.icon}</span>
+        {cat === 'overdue' ? <OverdueIcon /> : <span style={{ fontSize: 11 }}>{meta.icon}</span>}
         <span style={{ fontSize: 11, fontWeight: 700, color: meta.color, textTransform: 'uppercase', letterSpacing: '0.07em', flex: 1 }}>
           {meta.label}
         </span>
@@ -236,8 +244,13 @@ export default function DeadlinePanel({ token, onOpenTask, refreshKey = 0, hidde
 
   const categorized = { overdue: [], active: [], tomorrow: [], upcoming: [] };
   for (const task of tasks) {
-    const c = categorize(task);
-    if (c && categorized[c.cat]) categorized[c.cat].push({ ...task, _refDate: c.refDate });
+    if (task.urgentOnly && !task.done) {
+      // Tâches urgentes sans date → section Attention ! (après les tâches échues)
+      categorized.overdue.push({ ...task, _refDate: new Date() });
+    } else {
+      const c = categorize(task);
+      if (c && categorized[c.cat]) categorized[c.cat].push({ ...task, _refDate: c.refDate });
+    }
   }
   for (const cat of Object.keys(categorized)) {
     categorized[cat].sort((a, b) => a._refDate - b._refDate);
