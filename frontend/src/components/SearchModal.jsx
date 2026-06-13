@@ -48,6 +48,7 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
   // Custom card fields — pre-fill from initialGame in edit mode
   const [customName,     setCustomName]     = useState(initialGame?.name      || '');
   const [customEmoji,    setCustomEmoji]    = useState(initialGame?.emoji     || '🎮');
+  const [customColor,    setCustomColor]    = useState(initialGame?.color     || '#66c0f4');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [customTaskType, setCustomTaskType] = useState(initialGame?.taskType  || null);
 
@@ -110,6 +111,7 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
       name:      customName.trim(),
       type:      'custom',
       emoji:     customEmoji,
+      color:     !isTaskBoard ? customColor : undefined,
       header_img: null,
       icon_img:  null,
       taskType:  customTaskType,
@@ -366,6 +368,29 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
                 style={inputStyle}
               />
             </div>
+
+            {/* ── Couleur de la carte (boards personnalisés uniquement) ── */}
+            {!isTaskBoard && (
+              <div>
+                <label style={{ display: 'block', fontSize: 14, color: 'var(--text-muted)', marginBottom: 9 }}>
+                  Couleur de la carte
+                </label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <input
+                    type="color"
+                    value={customColor}
+                    onChange={e => setCustomColor(e.target.value)}
+                    style={{ width: 40, height: 32, padding: 2, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer' }}
+                  />
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {['#66c0f4','#f5c518','#3db86a','#e05555','#c090f0','#f0a030','#55b8e0','#e87890'].map(c => (
+                      <button key={c} onClick={() => setCustomColor(c)} style={{ width: 22, height: 22, borderRadius: '50%', background: c, border: customColor === c ? '2px solid #fff' : '2px solid transparent', cursor: 'pointer', padding: 0 }} />
+                    ))}
+                  </div>
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'monospace' }}>{customColor}</span>
+                </div>
+              </div>
+            )}
 
             {/* ── Task type selector (Steam boards only) ── */}
             {customOnly && (

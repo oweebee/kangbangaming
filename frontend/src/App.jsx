@@ -104,7 +104,7 @@ function HomeBoardCard({ board, isPublic, isFav, onToggleFav, onClick, typeColor
           ? `linear-gradient(var(--surface1), var(--surface1)) padding-box, linear-gradient(to right, ${isPublic ? '#3db86a' : '#f5c518'} 0%, ${typeColor} 100%) border-box`
           : 'var(--surface1)',
         border: isFav ? '2px solid transparent' : `2px solid ${typeColor}`,
-        borderRadius: 12, overflow: 'hidden',
+        borderRadius: 12,
         display: 'flex', flexDirection: 'column',
         opacity: isHidden ? 0.5 : 1,
         filter: isHidden ? 'saturate(0.3)' : 'none',
@@ -114,7 +114,7 @@ function HomeBoardCard({ board, isPublic, isFav, onToggleFav, onClick, typeColor
       {/* Banner — clickable */}
       <div
         onClick={onClick}
-        style={{ width: '100%', height: 110, background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0, cursor: 'pointer' }}
+        style={{ width: '100%', height: 110, background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0, cursor: 'pointer', borderRadius: '10px 10px 0 0' }}
       >
         {(board.headerImg || board.gameIcon) ? (
           <img src={board.headerImg || board.gameIcon} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -1552,11 +1552,11 @@ export default function App() {
               <button
                 onClick={() => setShowHiddenCards(v => !v)}
                 style={{
-                  background: showHiddenCards ? 'rgba(40,120,200,0.22)' : 'var(--surface2)',
-                  border: showHiddenCards ? '1px solid rgba(60,150,240,0.6)' : '1px solid var(--border)',
-                  borderRadius: 6, padding: '8px 10px', color: showHiddenCards ? '#70b8ff' : 'var(--text-muted)',
+                  background: showHiddenCards ? 'rgba(120,80,160,0.25)' : 'var(--surface2)',
+                  border: showHiddenCards ? '1px solid rgba(160,100,220,0.6)' : '1px solid var(--border)',
+                  borderRadius: 6, padding: '8px 12px', color: showHiddenCards ? '#c090f0' : 'var(--text-muted)',
                   fontSize: 11, cursor: 'pointer', fontWeight: showHiddenCards ? 700 : 400, flexShrink: 0,
-                  display: 'flex', alignItems: 'center', gap: 4,
+                  display: 'flex', alignItems: 'center', gap: 5,
                 }}
               >
                 <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">

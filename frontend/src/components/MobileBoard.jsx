@@ -90,7 +90,7 @@ export default function MobileBoard({ columns, byColumn, onCardClick, onArchiveG
             onToggleUrgent={onToggleUrgent ? (urgent) => onToggleUrgent(game.appid, urgent) : undefined}
             onUpdateAssignees={onUpdateAssignees ? (assignees) => onUpdateAssignees(game.appid, assignees) : undefined}
             onClickNotes={onClickNotes ? () => onClickNotes(game) : undefined}
-            genreColor={game.type !== 'custom' ? (genreColors[String(game.appid)] || '#66c0f4') : null}
+            genreColor={game.type !== 'custom' ? (genreColors[String(game.appid)] || '#66c0f4') : (game.color || null)}
             isHidden={hiddenCardIds.has(String(game.appid))}
             onHide={onHideCard ? () => onHideCard(game.appid) : undefined}
             onUnhide={onUnhideCard ? () => onUnhideCard(game.appid) : undefined}

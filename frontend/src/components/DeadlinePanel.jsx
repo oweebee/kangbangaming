@@ -180,6 +180,7 @@ function Section({ cat, tasks, onOpenTask, hiddenDeadlineIds, showHiddenDeadline
                   isTaskBoard={task.type === 'custom'}
                   onDragStart={() => {}}
                   onDragEnd={() => {}}
+                  genreColor={task.type === 'custom' ? (task.color || null) : null}
                   isHidden={hiddenDeadlineIds.has(key)}
                   onHide={onHideDeadline ? () => onHideDeadline(key) : undefined}
                   onUnhide={onUnhideDeadline ? () => onUnhideDeadline(key) : undefined}

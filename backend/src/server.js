@@ -960,6 +960,7 @@ app.patch('/api/public/boards/:boardId/games/:appid', requireAuth, (req, res) =>
   if (req.body.assignees !== undefined) game.assignees = req.body.assignees;
   if (req.body.progress !== undefined) game.progress = req.body.progress;
   if (req.body.done !== undefined) game.done = req.body.done;
+  if (req.body.color !== undefined) game.color = req.body.color;
   f.userBoards[req.params.boardId] = f.board;
   f.all[f.userId] = f.userBoards;
   writeBoards(f.all);
@@ -1148,6 +1149,7 @@ app.patch('/api/boards/:boardId/games/:appid', requireAuth, (req, res) => {
   if (req.body.assignees !== undefined) game.assignees = req.body.assignees;
   if (req.body.progress !== undefined) game.progress = req.body.progress;
   if (req.body.done !== undefined) game.done = req.body.done;
+  if (req.body.color !== undefined) game.color = req.body.color;
   setUserBoards(req.user.id, userBoards);
   res.json(game);
 });
