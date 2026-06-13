@@ -255,7 +255,7 @@ export default function App() {
   const homeSplitterRef = useRef(null);
   // Resizable splitter between boards and UpcomingPanel
   const [homeUpcomingWidth, setHomeUpcomingWidth] = useState(() => {
-    try { return parseFloat(localStorage.getItem('homeUpcomingWidth') || '280'); } catch { return 280; }
+    try { return parseFloat(localStorage.getItem('homeUpcomingWidth') || '340'); } catch { return 340; }
   });
   const homeUpcomingSplitterDragging = useRef(false);
   const homeUpcomingSplitterRef = useRef(null);
@@ -1193,7 +1193,7 @@ export default function App() {
             if (!homeUpcomingSplitterDragging.current || !container) return;
             const rect = container.getBoundingClientRect();
             const fromRight = rect.right - mv.clientX;
-            const clamped = Math.max(180, Math.min(480, fromRight));
+            const clamped = Math.max(220, Math.min(560, fromRight));
             setHomeUpcomingWidth(clamped);
             try { localStorage.setItem('homeUpcomingWidth', String(clamped)); } catch {}
           };

@@ -461,6 +461,53 @@ app.delete('/api/admin/boards/:userId/:boardId', requireAdmin, (req, res) => {
   res.json({ ok: true });
 });
 
+// ── Steam featured (homepage populaires/recommandés) ─────────────────────────
+
+let featuredCache = { data: null, fetchedAt: 0 };
+const FEATURED_TTL = 60 * 60 * 1000; // 1h
+
+app.get('/api/steam/featured', requireAuth, async (req, res) => {
+  const now = Date.now();
+  if (featuredCache.data && now - featuredCache.fetchedAt < FEATURED_TTL) {
+    return res.json(featuredCache.data);
+  }
+  try {
+    const hdrs = { 'User-Agent': 'Mozilla/5.0', 'Accept-Language': 'fr-FR,fr;q=0.9' };
+    const resp = await fetch('https://store.steampowered.com/api/featured/?cc=FR&l=french', { headers: hdrs });
+    const data = await resp.json();
+    const items = (data.featured_win || []).slice(0, 6);
+
+    const results = await Promise.allSettled(items.map(async item => {
+      try {
+        const [detailsRes, reviewsRes] = await Promise.allSettled([
+          fetch(`https://store.steampowered.com/api/appdetails?appids=${item.id}&filters=basic,genres,developers,categories&cc=FR&l=english`, { headers: hdrs }),
+          fetch(`https://store.steampowered.com/appreviews/${item.id}?json=1&language=all&purchase_type=all&num_per_page=0`, { headers: hdrs }),
+        ]);
+        const info = detailsRes.status === 'fulfilled' ? (await detailsRes.value.json())?.[item.id]?.data : null;
+        const reviewData = reviewsRes.status === 'fulfilled' ? (await reviewsRes.value.json())?.query_summary : null;
+        return {
+          appid: item.id,
+          name: info?.name || item.name,
+          headerImage: info?.header_image || item.header_image || `https://cdn.akamai.steamstatic.com/steam/apps/${item.id}/header.jpg`,
+          shortDescription: info?.short_description || '',
+          genres: (info?.genres || []).map(g => g.description).slice(0, 3),
+          categories: (info?.categories || []).map(c => c.description),
+          developers: info?.developers || [],
+          reviewScore: reviewData?.review_score ?? null,
+          reviewScoreDesc: reviewData?.review_score_desc || '',
+          reviewTotal: reviewData?.total_reviews ?? 0,
+        };
+      } catch { return null; }
+    }));
+
+    const games = results.map(r => r.status === 'fulfilled' ? r.value : null).filter(Boolean);
+    featuredCache = { data: games, fetchedAt: now };
+    res.json(games);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ── Steam upcoming releases ───────────────────────────────────────────────────
 
 let upcomingCache = { data: null, fetchedAt: 0 };

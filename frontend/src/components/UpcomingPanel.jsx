@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 const API = '/api';
 
@@ -75,6 +75,96 @@ function DaysBadge({ days }) {
   );
 }
 
+function FeaturedCard({ token }) {
+  const [items, setItems] = useState([]);
+  const [idx, setIdx] = useState(0);
+  const timerRef = useRef(null);
+  const h = { Authorization: `Bearer ${token}` };
+
+  useEffect(() => {
+    fetch(`${API}/steam/featured`, { headers: h })
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data) && data.length) setItems(data); })
+      .catch(() => {});
+  }, [token]);
+
+  useEffect(() => {
+    if (items.length < 2) return;
+    timerRef.current = setInterval(() => setIdx(i => (i + 1) % items.length), 5000);
+    return () => clearInterval(timerRef.current);
+  }, [items.length]);
+
+  if (!items.length) return null;
+  const game = items[idx];
+  const gc = genreColor(game.genres);
+
+  return (
+    <div style={{ padding: '10px 10px 0' }}>
+      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+        <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        Populaires & Recommandés
+      </div>
+      <a
+        href={`https://store.steampowered.com/app/${game.appid}/`}
+        target="_blank" rel="noreferrer"
+        style={{
+          display: 'block', textDecoration: 'none', overflow: 'hidden', borderRadius: 10,
+          border: '2px solid transparent',
+          background: `linear-gradient(var(--surface), var(--surface)) padding-box, linear-gradient(135deg, ${gc}, ${gc}55) border-box`,
+          transition: 'background .15s',
+        }}
+        onMouseEnter={e => e.currentTarget.style.background = `linear-gradient(var(--surface2), var(--surface2)) padding-box, linear-gradient(135deg, ${gc}, ${gc}55) border-box`}
+        onMouseLeave={e => e.currentTarget.style.background = `linear-gradient(var(--surface), var(--surface)) padding-box, linear-gradient(135deg, ${gc}, ${gc}55) border-box`}
+      >
+        {/* Image bannière */}
+        <div style={{ width: '100%', height: 100, overflow: 'hidden', position: 'relative', background: 'var(--surface2)' }}>
+          <img src={game.headerImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none'; }} />
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 35%, rgba(0,0,0,0.75) 100%)' }} />
+          {/* Dots navigation */}
+          {items.length > 1 && (
+            <div style={{ position: 'absolute', bottom: 8, right: 8, display: 'flex', gap: 4 }}>
+              {items.map((_, i) => (
+                <div key={i} onClick={e => { e.preventDefault(); e.stopPropagation(); clearInterval(timerRef.current); setIdx(i); }}
+                  style={{ width: i === idx ? 14 : 5, height: 5, borderRadius: 3, background: i === idx ? '#fff' : 'rgba(255,255,255,0.4)', cursor: 'pointer', transition: 'all .2s' }} />
+              ))}
+            </div>
+          )}
+          {/* Nom */}
+          <div style={{ position: 'absolute', bottom: 9, left: 10, right: 50, fontSize: 13, fontWeight: 700, color: '#fff', textShadow: '0 1px 4px rgba(0,0,0,0.9)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {game.name}
+          </div>
+        </div>
+        {/* Détails */}
+        <div style={{ padding: '7px 11px 9px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, marginBottom: 5 }}>
+            {game.developers?.length > 0 && (
+              <div style={{ fontSize: 10, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                👤 {game.developers[0]}
+              </div>
+            )}
+            <ReviewBadge score={game.reviewScore} desc={game.reviewScoreDesc} total={game.reviewTotal} />
+          </div>
+          {(game.genres?.length > 0 || playerTags(game.categories).length > 0) && (
+            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 5 }}>
+              {game.genres?.map(g => (
+                <span key={g} style={{ fontSize: 10, background: `${gc}20`, border: `1px solid ${gc}50`, borderRadius: 3, padding: '2px 6px', color: gc }}>{g}</span>
+              ))}
+              {playerTags(game.categories).map(t => (
+                <span key={t} style={{ fontSize: 10, background: 'rgba(102,192,244,0.12)', border: '1px solid rgba(102,192,244,0.35)', borderRadius: 3, padding: '2px 6px', color: '#66c0f4' }}>{t}</span>
+              ))}
+            </div>
+          )}
+          {game.shortDescription && (
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.45, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+              {game.shortDescription}
+            </div>
+          )}
+        </div>
+      </a>
+    </div>
+  );
+}
+
 export default function UpcomingPanel({ token }) {
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -138,8 +228,21 @@ export default function UpcomingPanel({ token }) {
         )}
       </div>
 
+      {/* Featured */}
+      <FeaturedCard token={token} />
+
+      {/* Séparateur sorties à venir */}
+      <div style={{ padding: '10px 14px 4px', flexShrink: 0 }}>
+        <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'flex', alignItems: 'center', gap: 5, borderTop: '1px solid var(--border)', paddingTop: 10 }}>
+          <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+          Sorties à venir
+        </div>
+      </div>
+
       {/* Body */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '4px 0' }}>
         {loading && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '8px 12px' }}>
             {[1,2,3,4,5].map(i => (
@@ -187,7 +290,7 @@ export default function UpcomingPanel({ token }) {
           // Carte élargie pour les sorties du jour
           if (isToday) {
             return (
-              <div key={game.appid} style={{ padding: '8px 10px', borderBottom: idx < games.length - 1 ? '1px solid var(--border)' : 'none' }}>
+              <div key={game.appid} style={{ padding: '8px 10px', borderBottom: 'none' }}>
                 <a
                   href={`https://store.steampowered.com/app/${game.appid}/`}
                   target="_blank"
@@ -245,7 +348,7 @@ export default function UpcomingPanel({ token }) {
 
           // Carte compacte pour les autres jours
           return (
-            <div key={game.appid} style={{ padding: '5px 10px', borderBottom: idx < games.length - 1 ? '1px solid var(--border)' : 'none' }}>
+            <div key={game.appid} style={{ padding: '5px 10px', borderBottom: 'none' }}>
               <a
                 href={`https://store.steampowered.com/app/${game.appid}/`}
                 target="_blank"
