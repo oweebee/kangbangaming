@@ -285,40 +285,48 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
 
               {/* Archive / Restaurer / Supprimer */}
               {isArchived ? (
-                <>
-                  <button
-                    onClick={e => { e.stopPropagation(); onUnarchive && onUnarchive(); }}
-                    title="Restaurer"
-                    style={{
-                      background: 'rgba(96,144,192,0.18)', border: '1px solid rgba(96,144,192,0.45)',
-                      borderRadius: 4, width: 20, height: 20, padding: 0,
-                      cursor: 'pointer', flexShrink: 0, fontSize: 12,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6090c0',
-                    }}
-                  >↩</button>
-                  <button
-                    onClick={e => { e.stopPropagation(); onDelete && onDelete(); }}
-                    title="Supprimer définitivement"
-                    style={{
-                      background: 'rgba(192,64,64,0.18)', border: '1px solid rgba(192,64,64,0.45)',
-                      borderRadius: 4, width: 20, height: 20, padding: 0,
-                      cursor: 'pointer', flexShrink: 0, fontSize: 12,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}
-                  >🗑</button>
-                </>
+                (onUnarchive || onDelete) && (
+                  <>
+                    {onUnarchive && <button
+                      onClick={e => { e.stopPropagation(); onUnarchive(); }}
+                      title="Restaurer"
+                      style={{
+                        background: 'rgba(96,144,192,0.18)', border: '1px solid rgba(96,144,192,0.45)',
+                        borderRadius: 4, width: 20, height: 20, padding: 0,
+                        cursor: 'pointer', flexShrink: 0, fontSize: 12,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6090c0',
+                      }}
+                    >↩</button>}
+                    {onDelete && <button
+                      onClick={e => { e.stopPropagation(); onDelete(); }}
+                      title="Supprimer définitivement"
+                      style={{
+                        background: 'rgba(192,64,64,0.18)', border: '1px solid rgba(192,64,64,0.45)',
+                        borderRadius: 4, width: 20, height: 20, padding: 0,
+                        cursor: 'pointer', flexShrink: 0, fontSize: 12,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}
+                    >🗑</button>}
+                  </>
+                )
               ) : (
-                <button
-                  onClick={e => { e.stopPropagation(); onArchive && onArchive(); }}
-                  title="Archiver"
-                  style={{
-                    background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.28)',
-                    borderRadius: 4, width: 20, height: 20, padding: 0,
-                    cursor: 'pointer', flexShrink: 0,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: 'rgba(255,255,255,0.65)', fontSize: 12, lineHeight: 1,
-                  }}
-                >✕</button>
+                onArchive && (
+                  <button
+                    onClick={e => { e.stopPropagation(); onArchive(); }}
+                    title="Archiver"
+                    style={{
+                      background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.28)',
+                      borderRadius: 4, width: 20, height: 20, padding: 0,
+                      cursor: 'pointer', flexShrink: 0,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      color: 'rgba(255,255,255,0.65)',
+                    }}
+                  >
+                    <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/>
+                    </svg>
+                  </button>
+                )
               )}
             </div>
           )}

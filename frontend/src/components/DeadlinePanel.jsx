@@ -98,7 +98,7 @@ function taskToGame(task) {
 }
 
 // ── Section ────────────────────────────────────────────────────────────────────
-function Section({ cat, tasks, onOpenTask }) {
+function Section({ cat, tasks, onOpenTask, hiddenDeadlineIds, showHiddenDeadlines, onHideDeadline, onUnhideDeadline }) {
   const [collapsed, setCollapsed] = useState(false);
   const [order, setOrder] = useState(() => {
     try { return JSON.parse(localStorage.getItem(`dlOrder_${cat}`) || 'null') || []; } catch { return []; }
@@ -133,7 +133,8 @@ function Section({ cat, tasks, onOpenTask }) {
     setDragKey(null); setDragOver(null);
   }
 
-  const sorted = applyOrder(tasks);
+  const allSorted = applyOrder(tasks);
+  const sorted = allSorted.filter(t => showHiddenDeadlines ? true : !hiddenDeadlineIds.has(taskKey(t)));
 
   return (
     <div style={{ marginBottom: 20 }}>
@@ -179,6 +180,9 @@ function Section({ cat, tasks, onOpenTask }) {
                   isTaskBoard={task.type === 'custom'}
                   onDragStart={() => {}}
                   onDragEnd={() => {}}
+                  isHidden={hiddenDeadlineIds.has(key)}
+                  onHide={onHideDeadline ? () => onHideDeadline(key) : undefined}
+                  onUnhide={onUnhideDeadline ? () => onUnhideDeadline(key) : undefined}
                 />
                 {/* Nom du board */}
                 <div style={{
@@ -214,7 +218,7 @@ function Section({ cat, tasks, onOpenTask }) {
 }
 
 // ── Composant principal ────────────────────────────────────────────────────────
-export default function DeadlinePanel({ token, onOpenTask, refreshKey = 0 }) {
+export default function DeadlinePanel({ token, onOpenTask, refreshKey = 0, hiddenDeadlineIds = new Set(), showHiddenDeadlines = false, onHideDeadline, onUnhideDeadline, onToggleShowHidden }) {
   const [tasks, setTasks]       = useState([]);
   const [loading, setLoading]   = useState(true);
   const [apiCount, setApiCount] = useState(null); // nb brut renvoyé par l'API
@@ -239,6 +243,7 @@ export default function DeadlinePanel({ token, onOpenTask, refreshKey = 0 }) {
   }
 
   const total = categorized.overdue.length + categorized.active.length + categorized.tomorrow.length + categorized.upcoming.length;
+  const hiddenCount = hiddenDeadlineIds.size;
 
   return (
     <>
@@ -256,6 +261,29 @@ export default function DeadlinePanel({ token, onOpenTask, refreshKey = 0 }) {
             borderRadius: 99, padding: '1px 7px',
             border: categorized.overdue.length > 0 ? '1px solid rgba(200,40,40,0.3)' : 'none',
           }}>{total}</span>
+        )}
+        {/* Masquées (N) */}
+        {hiddenCount > 0 && onToggleShowHidden && (
+          <button
+            onClick={onToggleShowHidden}
+            title={showHiddenDeadlines ? 'Masquer les cartes cachées' : 'Afficher les cartes cachées'}
+            style={{
+              background: showHiddenDeadlines ? 'rgba(40,120,200,0.22)' : 'var(--surface2)',
+              border: showHiddenDeadlines ? '1px solid rgba(60,150,240,0.6)' : '1px solid var(--border)',
+              borderRadius: 6, padding: '3px 7px', cursor: 'pointer',
+              color: showHiddenDeadlines ? '#70b8ff' : 'var(--text-muted)',
+              fontSize: 10, fontWeight: showHiddenDeadlines ? 700 : 400,
+              display: 'flex', alignItems: 'center', gap: 3,
+            }}
+          >
+            <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              {showHiddenDeadlines
+                ? <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>
+                : <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></>
+              }
+            </svg>
+            {hiddenCount}
+          </button>
         )}
         {/* Bouton actualiser */}
         <button
@@ -288,10 +316,10 @@ export default function DeadlinePanel({ token, onOpenTask, refreshKey = 0 }) {
         </div>
       ) : (
         <>
-          <Section cat="overdue"  tasks={categorized.overdue}   onOpenTask={onOpenTask} />
-          <Section cat="active"   tasks={categorized.active}    onOpenTask={onOpenTask} />
-          <Section cat="tomorrow" tasks={categorized.tomorrow}  onOpenTask={onOpenTask} />
-          <Section cat="upcoming" tasks={categorized.upcoming}  onOpenTask={onOpenTask} />
+          <Section cat="overdue"  tasks={categorized.overdue}   onOpenTask={onOpenTask} hiddenDeadlineIds={hiddenDeadlineIds} showHiddenDeadlines={showHiddenDeadlines} onHideDeadline={onHideDeadline} onUnhideDeadline={onUnhideDeadline} />
+          <Section cat="active"   tasks={categorized.active}    onOpenTask={onOpenTask} hiddenDeadlineIds={hiddenDeadlineIds} showHiddenDeadlines={showHiddenDeadlines} onHideDeadline={onHideDeadline} onUnhideDeadline={onUnhideDeadline} />
+          <Section cat="tomorrow" tasks={categorized.tomorrow}  onOpenTask={onOpenTask} hiddenDeadlineIds={hiddenDeadlineIds} showHiddenDeadlines={showHiddenDeadlines} onHideDeadline={onHideDeadline} onUnhideDeadline={onUnhideDeadline} />
+          <Section cat="upcoming" tasks={categorized.upcoming}  onOpenTask={onOpenTask} hiddenDeadlineIds={hiddenDeadlineIds} showHiddenDeadlines={showHiddenDeadlines} onHideDeadline={onHideDeadline} onUnhideDeadline={onUnhideDeadline} />
         </>
       )}
     </>

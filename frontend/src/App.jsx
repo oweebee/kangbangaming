@@ -98,12 +98,16 @@ function HomeBoardCard({ board, isPublic, isFav, onToggleFav, onClick, typeColor
   return (
     <div
       style={{
-        background: 'var(--surface1)',
-        border: `2px solid ${isFav ? (isPublic ? '#3db86a' : '#f5c518') : typeColor}`,
+        // Bordure dégradée pour les épinglés : doré/vert gauche → couleur Steam droite
+        // Technique background-clip : fonctionne avec border-radius
+        background: isFav
+          ? `linear-gradient(var(--surface1), var(--surface1)) padding-box, linear-gradient(to right, ${isPublic ? '#3db86a' : '#f5c518'} 0%, ${typeColor} 100%) border-box`
+          : 'var(--surface1)',
+        border: isFav ? '2px solid transparent' : `2px solid ${typeColor}`,
         borderRadius: 12, overflow: 'hidden',
         display: 'flex', flexDirection: 'column',
-        opacity: isHidden ? 0.55 : 1,
-        filter: isHidden ? 'saturate(0.4)' : 'none',
+        opacity: isHidden ? 0.5 : 1,
+        filter: isHidden ? 'saturate(0.3)' : 'none',
         transition: 'opacity .15s, filter .15s',
       }}
     >
@@ -272,6 +276,9 @@ export default function App() {
   // ── Masquage boards (localStorage par user) ────────────────────────────────
   const [hiddenBoardIds, setHiddenBoardIds] = useState(() => new Set());
   const [showHiddenBoards, setShowHiddenBoards] = useState(false);
+  // ── Masquage échéances (localStorage par user) ─────────────────────────────
+  const [hiddenDeadlineIds, setHiddenDeadlineIds] = useState(() => new Set());
+  const [showHiddenDeadlines, setShowHiddenDeadlines] = useState(false);
   const [infoPanelLocked, setInfoPanelLockedRaw] = useState(() => {
     try { return JSON.parse(localStorage.getItem('infoPanelLocked') || 'false'); } catch { return false; }
   });
@@ -495,6 +502,7 @@ export default function App() {
       try { const saved = JSON.parse(localStorage.getItem(`boardOrder_${currentUser.id}`) || 'null'); if (Array.isArray(saved)) setBoardOrder(saved); } catch {}
       try { const saved = JSON.parse(localStorage.getItem(`favOrder_${currentUser.id}`) || 'null'); if (Array.isArray(saved)) setFavOrder(saved); } catch {}
       try { const saved = JSON.parse(localStorage.getItem(`hiddenBoards_${currentUser.id}`) || '[]'); setHiddenBoardIds(new Set(saved)); } catch {}
+      try { const saved = JSON.parse(localStorage.getItem(`hiddenDeadlines_${currentUser.id}`) || '[]'); setHiddenDeadlineIds(new Set(saved)); } catch {}
     }
   }, [token]);
   useEffect(() => {
@@ -583,6 +591,23 @@ export default function App() {
     setHiddenBoardIds(prev => {
       const next = new Set(prev); next.delete(boardId);
       try { localStorage.setItem(`hiddenBoards_${currentUser.id}`, JSON.stringify([...next])); } catch {}
+      return next;
+    });
+  };
+
+  const hideDeadline = (key) => {
+    if (!currentUser?.id) return;
+    setHiddenDeadlineIds(prev => {
+      const next = new Set(prev); next.add(key);
+      try { localStorage.setItem(`hiddenDeadlines_${currentUser.id}`, JSON.stringify([...next])); } catch {}
+      return next;
+    });
+  };
+  const unhideDeadline = (key) => {
+    if (!currentUser?.id) return;
+    setHiddenDeadlineIds(prev => {
+      const next = new Set(prev); next.delete(key);
+      try { localStorage.setItem(`hiddenDeadlines_${currentUser.id}`, JSON.stringify([...next])); } catch {}
       return next;
     });
   };
@@ -956,7 +981,7 @@ export default function App() {
 
       {/* ── Colonne gauche : Échéances ── */}
       <div style={{ width: `${homeSplitPct}%`, minWidth: 0, flexShrink: 0, overflowY: 'auto', padding: '28px 20px' }}>
-        <DeadlinePanel token={token} onOpenTask={handleDeadlineOpen} refreshKey={deadlineRefreshKey} />
+        <DeadlinePanel token={token} onOpenTask={handleDeadlineOpen} refreshKey={deadlineRefreshKey} hiddenDeadlineIds={hiddenDeadlineIds} showHiddenDeadlines={showHiddenDeadlines} onHideDeadline={hideDeadline} onUnhideDeadline={unhideDeadline} onToggleShowHidden={() => setShowHiddenDeadlines(v => !v)} />
       </div>
 
       {/* ── Séparateur redimensionnable ── */}
@@ -1011,6 +1036,30 @@ export default function App() {
       {/* ── Colonne droite : Boards ── */}
       <div style={{ flex: 1, minWidth: 0, overflowY: 'auto', padding: '28px 28px' }}>
       <div style={{ maxWidth: 960, margin: '0 auto' }}>
+        {/* Toggle boards masqués — apparaît si des boards sont masqués */}
+        {hiddenBoardIds.size > 0 && (
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+            <button
+              onClick={() => setShowHiddenBoards(v => !v)}
+              style={{
+                background: showHiddenBoards ? 'rgba(40,120,200,0.22)' : 'var(--surface2)',
+                border: showHiddenBoards ? '1px solid rgba(60,150,240,0.6)' : '1px solid var(--border)',
+                borderRadius: 6, padding: '6px 12px', cursor: 'pointer',
+                color: showHiddenBoards ? '#70b8ff' : 'var(--text-muted)',
+                fontSize: 11, fontWeight: showHiddenBoards ? 700 : 400,
+                display: 'flex', alignItems: 'center', gap: 5,
+              }}
+            >
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                {showHiddenBoards
+                  ? <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>
+                  : <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></>
+                }
+              </svg>
+              Boards masqués ({hiddenBoardIds.size})
+            </button>
+          </div>
+        )}
         {/* Boards publics de la communauté */}
         <div style={{ marginBottom: 36 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
@@ -1024,7 +1073,7 @@ export default function App() {
             <div style={{ color: 'var(--text-muted)', fontSize: 12, padding: '16px 0' }}>Aucun board public disponible pour l'instant.</div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
-              {applySectionOrder(homePublicBoards, homePublicOrder).map(b => (
+              {applySectionOrder(homePublicBoards, homePublicOrder).filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).map(b => (
                 <div key={b.id}
                   draggable
                   onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; setHomeDragId(b.id); }}
@@ -1065,7 +1114,7 @@ export default function App() {
                     <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--surface2)', borderRadius: 99, padding: '1px 7px' }}>{favBoards2.length}</span>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
-                    {applySectionOrder(favBoards2, homeFavOrder).map(b => (
+                    {applySectionOrder(favBoards2, homeFavOrder).filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).map(b => (
                       <div key={b.id}
                         draggable
                         onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; setHomeDragId(b.id); }}
@@ -1092,7 +1141,7 @@ export default function App() {
                   <div style={{ color: 'var(--text-muted)', fontSize: 12, padding: '8px 0' }}>Tous tes boards sont épinglés 📌</div>
                 ) : (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
-                    {applySectionOrder(otherBoards, homeOtherOrder).map(b => (
+                    {applySectionOrder(otherBoards, homeOtherOrder).filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).map(b => (
                       <div key={b.id}
                         draggable
                         onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; setHomeDragId(b.id); }}
@@ -1226,12 +1275,6 @@ export default function App() {
                 <circle cx="10" cy="7" r="4"/><path d="M4 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M15 3.13a4 4 0 0 1 0 7.75"/><path d="M20 21v-2a4 4 0 0 0-3-3.85"/>
               </svg>
             ) : '🔒'}</button>
-            {/* Masquer/afficher board */}
-            <button onClick={e => { e.stopPropagation(); hiddenBoardIds.has(b.id) ? unhideBoard(b.id) : hideBoard(b.id); }} title={hiddenBoardIds.has(b.id) ? 'Réafficher ce board' : 'Masquer ce board'} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', flexShrink: 0, opacity: hiddenBoardIds.has(b.id) ? 0.9 : 0.65, color: hiddenBoardIds.has(b.id) ? '#70b8ff' : 'var(--text-muted)', lineHeight: 1 }}>
-              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                {hiddenBoardIds.has(b.id) ? <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></> : <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></>}
-              </svg>
-            </button>
             <button onClick={e => { e.stopPropagation(); deleteBoard(b.id); }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 11, padding: 0, opacity: 0.4, cursor: 'pointer', flexShrink: 0 }}>✕</button>
           </div>
             ))}
@@ -1293,12 +1336,6 @@ export default function App() {
                 <circle cx="10" cy="7" r="4"/><path d="M4 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M15 3.13a4 4 0 0 1 0 7.75"/><path d="M20 21v-2a4 4 0 0 0-3-3.85"/>
               </svg>
             ) : '🔒'}</button>
-            {/* Masquer/afficher board */}
-            <button onClick={e => { e.stopPropagation(); hiddenBoardIds.has(b.id) ? unhideBoard(b.id) : hideBoard(b.id); }} title={hiddenBoardIds.has(b.id) ? 'Réafficher ce board' : 'Masquer ce board'} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', flexShrink: 0, opacity: hiddenBoardIds.has(b.id) ? 0.9 : 0.65, color: hiddenBoardIds.has(b.id) ? '#70b8ff' : 'var(--text-muted)', lineHeight: 1 }}>
-              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                {hiddenBoardIds.has(b.id) ? <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></> : <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></>}
-              </svg>
-            </button>
             <button onClick={e => { e.stopPropagation(); deleteBoard(b.id); }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 11, padding: 0, opacity: 0.4, cursor: 'pointer', flexShrink: 0 }}>✕</button>
           </div>
         ))}
@@ -1360,12 +1397,6 @@ export default function App() {
                 </div>
               )}
               <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 14, fontWeight: 700, opacity: hiddenBoardIds.has(b.id) ? 0.45 : 1 }}>{b.name}</span>
-              {/* Masquer/afficher board suivi */}
-              <button onClick={e => { e.stopPropagation(); hiddenBoardIds.has(b.id) ? unhideBoard(b.id) : hideBoard(b.id); }} title={hiddenBoardIds.has(b.id) ? 'Réafficher ce board' : 'Masquer ce board'} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', flexShrink: 0, opacity: hiddenBoardIds.has(b.id) ? 0.9 : 0.65, color: hiddenBoardIds.has(b.id) ? '#70b8ff' : 'var(--text-muted)', lineHeight: 1 }}>
-                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  {hiddenBoardIds.has(b.id) ? <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></> : <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></>}
-                </svg>
-              </button>
               <svg viewBox="0 0 24 24" width="10" height="10" fill="var(--accent)" stroke="var(--accent)" strokeWidth="1.5" style={{ flexShrink: 0, opacity: 0.7 }}><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
             </div>
           ))}
