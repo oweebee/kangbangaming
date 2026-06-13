@@ -855,9 +855,10 @@ export default function App() {
   }
 
   // ── Couleur de type pour les boards ──────────────────────────────────────────
-  // Board perso → violet | Steam → couleur genre si connue, sinon bleu Steam
+  // Board perso → cuivre #c87830 (absent des genres Steam)
+  // Steam → couleur genre si connue, sinon bleu Steam #66c0f4
   const getBoardTypeColor = (b) => {
-    if (!b?.gameIcon) return '#6b3fa0';
+    if (!b?.gameIcon) return '#c87830';
     const appid = getSteamAppId(b.gameIcon);
     return (appid && boardGenreColors[appid]) || '#66c0f4';
   };
