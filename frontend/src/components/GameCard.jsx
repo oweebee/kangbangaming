@@ -3,7 +3,6 @@ import { getTaskType } from '../taskTypes.jsx';
 import { getDateInfo } from './TaskModal.jsx';
 import { progressColor } from './ProgressSlider.jsx';
 import AssigneeAvatars from './AssigneeAvatars.jsx';
-import { AssigneeEditor } from './CardControls.jsx';
 
 const COMPACT_ICON_SIZE = 40; // 33 * 1.2 ≈ 40
 
@@ -335,18 +334,7 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
           )}
         </div>
 
-        {/* ── Assignee picker ── */}
-        {isTaskBoard && appUsers.length > 0 && onUpdateAssignees && !isArchived && (
-          <div style={{ marginTop: 6 }} onClick={e => e.stopPropagation()}>
-            <AssigneeEditor
-              assignees={game.assignees || []}
-              appUsers={appUsers}
-              onUpdateAssignees={onUpdateAssignees}
-              compact
-              stopPropagation
-            />
-          </div>
-        )}
+
       </div>
       {/* ── Compact mode: icône bas-droite + avatars ── */}
       {compact && (

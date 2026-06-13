@@ -133,9 +133,9 @@ function FeaturedCard({ token, wishlist = new Set() }) {
             {game.name}
           </div>
         </div>
-        {/* Détails */}
-        <div style={{ padding: '7px 11px 9px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, marginBottom: 5 }}>
+        {/* Détails — hauteur fixe pour que la carte ne change pas de taille selon le jeu */}
+        <div style={{ padding: '7px 11px 9px', height: 78, boxSizing: 'border-box', overflow: 'hidden' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, marginBottom: 4 }}>
             {game.developers?.length > 0 && (
               <div style={{ fontSize: 10, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 👤 {game.developers[0]}
@@ -144,17 +144,17 @@ function FeaturedCard({ token, wishlist = new Set() }) {
             <ReviewBadge score={game.reviewScore} desc={game.reviewScoreDesc} total={game.reviewTotal} />
           </div>
           {(game.genres?.length > 0 || playerTags(game.categories).length > 0) && (
-            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 5 }}>
-              {game.genres?.map(g => (
-                <span key={g} style={{ fontSize: 10, background: `${gc}20`, border: `1px solid ${gc}50`, borderRadius: 3, padding: '2px 6px', color: gc }}>{g}</span>
+            <div style={{ display: 'flex', gap: 4, flexWrap: 'nowrap', overflow: 'hidden', marginBottom: 4 }}>
+              {game.genres?.slice(0, 2).map(g => (
+                <span key={g} style={{ fontSize: 10, background: `${gc}20`, border: `1px solid ${gc}50`, borderRadius: 3, padding: '2px 6px', color: gc, whiteSpace: 'nowrap', flexShrink: 0 }}>{g}</span>
               ))}
-              {playerTags(game.categories).map(t => (
-                <span key={t} style={{ fontSize: 10, background: 'rgba(102,192,244,0.12)', border: '1px solid rgba(102,192,244,0.35)', borderRadius: 3, padding: '2px 6px', color: '#66c0f4' }}>{t}</span>
+              {playerTags(game.categories).slice(0, 2).map(t => (
+                <span key={t} style={{ fontSize: 10, background: 'rgba(102,192,244,0.12)', border: '1px solid rgba(102,192,244,0.35)', borderRadius: 3, padding: '2px 6px', color: '#66c0f4', whiteSpace: 'nowrap', flexShrink: 0 }}>{t}</span>
               ))}
             </div>
           )}
           {game.shortDescription && (
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.45, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
               {game.shortDescription}
             </div>
           )}
