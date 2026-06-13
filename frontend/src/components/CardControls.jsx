@@ -1,7 +1,10 @@
+import { useState, useRef, useEffect } from 'react';
+
 // ── Composants partagés pour les contrôles de carte ──────────────────────────
-// StatusToggles : boutons Terminée + Urgent côte à côte
-// DatePicker    : sélecteur date unique / période
-// Importés par TaskModal, GameModal, SearchModal
+// StatusToggles  : boutons Terminée + Urgent côte à côte
+// DatePicker     : sélecteur date unique / période
+// AssigneeEditor : chips + dropdown pour ajouter / retirer des assignés
+// Importés par TaskModal, GameModal, SearchModal, GameCard
 
 export function formatDateLabel(dateStr) {
   if (!dateStr) return '';
@@ -28,6 +31,7 @@ export function StatusToggles({ isDone, onToggleDone, isUrgent, onToggleUrgent }
           border: `1.5px solid ${isDone ? '#3db86a' : 'var(--border)'}`,
           borderRadius: 9, padding: '11px 14px', cursor: 'pointer',
           transition: 'all .15s', textAlign: 'left',
+          boxShadow: isDone ? '0 0 10px rgba(61,184,106,0.2)' : 'none',
         }}
       >
         <div style={{
@@ -57,6 +61,7 @@ export function StatusToggles({ isDone, onToggleDone, isUrgent, onToggleUrgent }
           border: `1.5px solid ${isUrgent ? 'rgba(220,60,60,0.6)' : 'var(--border)'}`,
           borderRadius: 9, padding: '11px 14px', cursor: 'pointer',
           transition: 'all .15s', textAlign: 'left',
+          boxShadow: isUrgent ? '0 0 10px rgba(220,40,40,0.25)' : 'none',
         }}
       >
         <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>⚠</span>
@@ -129,6 +134,118 @@ export function DatePicker({ dateMode, onDateModeChange, dueDate, onDueDateChang
           📅 {startDate ? <strong style={{ color: '#80b8f0' }}>{formatDateLabel(startDate)}</strong> : '…'}
           {' → '}
           {endDate ? <strong style={{ color: '#80b8f0' }}>{formatDateLabel(endDate)}</strong> : '…'}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Éditeur d'assignés : chips + ✕ + dropdown ────────────────────────────────
+// Props:
+//   assignees        — tableau d'IDs actuels
+//   appUsers         — tous les utilisateurs disponibles
+//   onUpdateAssignees — callback(newAssigneesArray)
+//   compact          — mode réduit pour GameCard (avatar 14px, bouton inline)
+//   stopPropagation  — ajoute e.stopPropagation() sur tous les clics (pour GameCard)
+export function AssigneeEditor({ assignees = [], appUsers = [], onUpdateAssignees, compact = false, stopPropagation = false }) {
+  const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    if (!showMenu) return;
+    const handler = e => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) setShowMenu(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showMenu]);
+
+  const sp = stopPropagation ? e => e.stopPropagation() : undefined;
+  const available = appUsers.filter(u => u.role !== 'admin' && !assignees.includes(u.id));
+  const avatarSize = compact ? 14 : 20;
+  const chipFont   = compact ? 11 : 13;
+
+  return (
+    <div style={{ position: 'relative' }}>
+      {/* ── Chips ── */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: compact ? 4 : 6, alignItems: 'center', marginBottom: !compact && assignees.length > 0 ? 8 : 0 }}>
+        {assignees.map(uid => {
+          const u = appUsers.find(x => x.id === uid);
+          if (!u) return null;
+          return (
+            <div key={uid} style={{
+              display: 'flex', alignItems: 'center', gap: compact ? 3 : 5,
+              background: 'var(--surface3)', border: '1px solid var(--border)',
+              borderRadius: 20, padding: compact ? '2px 6px 2px 3px' : '4px 10px 4px 5px', fontSize: chipFont,
+            }}>
+              {u.steamAvatar
+                ? <img src={u.steamAvatar} alt="" style={{ width: avatarSize, height: avatarSize, borderRadius: '50%', flexShrink: 0 }} />
+                : <div style={{ width: avatarSize, height: avatarSize, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: Math.max(7, Math.floor(avatarSize * 0.45)), fontWeight: 700, color: '#fff', flexShrink: 0 }}>{u.username?.[0]?.toUpperCase()}</div>
+              }
+              <span style={{ color: 'var(--text)', maxWidth: compact ? 60 : 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {u.steamPersonaName || u.username}
+              </span>
+              <button
+                onClick={e => { if (sp) sp(e); onUpdateAssignees(assignees.filter(id => id !== uid)); }}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: compact ? 9 : 12, cursor: 'pointer', padding: compact ? '0 0 0 1px' : '0 0 0 2px', lineHeight: 1 }}
+              >✕</button>
+            </div>
+          );
+        })}
+
+        {/* Compact : bouton + inline avec les chips */}
+        {compact && available.length > 0 && (
+          <button
+            onClick={e => { if (sp) sp(e); setShowMenu(v => !v); }}
+            style={{ background: 'var(--surface3)', border: '1px dashed var(--border)', borderRadius: 20, padding: '2px 7px', fontSize: 11, color: 'var(--text-muted)', cursor: 'pointer' }}
+          >+ assigné</button>
+        )}
+      </div>
+
+      {/* Normal : bouton pleine largeur sous les chips */}
+      {!compact && available.length > 0 && (
+        <button
+          onClick={() => setShowMenu(v => !v)}
+          style={{ width: '100%', padding: '8px 12px', textAlign: 'left', background: 'var(--surface3)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+        >
+          <span>+ Ajouter un assigné</span>
+          <span style={{ marginLeft: 'auto', opacity: 0.4 }}>{showMenu ? '▲' : '▼'}</span>
+        </button>
+      )}
+
+      {/* ── Dropdown ── */}
+      {showMenu && (
+        <div ref={menuRef} style={{
+          position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50,
+          background: 'var(--surface2)', border: '1px solid var(--border)',
+          borderRadius: 8, marginTop: compact ? 3 : 4,
+          maxHeight: compact ? 160 : 180, overflowY: 'auto',
+          boxShadow: '0 6px 20px rgba(0,0,0,0.5)',
+        }}>
+          {available.map(u => (
+            <div key={u.id}
+              onClick={e => { if (sp) sp(e); onUpdateAssignees([...assignees, u.id]); setShowMenu(false); }}
+              style={{ display: 'flex', alignItems: 'center', gap: compact ? 7 : 8, padding: compact ? '7px 10px' : '8px 12px', cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.05)' }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--surface3)'}
+              onMouseLeave={e => e.currentTarget.style.background = ''}
+            >
+              {u.steamAvatar
+                ? <img src={u.steamAvatar} alt="" style={{ width: compact ? 22 : 26, height: compact ? 22 : 26, borderRadius: '50%', flexShrink: 0, border: '1px solid var(--border)' }} />
+                : <div style={{ width: compact ? 22 : 26, height: compact ? 22 : 26, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: compact ? 9 : 11, fontWeight: 700, color: '#fff', flexShrink: 0 }}>{u.username?.[0]?.toUpperCase()}</div>
+              }
+              <div>
+                <div style={{ fontSize: compact ? 12 : 13, color: 'var(--text)', fontWeight: 600 }}>{u.username}</div>
+                {u.steamPersonaName && u.steamPersonaName !== u.username && (
+                  <div style={{ fontSize: compact ? 10 : 11, color: 'var(--text-muted)' }}>{u.steamPersonaName}</div>
+                )}
+              </div>
+            </div>
+          ))}
+          {!compact && available.length === 0 && (
+            <div style={{ padding: '12px', fontSize: 13, color: 'var(--text-muted)', textAlign: 'center' }}>
+              Tous les utilisateurs sont assignés
+            </div>
+          )}
         </div>
       )}
     </div>

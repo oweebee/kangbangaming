@@ -2,6 +2,7 @@ import { useState, useCallback, useRef } from 'react';
 import { TASK_TYPES, getTaskType } from '../taskTypes.jsx';
 import NotesSection from './NotesSection.jsx';
 import ProgressSlider from './ProgressSlider.jsx';
+import { StatusToggles, DatePicker, AssigneeEditor } from './CardControls.jsx';
 
 const CARD_EMOJIS = [
   '🎮','🕹️','🏆','🥇','⭐','💎','🔥','❄️','⚡','🎯',
@@ -22,12 +23,6 @@ function LibraryBadge() {
       Bibliothèque
     </span>
   );
-}
-
-function formatDateLabel(dateStr) {
-  if (!dateStr) return '';
-  const d = new Date(dateStr + 'T00:00:00');
-  return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 // ── SearchModal ───────────────────────────────────────────────────────────────
@@ -71,9 +66,6 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
   const [notes,     setNotes]     = useState(initialGame?.notes     || []);
   const [notesDraft, setNotesDraft] = useState('');
   const [progress,  setProgress]  = useState(initialGame?.progress ?? null);
-  const [showAssigneeMenu, setShowAssigneeMenu] = useState(false);
-  const assigneeMenuRef = useRef(null);
-
   const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
 
   const search = useCallback(async (q) => {
@@ -403,198 +395,36 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
             )}
 
             {/* ── Date ── */}
-            <div>
-              <label style={{ display: 'block', fontSize: 14, color: 'var(--text-muted)', marginBottom: 10 }}>
-                📅 Date <span style={{ opacity: 0.55 }}>(facultatif)</span>
-              </label>
-              {/* Mode buttons */}
-              <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-                {[
-                  ['none',   '✕  Aucune'],
-                  ['single', '📌 Une date'],
-                  ['period', '↔ Période'],
-                ].map(([mode, lbl]) => (
-                  <button key={mode}
-                    onClick={() => setDateMode(mode)}
-                    style={{
-                      padding: '7px 15px', borderRadius: 18, cursor: 'pointer', fontSize: 13,
-                      background: dateMode === mode ? 'var(--accent)' : 'var(--surface2)',
-                      border: dateMode === mode ? '2px solid var(--accent)' : '2px solid var(--border)',
-                      color: dateMode === mode ? '#fff' : 'var(--text-muted)',
-                      fontWeight: dateMode === mode ? 700 : 500,
-                      transition: 'all .15s',
-                    }}
-                  >{lbl}</button>
-                ))}
-              </div>
-              {dateMode === 'single' && (
-                <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)}
-                  style={{ ...inputStyle, colorScheme: 'dark' }} />
-              )}
-              {dateMode === 'period' && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
-                    style={{ ...inputStyle, flex: 1, colorScheme: 'dark' }} />
-                  <span style={{ color: 'var(--text-muted)', fontSize: 20, flexShrink: 0 }}>→</span>
-                  <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
-                    style={{ ...inputStyle, flex: 1, colorScheme: 'dark' }} />
-                </div>
-              )}
-              {/* Date preview when set */}
-              {dateMode === 'single' && dueDate && (
-                <div style={{
-                  marginTop: 9, padding: '8px 13px', borderRadius: 8,
-                  background: 'rgba(180,140,10,0.12)', border: '1px solid rgba(180,140,10,0.35)',
-                  fontSize: 13, color: 'var(--text-muted)',
-                }}>
-                  📅 Échéance : <strong style={{ color: '#d4b020' }}>{formatDateLabel(dueDate)}</strong>
-                </div>
-              )}
-              {dateMode === 'period' && (startDate || endDate) && (
-                <div style={{
-                  marginTop: 9, padding: '8px 13px', borderRadius: 8,
-                  background: 'rgba(40,100,200,0.12)', border: '1px solid rgba(60,130,220,0.35)',
-                  fontSize: 13, color: 'var(--text-muted)',
-                }}>
-                  📅 {startDate ? <strong style={{ color: '#80b8f0' }}>{formatDateLabel(startDate)}</strong> : '…'}
-                  {' → '}
-                  {endDate ? <strong style={{ color: '#80b8f0' }}>{formatDateLabel(endDate)}</strong> : '…'}
-                </div>
-              )}
-            </div>
+            <DatePicker
+              dateMode={dateMode}
+              onDateModeChange={setDateMode}
+              dueDate={dueDate}
+              onDueDateChange={setDueDate}
+              startDate={startDate}
+              onStartDateChange={setStartDate}
+              endDate={endDate}
+              onEndDateChange={setEndDate}
+            />
 
-            {/* ── URGENT toggle ── */}
-            <div style={{ display: 'flex', gap: 10 }}>
-              {/* Urgent */}
-              <button
-                type="button"
-                onClick={() => setUrgent(v => !v)}
-                style={{
-                  flex: 1, display: 'flex', alignItems: 'center', gap: 8,
-                  padding: '10px 16px', borderRadius: 9, cursor: 'pointer',
-                  background: urgent ? 'rgba(220,40,40,0.14)' : 'var(--surface2)',
-                  border: urgent ? '2px solid rgba(220,60,60,0.7)' : '2px solid var(--border)',
-                  color: urgent ? '#ff6060' : 'var(--text-muted)',
-                  fontWeight: urgent ? 700 : 500, fontSize: 14,
-                  transition: 'all .15s',
-                  boxShadow: urgent ? '0 0 10px rgba(220,40,40,0.25)' : 'none',
-                }}
-              >
-                <span style={{ fontSize: 18, lineHeight: 1 }}>⚠</span>
-                <span>URGENT</span>
-                {urgent && <span style={{ marginLeft: 'auto', fontSize: 11, opacity: 0.7 }}>Activé</span>}
-              </button>
-              {/* Terminée */}
-              <button
-                type="button"
-                onClick={() => setDone(v => !v)}
-                style={{
-                  flex: 1, display: 'flex', alignItems: 'center', gap: 8,
-                  padding: '10px 16px', borderRadius: 9, cursor: 'pointer',
-                  background: done ? 'rgba(61,184,106,0.14)' : 'var(--surface2)',
-                  border: done ? '2px solid rgba(61,184,106,0.7)' : '2px solid var(--border)',
-                  color: done ? '#3db86a' : 'var(--text-muted)',
-                  fontWeight: done ? 700 : 500, fontSize: 14,
-                  transition: 'all .15s',
-                  boxShadow: done ? '0 0 10px rgba(61,184,106,0.2)' : 'none',
-                }}
-              >
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-                  <polyline points="20 6 9 17 4 12"/>
-                </svg>
-                <span>TERMINÉE</span>
-                {done && <span style={{ marginLeft: 'auto', fontSize: 11, opacity: 0.7 }}>Activé</span>}
-              </button>
-            </div>
+            {/* ── Terminée + Urgent ── */}
+            <StatusToggles
+              isDone={done}
+              onToggleDone={() => setDone(v => !v)}
+              isUrgent={urgent}
+              onToggleUrgent={() => setUrgent(v => !v)}
+            />
 
-            {/* ── Assignees (Steam boards only) ── */}
+            {/* ── Assignées (boards Steam seulement) ── */}
             {isTaskBoard && appUsers.length > 0 && (
-              <div style={{ position: 'relative' }}>
+              <div>
                 <label style={{ display: 'block', fontSize: 14, color: 'var(--text-muted)', marginBottom: 10 }}>
                   👥 Assignés <span style={{ opacity: 0.55 }}>(facultatif)</span>
                 </label>
-
-                {/* Selected assignees chips */}
-                {assignees.length > 0 && (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
-                    {assignees.map(uid => {
-                      const u = appUsers.find(x => x.id === uid);
-                      if (!u) return null;
-                      return (
-                        <div key={uid} style={{
-                          display: 'flex', alignItems: 'center', gap: 5,
-                          background: 'var(--surface2)', border: '1px solid var(--border)',
-                          borderRadius: 20, padding: '4px 10px 4px 5px',
-                          fontSize: 13,
-                        }}>
-                          {u.steamAvatar ? (
-                            <img src={u.steamAvatar} alt="" style={{ width: 20, height: 20, borderRadius: '50%', flexShrink: 0 }} />
-                          ) : (
-                            <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
-                              {u.username?.[0]?.toUpperCase()}
-                            </div>
-                          )}
-                          <span style={{ color: 'var(--text)' }}>{u.steamPersonaName || u.username}</span>
-                          <button
-                            onClick={() => setAssignees(a => a.filter(id => id !== uid))}
-                            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', padding: '0 0 0 2px', lineHeight: 1 }}
-                          >✕</button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-
-                <button
-                  onClick={() => setShowAssigneeMenu(v => !v)}
-                  style={{
-                    width: '100%', padding: '10px 12px', textAlign: 'left',
-                    background: 'var(--surface2)', border: '1px solid var(--border)',
-                    borderRadius: 8, color: 'var(--text-muted)', fontSize: 14, cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', gap: 6,
-                  }}
-                >
-                  <span>+ Ajouter un assigné</span>
-                  <span style={{ marginLeft: 'auto', opacity: 0.4 }}>{showAssigneeMenu ? '▲' : '▼'}</span>
-                </button>
-
-                {showAssigneeMenu && (
-                  <div ref={assigneeMenuRef} style={{
-                    position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50,
-                    background: 'var(--surface2)', border: '1px solid var(--border)',
-                    borderRadius: 8, marginTop: 4, maxHeight: 180, overflowY: 'auto',
-                    boxShadow: '0 6px 20px rgba(0,0,0,0.4)',
-                  }}>
-                    {appUsers
-                      .filter(u => u.role !== 'admin' && !assignees.includes(u.id))
-                      .map(u => (
-                        <div key={u.id}
-                          onClick={() => { setAssignees(a => [...a, u.id]); setShowAssigneeMenu(false); }}
-                          style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.05)' }}
-                          onMouseEnter={e => e.currentTarget.style.background = 'var(--surface3)'}
-                          onMouseLeave={e => e.currentTarget.style.background = ''}
-                        >
-                          {u.steamAvatar ? (
-                            <img src={u.steamAvatar} alt="" style={{ width: 26, height: 26, borderRadius: '50%', flexShrink: 0, border: '1px solid var(--border)' }} />
-                          ) : (
-                            <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
-                              {u.username?.[0]?.toUpperCase()}
-                            </div>
-                          )}
-                          <div>
-                            <div style={{ fontSize: 13, color: 'var(--text)', fontWeight: 600 }}>{u.username}</div>
-                            {u.steamPersonaName && u.steamPersonaName !== u.username && (
-                              <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{u.steamPersonaName}</div>
-                            )}
-                          </div>
-                        </div>
-                      ))
-                    }
-                    {appUsers.filter(u => u.role !== 'admin' && !assignees.includes(u.id)).length === 0 && (
-                      <div style={{ padding: '12px', fontSize: 13, color: 'var(--text-muted)', textAlign: 'center' }}>Tous les utilisateurs sont assignés</div>
-                    )}
-                  </div>
-                )}
+                <AssigneeEditor
+                  assignees={assignees}
+                  appUsers={appUsers}
+                  onUpdateAssignees={setAssignees}
+                />
               </div>
             )}
 
