@@ -75,7 +75,7 @@ function DaysBadge({ days }) {
   );
 }
 
-function FeaturedCard({ token }) {
+function FeaturedCard({ token, wishlist = new Set() }) {
   const [items, setItems] = useState([]);
   const [idx, setIdx] = useState(0);
   const timerRef = useRef(null);
@@ -99,12 +99,8 @@ function FeaturedCard({ token }) {
   const gc = genreColor(game.genres);
 
   return (
-    <div style={{ padding: '10px 10px 0' }}>
-      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
-        <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-        Populaires & Recommandés
-      </div>
-      <a
+    <div style={{ padding: '0 10px 0' }}>
+      <
         href={`https://store.steampowered.com/app/${game.appid}/`}
         target="_blank" rel="noreferrer"
         style={{
@@ -129,9 +125,12 @@ function FeaturedCard({ token }) {
               ))}
             </div>
           )}
-          {/* Nom */}
-          <div style={{ position: 'absolute', bottom: 9, left: 10, right: 50, fontSize: 13, fontWeight: 700, color: '#fff', textShadow: '0 1px 4px rgba(0,0,0,0.9)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {game.name}
+          {/* Nom + wishlist */}
+          <div style={{ position: 'absolute', bottom: 9, left: 10, right: 50, display: 'flex', alignItems: 'center', gap: 6, overflow: 'hidden' }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', textShadow: '0 1px 4px rgba(0,0,0,0.9)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+              {game.name}
+            </div>
+            {wishlist.has(game.appid) && <WishlistDot />}
           </div>
         </div>
         {/* Détails */}
@@ -165,11 +164,21 @@ function FeaturedCard({ token }) {
   );
 }
 
+function WishlistDot() {
+  return (
+    <span title="Dans ta wishlist Steam" style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 9, color: '#f5c518', background: 'rgba(245,197,24,0.15)', border: '1px solid rgba(245,197,24,0.35)', borderRadius: 3, padding: '1px 5px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+      <svg viewBox="0 0 24 24" width="9" height="9" fill="#f5c518" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+      Wishlist
+    </span>
+  );
+}
+
 export default function UpcomingPanel({ token }) {
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [lastFetch, setLastFetch] = useState(null);
+  const [wishlist, setWishlist] = useState(new Set());
 
   const h = { Authorization: `Bearer ${token}` };
 
@@ -191,53 +200,49 @@ export default function UpcomingPanel({ token }) {
 
   useEffect(() => { fetchUpcoming(); }, [fetchUpcoming]);
 
+  useEffect(() => {
+    fetch(`${API}/steam/wishlist`, { headers: h })
+      .then(r => r.json())
+      .then(ids => { if (Array.isArray(ids)) setWishlist(new Set(ids)); })
+      .catch(() => {});
+  }, [token]);
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      {/* Header */}
-      <div style={{ padding: '18px 16px 10px', flexShrink: 0, borderBottom: '1px solid var(--border)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="var(--accent)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-            </svg>
-            <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
-              Sorties à venir
+      {/* Section : Populaires & Recommandés */}
+      <div style={{ padding: '14px 14px 8px', flexShrink: 0 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="var(--accent)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          Populaires &amp; Recommandés
+        </div>
+      </div>
+
+      {/* Featured */}
+      <FeaturedCard token={token} wishlist={wishlist} />
+
+      {/* Section : Sorties à venir */}
+      <div style={{ padding: '14px 14px 8px', flexShrink: 0 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="var(--accent)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+          Sorties à venir
+          {!loading && games.length > 0 && (
+            <span style={{ fontSize: 10, color: 'var(--text-muted)', background: 'var(--surface2)', borderRadius: 99, padding: '1px 6px', fontWeight: 600 }}>
+              {games.length}
             </span>
-            {!loading && games.length > 0 && (
-              <span style={{ fontSize: 10, color: 'var(--text-muted)', background: 'var(--surface2)', borderRadius: 99, padding: '1px 6px' }}>
-                {games.length}
-              </span>
-            )}
-          </div>
+          )}
           <button
             onClick={() => fetchUpcoming(true)}
             disabled={loading}
             title="Forcer le rechargement"
-            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: loading ? 'default' : 'pointer', padding: 2, display: 'flex', alignItems: 'center', opacity: loading ? 0.4 : 0.7, transition: 'opacity .15s' }}
+            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: loading ? 'default' : 'pointer', padding: 0, display: 'flex', alignItems: 'center', opacity: loading ? 0.4 : 0.6, marginLeft: 'auto' }}
           >
-            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
               style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }}>
               <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
             </svg>
           </button>
-        </div>
-        {lastFetch && !loading && (
-          <div style={{ fontSize: 9, color: 'var(--text-muted)', marginTop: 4, opacity: 0.6 }}>
-            Mis à jour {lastFetch.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-          </div>
-        )}
-      </div>
-
-      {/* Featured */}
-      <FeaturedCard token={token} />
-
-      {/* Séparateur sorties à venir */}
-      <div style={{ padding: '10px 14px 4px', flexShrink: 0 }}>
-        <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'flex', alignItems: 'center', gap: 5, borderTop: '1px solid var(--border)', paddingTop: 10 }}>
-          <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-          </svg>
-          Sorties à venir
         </div>
       </div>
 
@@ -311,8 +316,11 @@ export default function UpcomingPanel({ token }) {
                       <span style={{ position: 'absolute', top: 7, left: 8, fontSize: 8, fontWeight: 800, background: 'rgba(90,60,160,0.85)', color: '#d0b0ff', borderRadius: 3, padding: '2px 5px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>DLC</span>
                     )}
                     {/* Nom par-dessus l'image */}
-                    <div style={{ position: 'absolute', bottom: 7, left: 10, right: 10, fontSize: 12, fontWeight: 700, color: '#fff', textShadow: '0 1px 4px rgba(0,0,0,0.8)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {game.name}
+                    <div style={{ position: 'absolute', bottom: 7, left: 10, right: 10, display: 'flex', alignItems: 'center', gap: 6, overflow: 'hidden' }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: '#fff', textShadow: '0 1px 4px rgba(0,0,0,0.8)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                        {game.name}
+                      </div>
+                      {wishlist.has(game.appid) && <WishlistDot />}
                     </div>
                   </div>
                   {/* Détails */}
@@ -371,9 +379,10 @@ export default function UpcomingPanel({ token }) {
                     {game.type === 'dlc' && (
                       <span style={{ fontSize: 8, fontWeight: 800, background: 'rgba(90,60,160,0.3)', color: '#b090f0', borderRadius: 3, padding: '1px 4px', flexShrink: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>DLC</span>
                     )}
-                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
                       {game.name}
                     </div>
+                    {wishlist.has(game.appid) && <WishlistDot />}
                   </div>
                   {game.developers?.length > 0 && (
                     <div style={{ fontSize: 10, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 3, opacity: 0.8 }}>

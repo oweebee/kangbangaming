@@ -461,6 +461,27 @@ app.delete('/api/admin/boards/:userId/:boardId', requireAdmin, (req, res) => {
   res.json({ ok: true });
 });
 
+// ── Steam wishlist ────────────────────────────────────────────────────────────
+
+const wishlistCache = new Map(); // userId → { appids: Set, fetchedAt }
+const WISHLIST_TTL = 15 * 60 * 1000; // 15 min
+
+app.get('/api/steam/wishlist', requireAuth, async (req, res) => {
+  const creds = getUserSteamCreds(req.user.id);
+  if (!creds.steamId) return res.json([]);
+  const now = Date.now();
+  const cached = wishlistCache.get(req.user.id);
+  if (cached && now - cached.fetchedAt < WISHLIST_TTL) return res.json([...cached.appids]);
+  try {
+    const url = `https://store.steampowered.com/wishlist/profiles/${creds.steamId}/wishlistdata/?p=0`;
+    const resp = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+    const data = await resp.json();
+    const appids = Object.keys(data || {}).map(Number);
+    wishlistCache.set(req.user.id, { appids: new Set(appids), fetchedAt: now });
+    res.json(appids);
+  } catch { res.json([]); }
+});
+
 // ── Steam featured (homepage populaires/recommandés) ─────────────────────────
 
 let featuredCache = { data: null, fetchedAt: 0 };
