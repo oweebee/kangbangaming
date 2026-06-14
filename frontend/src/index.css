@@ -1,7 +1,7 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* Icône Steam — miroir horizontal partout dans l'app */
-svg[viewBox="0 0 496 512"] { transform: scaleX(-1); }
+/* Icône Steam — miroir horizontal + vertical (rotation 180°) */
+svg[viewBox="0 0 496 512"] { transform: scale(-1); }
 
 :root {
   --bg:        #242424;
