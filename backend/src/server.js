@@ -118,8 +118,10 @@ function requireAdmin(req, res, next) {
 
 // ── Steam OpenID login ────────────────────────────────────────────────────────
 
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
-const BACKEND_URL  = process.env.BACKEND_URL  || `http://localhost:${process.env.PORT || 3001}`;
+// SERVICE_URL_FRONTEND is auto-injected by Coolify — no manual config needed for basic deploys.
+// Override with FRONTEND_URL / BACKEND_URL env vars for custom setups.
+const FRONTEND_URL = process.env.FRONTEND_URL || process.env.SERVICE_URL_FRONTEND || 'http://localhost:5173';
+const BACKEND_URL  = process.env.BACKEND_URL  || process.env.SERVICE_URL_FRONTEND || `http://localhost:${process.env.PORT || 3001}`;
 
 // 1. Redirige vers Steam pour authentification
 app.get('/api/auth/steam', (req, res) => {
