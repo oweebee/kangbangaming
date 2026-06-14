@@ -220,29 +220,40 @@ app.post('/api/auth/login', async (req, res) => {
   res.json({ token, user: { id: user.id, username: user.username, role: user.role, steamAvatar: user.steamAvatar || null, steamPersonaName: user.steamPersonaName || null } });
 });
 
+// Registration is admin-only: requires a valid admin JWT
 app.post('/api/auth/register', async (req, res) => {
+  // Verify caller is an admin
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) return res.status(403).json({ error: 'Inscriptions désactivées. Seul un administrateur peut créer des comptes.' });
+  let caller;
+  try { caller = jwt.verify(authHeader.slice(7), JWT_SECRET); } catch { return res.status(403).json({ error: 'Token invalide.' }); }
+  if (caller.role !== 'admin') return res.status(403).json({ error: 'Réservé aux administrateurs.' });
+
   const { username, password, steamId } = req.body;
   if (!username || !password) return res.status(400).json({ error: 'Missing fields' });
   if (username.length < 3) return res.status(400).json({ error: 'Username too short (min 3)' });
   if (password.length < 6) return res.status(400).json({ error: 'Password too short (min 6)' });
-  if (!steamId || !/^\d{17}$/.test(steamId.trim())) return res.status(400).json({ error: 'Steam ID invalide (17 chiffres requis)' });
+  // steamId is now optional
+  if (steamId && !/^\d{17}$/.test(steamId.trim())) return res.status(400).json({ error: 'Steam ID invalide (17 chiffres requis)' });
   const users = readUsers();
   if (users.find(u => u.username === username)) return res.status(409).json({ error: 'Username taken' });
   const hash = await bcrypt.hash(password, 10);
   const id = `user_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-  const newUser = { id, username, passwordHash: hash, role: 'user', status: 'pending', steamId: steamId.trim(), createdAt: new Date().toISOString() };
+  const trimmedSteamId = steamId ? steamId.trim() : null;
+  const newUser = { id, username, passwordHash: hash, role: 'user', status: 'active', createdAt: new Date().toISOString() };
+  if (trimmedSteamId) newUser.steamId = trimmedSteamId;
   // Try to fetch Steam avatar immediately
-  if (GLOBAL_STEAM_API_KEY) {
+  if (GLOBAL_STEAM_API_KEY && trimmedSteamId) {
     try {
-      const data = await steamFetch(`https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=${GLOBAL_STEAM_API_KEY}&steamids=${steamId.trim()}`);
+      const data = await steamFetch(`https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=${GLOBAL_STEAM_API_KEY}&steamids=${trimmedSteamId}`);
       const player = data.response?.players?.[0];
       if (player) { newUser.steamAvatar = player.avatarmedium || player.avatar || null; newUser.steamPersonaName = player.personaname || null; }
     } catch { /* not critical */ }
   }
   users.push(newUser);
   writeUsers(users);
-  // Don't issue a token — user must wait for approval
-  res.status(201).json({ pending: true, message: 'Compte créé ! Un admin doit valider ton inscription avant que tu puisses te connecter.' });
+  // Admin-created accounts are active immediately — no approval needed
+  res.status(201).json({ success: true, message: `Compte "${username}" créé avec succès.`, user: userPublicInfo(newUser) });
 });
 
 app.get('/api/auth/me', requireAuth, (req, res) => {

@@ -27,6 +27,12 @@ export default function AdminPanel({ token, currentUser, onClose }) {
   const [saving, setSaving] = useState(false);
   const [tab, setTab] = useState('pending');
 
+  // Create user tab
+  const [createForm, setCreateForm] = useState({ username: '', password: '', steamId: '' });
+  const [createMsg, setCreateMsg] = useState('');
+  const [createErr, setCreateErr] = useState('');
+  const [creating, setCreating] = useState(false);
+
   // Boards tab
   const [boards, setBoards] = useState([]);
   const [boardsLoading, setBoardsLoading] = useState(false);
@@ -75,6 +81,31 @@ export default function AdminPanel({ token, currentUser, onClose }) {
     if (!confirm('Supprimer cet utilisateur et tous ses boards ?')) return;
     await fetch(`${API}/admin/users/${id}`, { method: 'DELETE', headers: h });
     fetchUsers();
+  }
+
+  async function handleCreateUser(e) {
+    e.preventDefault();
+    setCreateErr(''); setCreateMsg('');
+    const { username, password, steamId } = createForm;
+    if (!username || !password) { setCreateErr('Nom d\'utilisateur et mot de passe requis.'); return; }
+    if (password.length < 6) { setCreateErr('Mot de passe trop court (min 6 caractères).'); return; }
+    setCreating(true);
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: h,
+        body: JSON.stringify({ username: username.trim(), password, steamId: steamId.trim() || undefined }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || data.error || 'Erreur');
+      setCreateMsg(`✓ ${data.message}`);
+      setCreateForm({ username: '', password: '', steamId: '' });
+      fetchUsers();
+    } catch (err) {
+      setCreateErr(err.message);
+    } finally {
+      setCreating(false);
+    }
   }
 
   async function handleSavePwd(id) {
@@ -216,6 +247,7 @@ export default function AdminPanel({ token, currentUser, onClose }) {
           <button style={tabStyle('active')} onClick={() => setTab('active')}>Actifs ({active.length})</button>
           <button style={tabStyle('suspended')} onClick={() => setTab('suspended')}>Suspendus ({suspended.length})</button>
           <button style={tabStyle('boards')} onClick={() => setTab('boards')}>Boards</button>
+          <button style={tabStyle('create')} onClick={() => { setTab('create'); setCreateMsg(''); setCreateErr(''); }}>+ Créer</button>
         </div>
 
         {/* Body */}
@@ -237,6 +269,38 @@ export default function AdminPanel({ token, currentUser, onClose }) {
             suspended.length === 0
               ? <p style={{ color: 'var(--text-muted)', fontSize: 13, textAlign: 'center', marginTop: 32 }}>Aucun utilisateur suspendu</p>
               : suspended.map(u => renderUser(u, false))
+          )}
+
+          {tab === 'create' && (
+            <form onSubmit={handleCreateUser} style={{ maxWidth: 380, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <p style={{ color: 'var(--text-muted)', fontSize: 12, margin: '0 0 4px' }}>
+                Crée un compte utilisateur actif directement. Le mot de passe peut être changé ensuite.
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <label style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Nom d'utilisateur *</label>
+                <input value={createForm.username} onChange={e => setCreateForm(f => ({ ...f, username: e.target.value }))}
+                  placeholder="ex: john_doe" required minLength={3}
+                  style={{ padding: '8px 10px', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 7, color: 'var(--text)', fontSize: 13, outline: 'none' }} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <label style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Mot de passe *</label>
+                <input type="password" value={createForm.password} onChange={e => setCreateForm(f => ({ ...f, password: e.target.value }))}
+                  placeholder="Min 6 caractères" required minLength={6}
+                  style={{ padding: '8px 10px', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 7, color: 'var(--text)', fontSize: 13, outline: 'none' }} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <label style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Steam ID <span style={{ fontWeight: 400, textTransform: 'none' }}>(optionnel, 17 chiffres)</span></label>
+                <input value={createForm.steamId} onChange={e => setCreateForm(f => ({ ...f, steamId: e.target.value }))}
+                  placeholder="ex: 76561198012345678"
+                  style={{ padding: '8px 10px', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 7, color: 'var(--text)', fontSize: 13, outline: 'none' }} />
+              </div>
+              {createErr && <div style={{ background: 'rgba(220,50,50,.12)', border: '1px solid rgba(220,50,50,.3)', borderRadius: 7, padding: '8px 10px', color: '#f88', fontSize: 12 }}>{createErr}</div>}
+              {createMsg && <div style={{ background: 'rgba(60,200,100,.1)', border: '1px solid rgba(60,200,100,.3)', borderRadius: 7, padding: '8px 10px', color: '#4cd882', fontSize: 12 }}>{createMsg}</div>}
+              <button type="submit" disabled={creating}
+                style={{ padding: '10px', background: 'var(--accent)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 14, fontWeight: 700, cursor: creating ? 'not-allowed' : 'pointer', opacity: creating ? 0.7 : 1 }}>
+                {creating ? 'Création…' : 'Créer le compte'}
+              </button>
+            </form>
           )}
 
           {tab === 'boards' && (

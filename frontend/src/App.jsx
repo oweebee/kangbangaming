@@ -6,7 +6,7 @@ import GameModal from './components/GameModal.jsx';
 import TaskModal from './components/TaskModal.jsx';
 import SearchModal from './components/SearchModal.jsx';
 import LoginPage from './components/LoginPage.jsx';
-import RegisterPage from './components/RegisterPage.jsx';
+// RegisterPage removed — Steam-only login
 import AdminPanel from './components/AdminPanel.jsx';
 import ProfilePage from './components/ProfilePage.jsx';
 import GameStatsWidget from './components/GameStatsWidget.jsx';
@@ -278,7 +278,6 @@ export default function App() {
   const isMobile = useMobile();
 
   // Auth
-  const [authPage, setAuthPage] = useState('login');
   const [currentUser, setCurrentUser] = useState(null);
   const [token, setToken] = useState(null);
   const [steamLoginError, setSteamLoginError] = useState('');
@@ -945,8 +944,7 @@ export default function App() {
 
   // Auth screens
   if (!currentUser) {
-    if (authPage === 'register') return <RegisterPage onLogin={handleLogin} onGoLogin={() => setAuthPage('login')} />;
-    return <LoginPage onLogin={handleLogin} onGoRegister={() => setAuthPage('register')} steamError={steamLoginError} />;
+    return <LoginPage onLogin={handleLogin} steamError={steamLoginError} />;
   }
 
   const filtered = games.filter(g => g.name?.toLowerCase().includes(search.toLowerCase()));
