@@ -625,12 +625,37 @@ app.get('/api/admin/settings', requireAdmin, (req, res) => {
   res.json(readSettings());
 });
 
-app.patch('/api/admin/settings', requireAdmin, (req, res) => {
+app.patch('/api/admin/settings', requireAdmin, async (req, res) => {
   const current = readSettings();
   const updated = { ...current };
   if ('requireApproval' in req.body) updated.requireApproval = Boolean(req.body.requireApproval);
-  if ('discordUrl'     in req.body) updated.discordUrl      = String(req.body.discordUrl || '');
-  if ('discordIconUrl' in req.body) updated.discordIconUrl  = String(req.body.discordIconUrl || '');
+
+  if ('discordUrl' in req.body) {
+    const url = String(req.body.discordUrl || '').trim();
+    updated.discordUrl = url;
+
+    // Résolution automatique de l'icône depuis l'API publique Discord
+    if (url) {
+      try {
+        const match = url.match(/discord(?:\.gg|\.com\/invite)\/([a-zA-Z0-9-]+)/);
+        if (match) {
+          const code = match[1];
+          const r = await fetch(`https://discord.com/api/v10/invites/${code}`);
+          if (r.ok) {
+            const data = await r.json();
+            if (data.guild?.icon && data.guild?.id) {
+              updated.discordIconUrl = `https://cdn.discordapp.com/icons/${data.guild.id}/${data.guild.icon}.webp?size=128`;
+            }
+          }
+        }
+      } catch {
+        // échec silencieux — pas d'icône
+      }
+    } else {
+      updated.discordIconUrl = '';
+    }
+  }
+
   writeSettings(updated);
   res.json(updated);
 });
