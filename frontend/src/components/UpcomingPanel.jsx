@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useLang } from '../i18n.js';
 import { genreColor, playerTags, ReviewBadge, DaysBadge, WishlistDot } from './SteamUI.jsx';
 import { daysUntil, formatDateShort } from '../utils.js';
 
@@ -99,6 +100,7 @@ function FeaturedCard({ token, wishlist = new Set() }) {
 
 
 export default function UpcomingPanel({ token }) {
+  const { t } = useLang();
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -117,7 +119,7 @@ export default function UpcomingPanel({ token }) {
       setGames(data);
       setLastFetch(new Date());
     } catch (e) {
-      setError('Impossible de charger les sorties.');
+      setError(t('upcoming.load_error'));
     } finally {
       setLoading(false);
     }
@@ -138,7 +140,7 @@ export default function UpcomingPanel({ token }) {
       <div style={{ padding: '14px 14px 8px', flexShrink: 0 }}>
         <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'flex', alignItems: 'center', gap: 6 }}>
           <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="var(--accent)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-          Populaires &amp; Recommandés
+          {t('upcoming.popular')}
         </div>
       </div>
 
@@ -151,7 +153,7 @@ export default function UpcomingPanel({ token }) {
           <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="var(--accent)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
           </svg>
-          Sorties à venir
+          {t('upcoming.releases')}
           {!loading && games.length > 0 && (
             <span style={{ fontSize: 10, color: 'var(--text-muted)', background: 'var(--surface2)', borderRadius: 99, padding: '1px 6px', fontWeight: 600 }}>
               {games.length}
@@ -160,7 +162,7 @@ export default function UpcomingPanel({ token }) {
           <button
             onClick={() => fetchUpcoming(true)}
             disabled={loading}
-            title="Forcer le rechargement"
+            title={t('upcoming.force_reload')}
             style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: loading ? 'default' : 'pointer', padding: 0, display: 'flex', alignItems: 'center', opacity: loading ? 0.4 : 0.6, marginLeft: 'auto' }}
           >
             <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
@@ -193,7 +195,7 @@ export default function UpcomingPanel({ token }) {
             {error}
             <br />
             <button onClick={fetchUpcoming} style={{ marginTop: 10, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 12px', color: 'var(--text)', fontSize: 11, cursor: 'pointer' }}>
-              Réessayer
+              {t('upcoming.retry')}
             </button>
           </div>
         )}
@@ -201,7 +203,7 @@ export default function UpcomingPanel({ token }) {
         {!loading && !error && games.length === 0 && (
           <div style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 12 }}>
             <div style={{ fontSize: 28, marginBottom: 8 }}>🎮</div>
-            Aucune sortie majeure<br />dans les 45 prochains jours
+            {t('upcoming.empty').split('\n').map((line, i) => <span key={i}>{line}{i === 0 && <br />}</span>)}
           </div>
         )}
 

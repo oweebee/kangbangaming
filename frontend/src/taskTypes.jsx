@@ -253,19 +253,19 @@ export const TASK_TYPES = [
     badgeBg: 'rgba(80,45,10,0.88)', badgeText: '#d4a870', textColor: '#d4a870',
   },
   {
-    id: 'daily', label: 'Quotidien', emoji: '🔁',
+    id: 'daily', label: 'Quotidien', labelKey: 'type.daily', emoji: '🔁',
     img: '/task-types/daily.png', FallbackIcon: DailyQuestIcon,
     bg: 'rgba(180,100,10,0.16)', border: '#e69628',
     badgeBg: 'rgba(130,75,8,0.88)', badgeText: '#f5c060', textColor: '#f5c060',
   },
   {
-    id: 'event', label: 'Événement', emoji: '📅',
+    id: 'event', label: 'Événement', labelKey: 'type.event', emoji: '📅',
     img: '/task-types/event.png', FallbackIcon: EventIcon,
     bg: 'rgba(90,90,130,0.16)', border: '#a0a0d2',
     badgeBg: 'rgba(50,50,90,0.88)', badgeText: '#c0c0e0', textColor: '#c0c0e0',
   },
   {
-    id: 'dungeon', label: 'Donjon', emoji: '🐉',
+    id: 'dungeon', label: 'Donjon', labelKey: 'type.dungeon', emoji: '🐉',
     img: '/task-types/dungeon.png', FallbackIcon: DungeonIcon,
     bg: 'rgba(160,15,15,0.16)', border: '#dc3232',
     badgeBg: 'rgba(100,8,8,0.88)', badgeText: '#f08080', textColor: '#f08080',

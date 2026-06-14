@@ -535,6 +535,15 @@ fr: {
   'err.col_network':   'Erreur réseau: ',
   'err.del_board':     'Supprimer ce board ?',
   'err.del_col':       'Supprimer cette colonne ? Les jeux seront déplacés dans la première colonne.',
+
+  // ProgressSlider
+  'progress.label':    '📊 Progression',
+  'progress.disabled': 'Désactivé',
+
+  // Task types
+  'type.daily':        'Quotidien',
+  'type.event':        'Événement',
+  'type.dungeon':      'Donjon',
 },
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -970,6 +979,15 @@ en: {
   'err.col_network':   'Network error: ',
   'err.del_board':     'Delete this board?',
   'err.del_col':       'Delete this column? Games will be moved to the first column.',
+
+  // ProgressSlider
+  'progress.label':    '📊 Progress',
+  'progress.disabled': 'Disabled',
+
+  // Task types
+  'type.daily':        'Daily',
+  'type.event':        'Event',
+  'type.dungeon':      'Dungeon',
 },
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -1405,6 +1423,15 @@ es: {
   'err.col_network':   'Error de red: ',
   'err.del_board':     '¿Eliminar este tablero?',
   'err.del_col':       '¿Eliminar esta columna? Los juegos se moverán a la primera columna.',
+
+  // ProgressSlider
+  'progress.label':    '📊 Progreso',
+  'progress.disabled': 'Desactivado',
+
+  // Task types
+  'type.daily':        'Diario',
+  'type.event':        'Evento',
+  'type.dungeon':      'Mazmorra',
 },
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -1840,6 +1867,15 @@ de: {
   'err.col_network':   'Netzwerkfehler: ',
   'err.del_board':     'Dieses Board löschen?',
   'err.del_col':       'Diese Spalte löschen? Spiele werden in die erste Spalte verschoben.',
+
+  // ProgressSlider
+  'progress.label':    '📊 Fortschritt',
+  'progress.disabled': 'Deaktiviert',
+
+  // Task types
+  'type.daily':        'Täglich',
+  'type.event':        'Ereignis',
+  'type.dungeon':      'Kerker',
 },
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -2275,6 +2311,15 @@ ru: {
   'err.col_network':   'Ошибка сети: ',
   'err.del_board':     'Удалить эту доску?',
   'err.del_col':       'Удалить эту колонку? Игры будут перемещены в первую колонку.',
+
+  // ProgressSlider
+  'progress.label':    '📊 Прогресс',
+  'progress.disabled': 'Отключено',
+
+  // Task types
+  'type.daily':        'Ежедневно',
+  'type.event':        'Событие',
+  'type.dungeon':      'Подземелье',
 },
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -2710,6 +2755,15 @@ zh: {
   'err.col_network':   '网络错误：',
   'err.del_board':     '删除此看板？',
   'err.del_col':       '删除此列？游戏将移至第一列。',
+
+  // ProgressSlider
+  'progress.label':    '📊 进度',
+  'progress.disabled': '已禁用',
+
+  // Task types
+  'type.daily':        '每日',
+  'type.event':        '事件',
+  'type.dungeon':      '地牢',
 },
 
 }; // fin TRANSLATIONS

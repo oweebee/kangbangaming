@@ -3,7 +3,10 @@
  * Metacritic, prix, genres, studio, date de sortie).
  * Utilisé dans les deux branches header (board personnel & board public).
  */
+import { useLang } from '../i18n.js';
+
 export default function SteamEncart({ gameInfo }) {
+  const { t } = useLang();
   if (!gameInfo) return null;
 
   const score = gameInfo.reviewScore ?? 0;
@@ -85,10 +88,10 @@ export default function SteamEncart({ gameInfo }) {
         <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 4, padding: '5px 11px', borderLeft: '1px solid rgba(255,255,255,0.08)' }}>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, alignItems: 'center' }}>
             {gameInfo.earlyAccess && (
-              <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 4, background: 'rgba(220,50,50,0.18)', color: '#ff5555', border: '2px solid rgba(220,50,50,0.85)', whiteSpace: 'nowrap' }}>⚠ Accès Anticipé</span>
+              <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 4, background: 'rgba(220,50,50,0.18)', color: '#ff5555', border: '2px solid rgba(220,50,50,0.85)', whiteSpace: 'nowrap' }}>{t('ginfo.early_access')}</span>
             )}
             {gameInfo.comingSoon && !gameInfo.earlyAccess && (
-              <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 4, background: 'rgba(245,197,24,0.12)', color: '#f5c518', border: '2px solid rgba(245,197,24,0.75)', whiteSpace: 'nowrap' }}>🔜 À venir</span>
+              <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 4, background: 'rgba(245,197,24,0.12)', color: '#f5c518', border: '2px solid rgba(245,197,24,0.75)', whiteSpace: 'nowrap' }}>{t('ginfo.coming_soon')}</span>
             )}
             {gameInfo.multiplayerLabel && (
               <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 4, background: 'rgba(71,167,245,0.15)', color: '#47a7f5', border: '2px solid rgba(71,167,245,0.75)', whiteSpace: 'nowrap' }}>👥 {gameInfo.multiplayerLabel}</span>

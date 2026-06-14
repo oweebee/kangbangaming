@@ -311,7 +311,7 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
                       background: previewTt.badgeBg, color: previewTt.badgeText,
                       fontSize: 9, fontWeight: 700, padding: '2px 7px',
                       borderRadius: 4, letterSpacing: '0.04em',
-                    }}>{previewTt.label.toUpperCase()}</div>
+                    }}>{(previewTt.labelKey ? t(previewTt.labelKey) : previewTt.label).toUpperCase()}</div>
                   )}
                 </div>
                 <div style={{ padding: '8px 10px' }}>
@@ -405,25 +405,25 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
                   {t('search.type_label')} <span style={{ opacity: 0.55 }}>{t('search.optional')}</span>
                 </label>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                  {TASK_TYPES.map(t => {
-                    const active = customTaskType === t.id;
+                  {TASK_TYPES.map(taskTy => {
+                    const active = customTaskType === taskTy.id;
                     return (
-                      <button key={t.id}
-                        onClick={() => setCustomTaskType(active ? null : t.id)}
+                      <button key={taskTy.id}
+                        onClick={() => setCustomTaskType(active ? null : taskTy.id)}
                         style={{
                           display: 'flex', alignItems: 'center', gap: 7,
                           padding: '8px 14px',
-                          background: active ? t.bg : 'var(--surface2)',
-                          border: active ? `2px solid ${t.border}` : '2px solid var(--border)',
+                          background: active ? taskTy.bg : 'var(--surface2)',
+                          border: active ? `2px solid ${taskTy.border}` : '2px solid var(--border)',
                           borderRadius: 22,
-                          color: active ? t.textColor : 'var(--text-muted)',
+                          color: active ? taskTy.textColor : 'var(--text-muted)',
                           fontSize: 13, fontWeight: active ? 700 : 500,
                           cursor: 'pointer', transition: 'all .15s', whiteSpace: 'nowrap',
-                          boxShadow: active ? `0 0 8px ${t.border}` : 'none',
+                          boxShadow: active ? `0 0 8px ${taskTy.border}` : 'none',
                         }}
                       >
-                        <span style={{ fontSize: 16 }}>{t.emoji}</span>
-                        <span>{t.label}</span>
+                        <span style={{ fontSize: 16 }}>{taskTy.emoji}</span>
+                        <span>{taskTy.labelKey ? t(taskTy.labelKey) : taskTy.label}</span>
                       </button>
                     );
                   })}

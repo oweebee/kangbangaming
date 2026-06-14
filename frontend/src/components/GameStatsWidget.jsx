@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useLang } from '../i18n.js';
 
 function extractAppId(url) {
   if (!url) return null;
@@ -28,6 +29,7 @@ function StatusDot({ state }) {
 }
 
 export default function GameStatsWidget({ api, token, board, rightOffset = 0 }) {
+  const { t } = useLang();
   const [stats, setStats]       = useState(null);
   const [profile, setProfile]   = useState(null);
   const [loading, setLoading]   = useState(true);
@@ -119,7 +121,7 @@ export default function GameStatsWidget({ api, token, board, rightOffset = 0 }) 
         <div
           onClick={() => { if (!permanentLock) setSlideIn(v => !v); }}
           style={{ cursor: permanentLock ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1, width: '100%' }}
-          title={permanentLock ? `Verrouillé ${permanentLock === 'open' ? 'ouvert' : 'fermé'}` : (slideIn ? 'Fermer' : 'Ouvrir')}
+          title={permanentLock ? (permanentLock === 'open' ? t('stats.locked_open') : t('stats.locked_closed')) : (slideIn ? t('stats.close') : t('stats.open'))}
         >
           <span style={{
             fontSize: 14,
@@ -141,7 +143,7 @@ export default function GameStatsWidget({ api, token, board, rightOffset = 0 }) 
               setPermanentLockAndSave(null);
             }
           }}
-          title={permanentLock ? 'Déverrouiller' : (slideIn ? 'Verrouiller ouvert' : 'Verrouiller fermé')}
+          title={permanentLock ? t('stats.unlock') : (slideIn ? t('stats.lock_open') : t('stats.lock_closed'))}
           style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', paddingBottom: 2 }}
         >
           <svg viewBox="0 0 24 24" width="11" height="11" fill="none"
@@ -258,7 +260,7 @@ export default function GameStatsWidget({ api, token, board, rightOffset = 0 }) 
         {/* ── Stats jeu ── */}
         <div style={{ padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 6 }}>
           {loading ? (
-            <div style={{ color: 'var(--text-muted)', fontSize: 11, textAlign: 'center', padding: '4px 0' }}>Chargement…</div>
+            <div style={{ color: 'var(--text-muted)', fontSize: 11, textAlign: 'center', padding: '4px 0' }}>{t('stats.loading')}</div>
           ) : (
             <>
               <div style={{
@@ -272,9 +274,9 @@ export default function GameStatsWidget({ api, token, board, rightOffset = 0 }) 
                   flex: 1, background: 'var(--surface2)', borderRadius: 7,
                   padding: '5px 7px', display: 'flex', flexDirection: 'column', gap: 1,
                 }}>
-                  <div style={{ fontSize: 9, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>⏱ Temps</div>
+                  <div style={{ fontSize: 9, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('stats.playtime')}</div>
                   <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>
-                    {stats?.playtime_minutes === 0 ? 'Jamais joué' : stats?.playtime_display || '—'}
+                    {stats?.playtime_minutes === 0 ? t('stats.never_played') : stats?.playtime_display || '—'}
                   </div>
                 </div>
 
@@ -292,7 +294,7 @@ export default function GameStatsWidget({ api, token, board, rightOffset = 0 }) 
                     onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.background = 'var(--accent-dim, rgba(232,129,58,.12))'; }}
                     onMouseLeave={e => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.background = 'var(--surface2)'; }}
                   >
-                    <div style={{ fontSize: 9, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>🏆 Succès ↗</div>
+                    <div style={{ fontSize: 9, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('stats.achievements')}</div>
                     <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)' }}>
                       {stats.achievements_unlocked}
                       <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: 10 }}>/{stats.achievements_total}</span>

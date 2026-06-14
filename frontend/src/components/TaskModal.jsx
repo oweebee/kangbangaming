@@ -251,7 +251,7 @@ export default function TaskModal({ game, onClose, onEdit, appUsers = [], onPatc
               background: tt.badgeBg, color: tt.badgeText,
               fontSize: 9, fontWeight: 700, padding: '3px 8px',
               borderRadius: 5, letterSpacing: '0.05em',
-            }}>{tt.emoji} {tt.label.toUpperCase()}</div>
+            }}>{tt.emoji} {(tt.labelKey ? t(tt.labelKey) : tt.label).toUpperCase()}</div>
           )}
 
           {/* Buttons top-right */}
@@ -288,7 +288,7 @@ export default function TaskModal({ game, onClose, onEdit, appUsers = [], onPatc
             </div>
             {tt && (
               <div style={{ fontSize: 12, marginTop: 3, color: tt.textColor, opacity: 0.85 }}>
-                {tt.emoji} {tt.label}
+                {tt.emoji} {tt.labelKey ? t(tt.labelKey) : tt.label}
               </div>
             )}
           </div>

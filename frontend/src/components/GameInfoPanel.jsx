@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useLang } from '../i18n.js';
 
 export const GAME_INFO_PANEL_WIDTH = 390;
 
@@ -81,6 +82,7 @@ export default function GameInfoPanel({
   sidebarWidth = 278,
   topOffset = 0,
 }) {
+  const { t } = useLang();
   const [open, setOpen]               = useState(false);
   const [news, setNews]               = useState([]);
   const [newsLoading, setNewsLoading] = useState(false);
@@ -180,7 +182,7 @@ export default function GameInfoPanel({
         {/* Side-switch — always visible, top zone */}
         <div
           onClick={handleSideToggle}
-          title={isLeft ? 'Déplacer le panneau à droite' : 'Déplacer le panneau à gauche'}
+          title={isLeft ? t('ginfo.move_right') : t('ginfo.move_left')}
           style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', flex: 1, paddingTop: 6 }}
         >
           {/* ↔ swap icon — distinct from chevron */}
@@ -192,7 +194,7 @@ export default function GameInfoPanel({
         {/* Newspaper icon — always visible */}
         <div
           onClick={handleTabClick}
-          title={isOpen ? (locked ? 'Panneau verrouillé ouvert' : 'Fermer') : 'Infos & Actualités du jeu'}
+          title={isOpen ? (locked ? t('ginfo.locked') : t('ginfo.close')) : t('ginfo.open')}
           style={{ cursor: locked ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', flex: 1 }}
         >
           <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke={accentColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -204,7 +206,7 @@ export default function GameInfoPanel({
         {/* Lock toggle — only visible when open */}
         <div
           onClick={isOpen ? handleLockToggle : undefined}
-          title={locked ? 'Déverrouiller' : 'Verrouiller ouvert (panneau fixe)'}
+          title={locked ? t('ginfo.unlock') : t('ginfo.lock')}
           style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%',
             height: isOpen ? 24 : 0,
@@ -264,7 +266,7 @@ export default function GameInfoPanel({
               <a
                 href={`https://store.steampowered.com/app/${appId}`}
                 target="_blank" rel="noreferrer"
-                title="Voir sur Steam"
+                title={t('ginfo.steam_link')}
                 style={{ width: 28, height: 28, borderRadius: 6, background: 'rgba(0,0,0,0.55)', border: '1px solid rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}
               >
                 <svg viewBox="0 0 496 512" xmlns="http://www.w3.org/2000/svg" style={{ width: 14, height: 14, fill: '#c7d5e0' }}>
@@ -287,7 +289,7 @@ export default function GameInfoPanel({
               <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 14 }}>
                 <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#3db86a', boxShadow: '0 0 5px #3db86a88', display: 'inline-block', flexShrink: 0 }} />
                 <span style={{ fontWeight: 700, color: '#fff' }}>{gameInfo.playerCount.toLocaleString('fr-FR')}</span>
-                <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>en jeu</span>
+                <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>{t('ginfo.in_game')}</span>
               </div>
             )}
             {/* Review */}
@@ -318,8 +320,8 @@ export default function GameInfoPanel({
             )}
             {/* Badges */}
             <div style={{ width: '100%', display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-              {gameInfo.earlyAccess && <span style={{ fontSize: 13, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: 'rgba(220,50,50,0.18)', color: '#ff5555', border: '2px solid rgba(220,50,50,0.85)' }}>⚠ Accès Anticipé</span>}
-              {gameInfo.comingSoon && !gameInfo.earlyAccess && <span style={{ fontSize: 13, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: 'rgba(245,197,24,0.12)', color: '#f5c518', border: '2px solid rgba(245,197,24,0.75)' }}>🔜 À venir</span>}
+              {gameInfo.earlyAccess && <span style={{ fontSize: 13, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: 'rgba(220,50,50,0.18)', color: '#ff5555', border: '2px solid rgba(220,50,50,0.85)' }}>{t('ginfo.early_access')}</span>}
+              {gameInfo.comingSoon && !gameInfo.earlyAccess && <span style={{ fontSize: 13, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: 'rgba(245,197,24,0.12)', color: '#f5c518', border: '2px solid rgba(245,197,24,0.75)' }}>{t('ginfo.coming_soon')}</span>}
               {gameInfo.multiplayerLabel && <span style={{ fontSize: 13, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: 'rgba(71,167,245,0.15)', color: '#47a7f5', border: '2px solid rgba(71,167,245,0.75)' }}>👥 {gameInfo.multiplayerLabel}</span>}
               {(gameInfo.genres || []).map(g => <span key={g} style={{ fontSize: 13, padding: '2px 7px', borderRadius: 4, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)', border: '2px solid rgba(255,255,255,0.25)' }}>{g}</span>)}
             </div>
@@ -342,14 +344,14 @@ export default function GameInfoPanel({
               <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/>
               <path d="M18 14h-8M15 18h-5M10 6h8v4h-8z"/>
             </svg>
-            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Actualités Steam</span>
-            {newsLoading && <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 'auto' }}>Chargement…</span>}
-            {!newsLoading && news.length > 0 && <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 'auto' }}>{news.length} articles</span>}
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('ginfo.news_header')}</span>
+            {newsLoading && <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 'auto' }}>{t('ginfo.loading')}</span>}
+            {!newsLoading && news.length > 0 && <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 'auto' }}>{t('ginfo.news_count', { count: news.length })}</span>}
           </div>
 
           {!newsLoading && news.length === 0 && (
             <div style={{ padding: '28px 14px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
-              {appId ? 'Aucune actualité disponible' : 'Aucun jeu Steam sélectionné'}
+              {appId ? t('ginfo.no_news') : t('ginfo.no_game')}
             </div>
           )}
 

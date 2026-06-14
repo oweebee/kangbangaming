@@ -2,6 +2,7 @@
 //   value    – null | 0 | 25 | 50 | 75 | 100
 //   onChange – called with new value (null or number)
 //   compact  – slightly larger typography for SearchModal
+import { useLang } from '../i18n.js';
 
 const STEPS = [
   { val: null, label: '—',    color: null },
@@ -22,6 +23,7 @@ export function progressColor(v) {
 }
 
 export default function ProgressSlider({ value, onChange, compact = false }) {
+  const { t } = useLang();
   const color = progressColor(value);
 
   return (
@@ -31,9 +33,9 @@ export default function ProgressSlider({ value, onChange, compact = false }) {
           fontSize: compact ? 14 : 12, fontWeight: 600,
           color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em',
         }}>
-          📊 Progression
+          {t('progress.label')}
           <span style={{ opacity: 0.55, textTransform: 'none', fontWeight: 400, fontSize: compact ? 12 : 10, marginLeft: 5 }}>
-            (facultatif)
+            {t('ctrl.optional')}
           </span>
         </span>
         <span style={{
@@ -44,7 +46,7 @@ export default function ProgressSlider({ value, onChange, compact = false }) {
           borderRadius: 5, padding: '1px 8px',
           transition: 'all .2s',
         }}>
-          {value === null ? 'Désactivé' : `${value}%`}
+          {value === null ? t('progress.disabled') : `${value}%`}
         </span>
       </div>
 

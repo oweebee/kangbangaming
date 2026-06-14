@@ -78,7 +78,7 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
             background: tt.badgeBg, color: tt.badgeText,
             fontSize: 8, fontWeight: 700, padding: '2px 6px',
             borderRadius: 4, letterSpacing: '0.04em',
-          }}>{tt.label.toUpperCase()}</div>
+          }}>{(tt.labelKey ? t(tt.labelKey) : tt.label).toUpperCase()}</div>
           {isUrgent && !isArchived && (
             <div style={{
               position: 'absolute', top: 5, right: 5,
@@ -234,7 +234,7 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
           <div style={{ fontSize: 11, color: 'var(--text-muted)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {isCustom
               ? <span style={{ color: tt ? tt.textColor : 'var(--accent)', opacity: 0.8 }}>
-                  {tt ? tt.label : null}
+                  {tt ? (tt.labelKey ? t(tt.labelKey) : tt.label) : null}
                 </span>
               : formatPlaytime(game.playtime_minutes)
             }
