@@ -70,7 +70,7 @@ export default function LoginPage({ onLogin, steamError = '' }) {
         )}
 
         {/* Bouton Steam principal */}
-        <a href="/api/auth/steam" style={{ textDecoration: 'none', display: 'block' }}>
+        <a href="/api/auth/steam" target="_blank" rel="noreferrer" style={{ textDecoration: 'none', display: 'block' }}>
           <button type="button" style={{
             width: '100%', padding: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
             background: '#1b2838', border: '1px solid #2a475e', borderRadius: 10,
