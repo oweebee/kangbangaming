@@ -123,6 +123,7 @@ function TabFeatures() {
     { icon: '🔍', title: 'Recherche globale', desc: 'Icône 🔍 en haut de sidebar — cherche parmi tous tes jeux et toutes tes cartes.' },
     { icon: '⭐', title: 'Populaires & Recommandés', desc: 'Carrousel des jeux mis en avant sur Steam avec note, genres et description. Défilement toutes les 5 secondes.' },
     { icon: '📅', title: 'Sorties à venir', desc: 'Prochaines sorties Steam avec date et note Metacritic. Actualisation via ↺.' },
+    { icon: '🗑️', title: 'Corbeille des notes', desc: 'Les notes supprimées sont conservées 30 jours dans la corbeille. Restauration en un clic depuis l\'onglet "Corbeille" de ton profil. Les admins peuvent gérer la corbeille globale.' },
   ];
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>

@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useLang, LANG_META, SUPPORTED_LANGS } from '../i18n.js';
+import TrashPanel from './TrashPanel.jsx';
 
 const API = '/api';
 
 export default function ProfilePage({ token, currentUser, onClose, onSaveSteam }) {
   const { t, lang, setLang } = useLang();
+  const [activeTab, setActiveTab] = useState('profile'); // 'profile' | 'trash'
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -101,8 +103,34 @@ export default function ProfilePage({ token, currentUser, onClose, onSaveSteam }
           )}
         </div>
 
+        {/* Onglets Profil / Corbeille */}
+        <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', flexShrink: 0, background: 'var(--surface1)' }}>
+          {[
+            { id: 'profile', label: t('profile.tab_profile') },
+            { id: 'trash',   label: t('profile.tab_trash')   },
+          ].map(({ id, label }) => (
+            <button
+              key={id}
+              onClick={() => setActiveTab(id)}
+              style={{
+                flex: 1, background: 'none', border: 'none',
+                borderBottom: activeTab === id ? '2px solid var(--accent)' : '2px solid transparent',
+                padding: '10px 6px', marginBottom: -1,
+                color: activeTab === id ? 'var(--text)' : 'var(--text-muted)',
+                fontSize: 12, fontWeight: activeTab === id ? 700 : 400,
+                cursor: 'pointer', transition: 'color .15s',
+              }}
+            >{label}</button>
+          ))}
+        </div>
+
         {/* Body */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
+          {/* ── Onglet Corbeille ── */}
+          {activeTab === 'trash' && <TrashPanel token={token} />}
+
+          {/* ── Onglet Profil ── */}
+          {activeTab === 'profile' && (<>
           {loading && <p style={{ color: 'var(--text-muted)', textAlign: 'center' }}>{t('common.loading')}</p>}
           {error && <p style={{ color: '#f88', textAlign: 'center' }}>{error}</p>}
 
@@ -226,6 +254,7 @@ export default function ProfilePage({ token, currentUser, onClose, onSaveSteam }
               </div>
             </>
           )}
+          </>)}
 
         </div>
       </div>

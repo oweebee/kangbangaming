@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Thème sombre sans ActionBar — plein écran WebView -->
-    <style name="Theme.KangBanGaming" parent="android:Theme.Material.NoTitleBar.Fullscreen">
+    <style name="Theme.KangBanGaming" parent="android:Theme.DeviceDefault.NoActionBar">
         <item name="android:windowBackground">#242424</item>
         <item name="android:statusBarColor">#242424</item>
         <item name="android:navigationBarColor">#242424</item>

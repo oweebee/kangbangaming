@@ -24,7 +24,7 @@ const DISCORD_FALLBACK_URL  = 'https://discord.gg/9mXpM9wv';
 
 function DiscordServerIcon({ size = 22, borderColor = 'var(--surface1)', iconUrl = '' }) {
   const [err, setErr] = useState(false);
-  const src = iconUrl || DISCORD_FALLBACK_ICON;
+  const src = iconUrl || null; // pas de fallback hardcodé : si iconUrl vide → logo générique
   if (err || !src) return (
     <div style={{ width: size, height: size, borderRadius: '50%', background: '#5865f2', marginLeft: -(size * 0.2), position: 'relative', zIndex: 2, border: `1.5px solid ${borderColor}`, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
       <svg viewBox="0 0 127.14 96.36" xmlns="http://www.w3.org/2000/svg" style={{ width: '70%', height: '70%', fill: '#fff' }}><path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22h0C129.24,52.84,122.09,29.11,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,46,53.89,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,46,96.12,53,91.08,65.69,84.69,65.69Z"/></svg>
@@ -182,15 +182,39 @@ function HomeBoardCard({ board, isPublic, isFav, onToggleFav, onClick, typeColor
         transition: 'opacity .15s, filter .15s',
       }}
     >
-      {/* Banner — clickable */}
-      <div
-        onClick={onClick}
-        style={{ width: '100%', height: 110, background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0, cursor: 'pointer', borderRadius: '10px 10px 0 0' }}
-      >
-        {(board.headerImg || board.gameIcon) ? (
-          <img src={board.headerImg || board.gameIcon} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-        ) : (
-          <span style={{ fontSize: 44 }}>{board.emoji || '🎮'}</span>
+      {/* Banner — clickable + bouton masquage flottant */}
+      <div style={{ position: 'relative', width: '100%', height: 110, flexShrink: 0 }}>
+        <div
+          onClick={onClick}
+          style={{ width: '100%', height: '100%', background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', cursor: 'pointer', borderRadius: '10px 10px 0 0' }}
+        >
+          {(board.headerImg || board.gameIcon) ? (
+            <img src={board.headerImg || board.gameIcon} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : (
+            <span style={{ fontSize: 44 }}>{board.emoji || '🎮'}</span>
+          )}
+        </div>
+        {(onHide || onUnhide) && (
+          <button
+            onClick={e => { e.stopPropagation(); isHidden ? onUnhide() : onHide(); }}
+            title={isHidden ? t('hbc.unhide_title') : t('hbc.hide_title')}
+            style={{
+              position: 'absolute', top: 6, right: 6,
+              background: isHidden ? 'rgba(60,150,240,0.75)' : 'rgba(0,0,0,0.45)',
+              border: 'none', borderRadius: 6, padding: '4px 5px',
+              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: isHidden ? '#fff' : 'rgba(255,255,255,0.75)',
+              backdropFilter: 'blur(4px)',
+              transition: 'background .15s',
+            }}
+          >
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              {isHidden
+                ? <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>
+                : <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></>
+              }
+            </svg>
+          </button>
         )}
       </div>
       {/* Info */}
@@ -204,68 +228,52 @@ function HomeBoardCard({ board, isPublic, isFav, onToggleFav, onClick, typeColor
           {(isPublic || board.public) ? t('hbc.public') : t('hbc.private')}
         </span>
       </div>
-      {/* Action bar */}
-      {onToggleFav ? (
-        <div style={{ display: 'flex', gap: 6, padding: '0 10px 10px' }}>
-          <button
-            onClick={onClick}
-            style={{ flex: 1, background: 'var(--accent)', border: 'none', borderRadius: 6, padding: '5px 0', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
-          >{t('hbc.show')}</button>
-          {(onHide || onUnhide) && (
-            <button
-              onClick={e => { e.stopPropagation(); isHidden ? onUnhide() : onHide(); }}
-              title={isHidden ? t('hbc.unhide_title') : t('hbc.hide_title')}
-              style={{
-                background: isHidden ? 'rgba(60,150,240,0.18)' : 'var(--surface2)',
-                border: isHidden ? '1px solid rgba(60,150,240,0.55)' : '1px solid var(--border)',
-                borderRadius: 6, padding: '5px 8px', cursor: 'pointer',
-                color: isHidden ? '#70b8ff' : 'var(--text-muted)',
-                display: 'flex', alignItems: 'center', flexShrink: 0,
-              }}
-            >
-              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                {isHidden
-                  ? <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>
-                  : <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></>
-                }
-              </svg>
-            </button>
-          )}
+      {/* Action bar — 2 boutons + icône masquage flottant sur la bannière */}
+      <div style={{ display: 'flex', gap: 6, padding: '0 10px 10px' }}>
+        {/* Bouton principal : Afficher */}
+        <button
+          onClick={onClick}
+          style={{
+            flex: 1, background: 'var(--accent)', border: 'none',
+            borderRadius: 8, padding: '7px 0',
+            color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+          }}
+        >{t('hbc.show')}</button>
+        {/* Bouton secondaire : Suivre / Suivi / Épingler */}
+        {onToggleFav && (
           <button
             onClick={e => { e.stopPropagation(); onToggleFav(isFav); }}
             onMouseEnter={() => setFavHover(true)}
             onMouseLeave={() => setFavHover(false)}
             style={{
               background: isFav
-                ? (favHover ? 'rgba(220,50,50,.15)' : 'rgba(245,197,24,.12)')
+                ? (favHover ? 'rgba(220,50,50,.15)' : 'rgba(245,197,24,.10)')
                 : 'var(--surface2)',
               border: isFav
-                ? (favHover ? '1px solid rgba(220,50,50,.6)' : '1px solid rgba(245,197,24,.5)')
+                ? (favHover ? '1px solid rgba(220,50,50,.5)' : '1px solid rgba(245,197,24,.5)')
                 : '1px solid var(--border)',
-              borderRadius: 6, padding: '5px 10px', cursor: 'pointer',
+              borderRadius: 8, padding: '7px 10px', cursor: 'pointer',
               color: isFav ? (favHover ? '#e05555' : '#f5c518') : 'var(--text-muted)',
-              fontSize: 11, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0,
+              fontSize: 12, fontWeight: 600,
+              display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0,
               transition: 'background .15s, border-color .15s, color .15s',
             }}
           >
             {isPublic
               ? (isFav
-                ? (favHover ? <><span style={{ fontSize: 12, lineHeight: 1 }}>✕</span> {t('hbc.unfollow')}</> : <>{t('hbc.following')}</>)
-                : <>{t('hbc.follow')}</>)
+                ? (favHover
+                  ? <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  : <svg viewBox="0 0 24 24" width="14" height="14" fill="#f5c518" stroke="#f5c518" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>)
+                : <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>)
               : (isFav
-                ? (favHover ? <><span style={{ fontSize: 12, lineHeight: 1 }}>✕</span> {t('hbc.unfollow')}</> : <>{t('hbc.pinned')}</>)
-                : <>{t('hbc.pin')}</>)
+                ? (favHover
+                  ? <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  : <svg viewBox="0 0 24 24" width="14" height="14" fill="#f5c518" stroke="#f5c518" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>)
+                : <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>)
             }
           </button>
-        </div>
-      ) : (
-        <div style={{ padding: '0 10px 10px' }}>
-          <button
-            onClick={onClick}
-            style={{ width: '100%', background: 'var(--accent)', border: 'none', borderRadius: 6, padding: '5px 0', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
-          >{t('hbc.show')}</button>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

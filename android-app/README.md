@@ -2,7 +2,7 @@
 
 Application Android pour accéder à ton instance [KangBanGaming](https://github.com/oweebee/kangbangaming) depuis ton téléphone.
 
-WebView plein écran avec URL configurable au premier lancement — compatible avec toute instance auto-hébergée.
+WebView plein écran adaptatif — compatible Android 8.0+ (Pixel 9 inclus).
 
 ---
 
@@ -34,7 +34,17 @@ https://gaming.tondomaine.com
 
 L'URL est sauvegardée — les lancements suivants ouvrent directement l'app.
 
-**Changer de serveur :** appui long sur l'écran → dialog de modification.
+**Changer de serveur :** appui long sur n'importe quelle partie de l'écran → dialog de modification.
+
+---
+
+## Fonctionnement
+
+- **Plein écran adaptatif** — Android 11+ utilise l'API edge-to-edge native ; Android 8-10 utilise le mode immersif classique
+- **Clavier** — le contenu défile pour que le champ actif reste visible ; pas d'élargissement de l'écran
+- **Dialogs JS** — `alert`, `confirm`, `prompt` (ex. : supprimer une note) s'affichent comme des dialogs Android natifs
+- **Retour** — le bouton retour Android navigue dans l'historique du WebView ; si plus d'historique, propose de quitter
+- **Résilience** — si le processus WebView est tué par Android (Android 14+), l'app se recharge automatiquement sans crasher
 
 ---
 
@@ -42,6 +52,7 @@ L'URL est sauvegardée — les lancements suivants ouvrent directement l'app.
 
 - Android 8.0 (API 26) et supérieur
 - Nécessite une connexion réseau vers le serveur KangBanGaming
+- Testé sur Google Pixel 9 (Android 15)
 
 ---
 

@@ -76,8 +76,9 @@ export default function NotesSection({ notes: externalNotes = [], onSave, onDraf
     setNewNoteWithDraft('');
   };
 
+  // Soft-delete : ajoute deletedAt (→ corbeille 30 j) au lieu de retirer la note
   const deleteNote = (id) => {
-    push(notes.filter(n => n.id !== id));
+    push(notes.map(n => n.id === id ? { ...n, deletedAt: new Date().toISOString() } : n));
   };
 
   const saveEdit = () => {
@@ -87,8 +88,8 @@ export default function NotesSection({ notes: externalNotes = [], onSave, onDraf
     setEditingId(null);
   };
 
-  // Display newest first — sort by createdAt descending (handles both old and new data)
-  const sorted = [...notes].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  // Afficher uniquement les notes actives (pas dans la corbeille), du plus récent au plus ancien
+  const sorted = [...notes].filter(n => !n.deletedAt).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
   const labelStyle = {
     display: 'block', fontSize: compact ? 14 : 12,
@@ -200,7 +201,7 @@ export default function NotesSection({ notes: externalNotes = [], onSave, onDraf
                         </svg>
                       </button>
                       <button
-                        onClick={e => { e.stopPropagation(); if (window.confirm(t('notes.del_confirm'))) deleteNote(note.id); }}
+                        onClick={e => { e.stopPropagation(); if (window.confirm(t('notes.trash_confirm'))) deleteNote(note.id); }}
                         style={{ background: 'none', border: 'none', color: '#c05050', cursor: 'pointer', opacity: 0.6, padding: '2px 4px', lineHeight: 1, display: 'flex', alignItems: 'center', flexShrink: 0 }}
                         title={t('card.delete')}
                       >

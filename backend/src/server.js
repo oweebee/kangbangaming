@@ -588,6 +588,134 @@ app.delete('/api/admin/boards/:userId/:boardId', requireAdmin, (req, res) => {
   res.json({ ok: true });
 });
 
+// ── Corbeille notes ───────────────────────────────────────────────────────────
+// Notes soft-deletées (champ deletedAt) : conservées 30 j, puis purge auto au scan.
+
+const TRASH_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 jours
+
+function scanUserTrash(userId, userBoards, saveIfChanged = true) {
+  const now = Date.now();
+  const trash = [];
+  let changed = false;
+  for (const [boardId, board] of Object.entries(userBoards)) {
+    for (const [gameId, game] of Object.entries(board.games || {})) {
+      if (!game.notes) continue;
+      const kept = [];
+      for (const note of game.notes) {
+        if (!note.deletedAt) { kept.push(note); continue; }
+        const age = now - new Date(note.deletedAt).getTime();
+        if (age > TRASH_TTL_MS) { changed = true; continue; } // expiré → suppression définitive
+        kept.push(note);
+        const daysLeft = Math.max(1, Math.ceil((TRASH_TTL_MS - age) / 86400000));
+        trash.push({ userId, boardId, boardName: board.name || boardId, gameId, gameName: game.name || gameId, gameIcon: game.icon_img || null, ...note, daysLeft });
+      }
+      if (kept.length !== game.notes.length) { game.notes = kept; changed = true; }
+    }
+  }
+  if (changed && saveIfChanged) setUserBoards(userId, userBoards);
+  return trash.sort((a, b) => new Date(b.deletedAt) - new Date(a.deletedAt));
+}
+
+// GET /api/trash/notes — corbeille de l'utilisateur connecté
+app.get('/api/trash/notes', requireAuth, (req, res) => {
+  const userBoards = getUserBoards(req.user.id);
+  res.json(scanUserTrash(req.user.id, userBoards));
+});
+
+// POST /api/trash/notes/restore — restaurer une note (retire deletedAt)
+app.post('/api/trash/notes/restore', requireAuth, (req, res) => {
+  const { boardId, gameId, noteId } = req.body;
+  if (!boardId || !gameId || !noteId) return res.status(400).json({ error: 'Missing fields' });
+  const userBoards = getUserBoards(req.user.id);
+  const game = (userBoards[boardId]?.games || {})[gameId];
+  if (!game) return res.status(404).json({ error: 'Game not found' });
+  let found = false;
+  game.notes = (game.notes || []).map(n => {
+    if (n.id === noteId && n.deletedAt) { found = true; const { deletedAt, ...rest } = n; return rest; }
+    return n;
+  });
+  if (!found) return res.status(404).json({ error: 'Note not found in trash' });
+  setUserBoards(req.user.id, userBoards);
+  res.json({ ok: true });
+});
+
+// DELETE /api/trash/notes/item — suppression définitive d'une note de la corbeille
+app.delete('/api/trash/notes/item', requireAuth, (req, res) => {
+  const { boardId, gameId, noteId } = req.body;
+  if (!boardId || !gameId || !noteId) return res.status(400).json({ error: 'Missing fields' });
+  const userBoards = getUserBoards(req.user.id);
+  const game = (userBoards[boardId]?.games || {})[gameId];
+  if (!game) return res.status(404).json({ error: 'Game not found' });
+  const before = (game.notes || []).length;
+  game.notes = (game.notes || []).filter(n => !(n.id === noteId && n.deletedAt));
+  if (game.notes.length === before) return res.status(404).json({ error: 'Note not found in trash' });
+  setUserBoards(req.user.id, userBoards);
+  res.json({ ok: true });
+});
+
+// DELETE /api/trash/notes — vider sa propre corbeille
+app.delete('/api/trash/notes', requireAuth, (req, res) => {
+  const userBoards = getUserBoards(req.user.id);
+  for (const board of Object.values(userBoards))
+    for (const game of Object.values(board.games || {}))
+      if (game.notes) game.notes = game.notes.filter(n => !n.deletedAt);
+  setUserBoards(req.user.id, userBoards);
+  res.json({ ok: true });
+});
+
+// GET /api/admin/trash — corbeille globale (toutes les notes supprimées de tous les users)
+app.get('/api/admin/trash', requireAdmin, (req, res) => {
+  const allBoards = readBoards();
+  const users = readUsers();
+  const all = [];
+  for (const [userId, userBoards] of Object.entries(allBoards)) {
+    const user = users.find(u => u.id === userId);
+    const items = scanUserTrash(userId, userBoards, false).map(i => ({ ...i, username: user?.username || userId }));
+    all.push(...items);
+  }
+  res.json(all.sort((a, b) => new Date(b.deletedAt) - new Date(a.deletedAt)));
+});
+
+// POST /api/admin/trash/restore — restaurer une note (admin, n'importe quel user)
+app.post('/api/admin/trash/restore', requireAdmin, (req, res) => {
+  const { userId, boardId, gameId, noteId } = req.body;
+  if (!userId || !boardId || !gameId || !noteId) return res.status(400).json({ error: 'Missing fields' });
+  const userBoards = getUserBoards(userId);
+  const game = (userBoards[boardId]?.games || {})[gameId];
+  if (!game) return res.status(404).json({ error: 'Game not found' });
+  let found = false;
+  game.notes = (game.notes || []).map(n => {
+    if (n.id === noteId && n.deletedAt) { found = true; const { deletedAt, ...rest } = n; return rest; }
+    return n;
+  });
+  if (!found) return res.status(404).json({ error: 'Note not found' });
+  setUserBoards(userId, userBoards);
+  res.json({ ok: true });
+});
+
+// DELETE /api/admin/trash/item — suppression définitive (admin)
+app.delete('/api/admin/trash/item', requireAdmin, (req, res) => {
+  const { userId, boardId, gameId, noteId } = req.body;
+  if (!userId || !boardId || !gameId || !noteId) return res.status(400).json({ error: 'Missing fields' });
+  const userBoards = getUserBoards(userId);
+  const game = (userBoards[boardId]?.games || {})[gameId];
+  if (!game) return res.status(404).json({ error: 'Game not found' });
+  game.notes = (game.notes || []).filter(n => !(n.id === noteId && n.deletedAt));
+  setUserBoards(userId, userBoards);
+  res.json({ ok: true });
+});
+
+// DELETE /api/admin/trash — purger TOUTE la corbeille (tous les users)
+app.delete('/api/admin/trash', requireAdmin, (req, res) => {
+  const allBoards = readBoards();
+  for (const userBoards of Object.values(allBoards))
+    for (const board of Object.values(userBoards))
+      for (const game of Object.values(board.games || {}))
+        if (game.notes) game.notes = game.notes.filter(n => !n.deletedAt);
+  writeBoards(allBoards);
+  res.json({ ok: true });
+});
+
 // ── Admin export / restore ────────────────────────────────────────────────────
 
 app.get('/api/admin/export', requireAdmin, (req, res) => {
@@ -1205,8 +1333,8 @@ function extractYoutubeId(raw = '') {
   return null;
 }
 
-// Debug: raw news content (no auth, temp)
-app.get('/api/steam/news/:appid/raw', async (req, res) => {
+// Debug: raw news content (admin only)
+app.get('/api/steam/news/:appid/raw', requireAdmin, async (req, res) => {
   try {
     const data = await steamFetch(
       `https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=${req.params.appid}&count=3&maxlength=0&format=json`
