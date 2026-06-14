@@ -1,27 +1,84 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
 import { useLang, LANG_META, SUPPORTED_LANGS } from '../i18n.js';
 import TrashPanel from './TrashPanel.jsx';
 
 const API = '/api';
+const TABS = ['profile', 'trash'];
+const N    = TABS.length;
 
 export default function ProfilePage({ token, currentUser, onClose, onSaveSteam }) {
   const { t, lang, setLang } = useLang();
-  const [activeTab, setActiveTab] = useState('profile'); // 'profile' | 'trash'
-  const TABS = ['profile', 'trash'];
-  const swipeOrigin = useRef({ x: 0, y: 0 });
+  const [activeTab, setActiveTab] = useState('profile');
 
-  const onSwipeStart = (e) => {
-    swipeOrigin.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-  };
-  const onSwipeEnd = (e) => {
-    const dx = e.changedTouches[0].clientX - swipeOrigin.current.x;
-    const dy = e.changedTouches[0].clientY - swipeOrigin.current.y;
-    // Ignorer si geste trop petit ou plutôt vertical (scroll)
-    if (Math.abs(dx) < 48 || Math.abs(dy) > Math.abs(dx) * 1.1) return;
-    const idx = TABS.indexOf(activeTab);
-    if (dx < 0 && idx < TABS.length - 1) setActiveTab(TABS[idx + 1]); // glisse gauche → suivant
-    if (dx > 0 && idx > 0)               setActiveTab(TABS[idx - 1]); // glisse droite → précédent
-  };
+  // ── Slide track (même logique que SwipeTabs) ──────────────────────────────
+  const containerRef = useRef(null);
+  const trackRef     = useRef(null);
+  const dragRef      = useRef({ active: false, startX: 0, startY: 0, startTime: 0, isHorizontal: null, w: 0 });
+  const activeIdxRef = useRef(0);
+
+  useEffect(() => { activeIdxRef.current = TABS.indexOf(activeTab); }, [activeTab]);
+
+  const snapToIndex = useCallback((idx, animate = true) => {
+    const el  = containerRef.current;
+    const trk = trackRef.current;
+    if (!el || !trk) return;
+    trk.style.transition = animate ? 'transform 0.3s cubic-bezier(0.25,0.46,0.45,0.94)' : 'none';
+    trk.style.transform  = `translateX(${-idx * el.offsetWidth}px)`;
+  }, []);
+
+  useLayoutEffect(() => { snapToIndex(0, false); }, []);
+  useEffect(() => { snapToIndex(TABS.indexOf(activeTab), true); }, [activeTab, snapToIndex]);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const onStart = (e) => {
+      const d = dragRef.current;
+      d.active = true; d.isHorizontal = null;
+      d.startX = e.touches[0].clientX; d.startY = e.touches[0].clientY;
+      d.startTime = Date.now(); d.w = el.offsetWidth;
+      if (trackRef.current) trackRef.current.style.transition = 'none';
+    };
+    const onMove = (e) => {
+      const d = dragRef.current;
+      if (!d.active) return;
+      const dx = e.touches[0].clientX - d.startX;
+      const dy = e.touches[0].clientY - d.startY;
+      if (d.isHorizontal === null && (Math.abs(dx) > 5 || Math.abs(dy) > 5))
+        d.isHorizontal = Math.abs(dx) > Math.abs(dy);
+      if (!d.isHorizontal) return;
+      e.preventDefault();
+      const base = -activeIdxRef.current * d.w;
+      let x = base + dx;
+      if (x > 0)               x = dx * 0.15;
+      if (x < -(N - 1) * d.w) x = -(N - 1) * d.w + (x + (N - 1) * d.w) * 0.15;
+      if (trackRef.current) trackRef.current.style.transform = `translateX(${x}px)`;
+    };
+    const onEnd = (e) => {
+      const d = dragRef.current;
+      if (!d.active) return;
+      d.active = false;
+      if (!d.isHorizontal) return;
+      const dx      = e.changedTouches[0].clientX - d.startX;
+      const dt      = Date.now() - d.startTime;
+      const isFlick = dt < 300 && Math.abs(dx) > 25;
+      let idx = activeIdxRef.current;
+      if ((dx < -d.w * 0.3 || (isFlick && dx < 0)) && idx < N - 1) idx++;
+      else if ((dx > d.w * 0.3 || (isFlick && dx > 0)) && idx > 0) idx--;
+      if (idx !== activeIdxRef.current) setActiveTab(TABS[idx]);
+      else snapToIndex(activeIdxRef.current, true);
+    };
+
+    el.addEventListener('touchstart', onStart, { passive: true });
+    el.addEventListener('touchmove',  onMove,  { passive: false });
+    el.addEventListener('touchend',   onEnd,   { passive: true });
+    return () => {
+      el.removeEventListener('touchstart', onStart);
+      el.removeEventListener('touchmove',  onMove);
+      el.removeEventListener('touchend',   onEnd);
+    };
+  }, [snapToIndex]);
 
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -140,17 +197,14 @@ export default function ProfilePage({ token, currentUser, onClose, onSaveSteam }
           ))}
         </div>
 
-        {/* Body — swipe horizontal pour changer d'onglet */}
-        <div
-          style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}
-          onTouchStart={onSwipeStart}
-          onTouchEnd={onSwipeEnd}
-        >
-          {/* ── Onglet Corbeille ── */}
-          {activeTab === 'trash' && <TrashPanel token={token} />}
+        {/* Body — track glissant (swipe avec effet visuel) */}
+        <div ref={containerRef} style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
+          <div ref={trackRef} style={{ display: 'flex', width: `${N * 100}%`, height: '100%', willChange: 'transform' }}>
 
+            {/* ── Onglet Profil (index 0) ── */}
+            <div style={{ width: `${100 / N}%`, height: '100%', flexShrink: 0, overflowY: 'auto', padding: '20px 24px', boxSizing: 'border-box' }}>
           {/* ── Onglet Profil ── */}
-          {activeTab === 'profile' && (<>
+          {(<>
           {loading && <p style={{ color: 'var(--text-muted)', textAlign: 'center' }}>{t('common.loading')}</p>}
           {error && <p style={{ color: '#f88', textAlign: 'center' }}>{error}</p>}
 
@@ -275,8 +329,16 @@ export default function ProfilePage({ token, currentUser, onClose, onSaveSteam }
             </>
           )}
           </>)}
+            </div>
 
-        </div>
+            {/* ── Onglet Corbeille (index 1) ── */}
+            <div style={{ width: `${100 / N}%`, height: '100%', flexShrink: 0, overflowY: 'auto', padding: '20px 24px', boxSizing: 'border-box' }}>
+              <TrashPanel token={token} />
+            </div>
+
+          </div>{/* /track */}
+        </div>{/* /container */}
+
       </div>
     </div>
   );

@@ -388,19 +388,19 @@ export default function AdminPanel({ token, currentUser, onClose }) {
                     <input value={discordUrl} onChange={e => setDiscordUrl(e.target.value)} placeholder="https://discord.gg/xxxxxx"
                       style={{ padding: '7px 10px', background: 'var(--surface1)', border: '1px solid var(--border)', borderRadius: 7, color: 'var(--text)', fontSize: 13, outline: 'none' }} />
                     <div style={{ fontSize: 10, color: 'var(--text-muted)', lineHeight: 1.5 }}>
-                      Lien d'invitation pour le bouton Discord. Mettre un lien <strong style={{ color: 'var(--text)' }}>discord.gg/xxx</strong> permet de récupérer l'icône automatiquement.
+                      {t('admin.discord_url_hint')}
                     </div>
                   </div>
                   {/* Icône — auto-remplie ou saisie manuelle */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    <label style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>URL de l'icône <span style={{ opacity: 0.55, fontWeight: 400 }}>(auto ou manuelle)</span></label>
+                    <label style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>{t('admin.discord_icon')}</label>
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                       <input value={discordIconUrl} onChange={e => setDiscordIconUrl(e.target.value)} placeholder="https://cdn.discordapp.com/icons/…/….webp"
                         style={{ flex: 1, padding: '7px 10px', background: 'var(--surface1)', border: '1px solid var(--border)', borderRadius: 7, color: 'var(--text)', fontSize: 12, outline: 'none' }} />
                       {discordIconUrl && <img src={discordIconUrl} alt="" style={{ width: 32, height: 32, borderRadius: '50%', border: '2px solid var(--border)', flexShrink: 0, objectFit: 'cover' }} onError={e => e.target.style.display = 'none'} />}
                     </div>
                     <div style={{ fontSize: 10, color: 'var(--text-muted)', lineHeight: 1.5 }}>
-                      Remplie auto si lien d'invitation fourni. Sinon, colle l'URL directe de l'icône Discord (clic droit → Copier l'adresse).
+                      {t('admin.discord_icon_hint')}
                     </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
