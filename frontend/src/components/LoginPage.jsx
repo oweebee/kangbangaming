@@ -91,6 +91,15 @@ export default function LoginPage({ onLogin, steamError = '' }) {
           Première connexion ? Un compte est créé automatiquement.
         </div>
 
+        <div style={{ marginTop: 10, background: 'rgba(102,192,244,0.07)', border: '1px solid rgba(102,192,244,0.25)', borderRadius: 8, padding: '8px 12px', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#66c0f4" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <div style={{ fontSize: 10, color: 'var(--text-muted)', lineHeight: 1.6 }}>
+            Pour une expérience complète (succès, wishlist, bannière "En jeu"), ton profil Steam doit être <span style={{ color: '#66c0f4', fontWeight: 700 }}>public</span>.
+          </div>
+        </div>
+
         {/* Discord + GitHub */}
         <div style={{ marginTop: 28, paddingTop: 20, borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'center', gap: 12 }}>
           <a href={DISCORD} target="_blank" rel="noreferrer"

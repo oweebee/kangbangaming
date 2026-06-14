@@ -281,8 +281,24 @@ export default function AppInfoModal({ onClose }) {
             </div>
           </Section>
 
+          {/* Profil Steam public */}
+          <div style={{ background: 'rgba(102,192,244,0.08)', border: '1px solid rgba(102,192,244,0.3)', borderRadius: 10, padding: '12px 14px', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+            <svg viewBox="0 0 496 512" xmlns="http://www.w3.org/2000/svg" style={{ width: 18, height: 18, fill: '#66c0f4', flexShrink: 0, marginTop: 1 }}>
+              <path d="M496 256c0 137-111.2 248-248.4 248-113.8 0-209.7-76.3-239-180.4l95.2 39.3c6.4 32.1 34.9 56.4 68.9 56.4 38.2 0 69.1-31.1 68.9-69.3l84.5-60.2c52.1 1.3 95.8-40.9 95.8-93.5 0-51.6-42-93.5-93.7-93.5s-93.7 42-93.7 93.5v1.2L176.6 279c-15.5-.9-30.7 3.4-43.5 12.1L0 236.1C10.2 108.4 117.1 8 247.6 8 384.8 8 496 119 496 256z"/>
+            </svg>
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#66c0f4', marginBottom: 4 }}>Profil Steam public recommandé</div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                Pour une expérience complète, ton profil Steam doit être <strong style={{ color: 'var(--text)' }}>public</strong>. Sans ça, les fonctionnalités suivantes ne peuvent pas fonctionner : succès, wishlist, et détection "En jeu" dans la bannière.<br />
+                <a href="https://steamcommunity.com/my/edit/settings" target="_blank" rel="noreferrer" style={{ color: '#66c0f4', marginTop: 4, display: 'inline-block' }}>
+                  Modifier la confidentialité Steam →
+                </a>
+              </div>
+            </div>
+          </div>
+
           {/* Version */}
-          <div style={{ textAlign: 'center', paddingTop: 8, borderTop: '1px solid var(--border)', color: 'var(--text-muted)', fontSize: 11 }}>
+          <div style={{ textAlign: 'center', paddingTop: 16, borderTop: '1px solid var(--border)', color: 'var(--text-muted)', fontSize: 11, marginTop: 8 }}>
             KangBanGaming — Steam-powered Kanban
           </div>
         </div>
