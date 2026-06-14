@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useLang } from '../i18n.js';
 
 // ── Composants partagés pour les contrôles de carte ──────────────────────────
 // StatusToggles  : boutons Terminée + Urgent côte à côte
@@ -20,6 +21,7 @@ const inputStyle = {
 
 // ── Terminée + Urgent côte à côte ─────────────────────────────────────────────
 export function StatusToggles({ isDone, onToggleDone, isUrgent, onToggleUrgent }) {
+  const { t } = useLang();
   return (
     <div style={{ display: 'flex', gap: 10 }}>
 
@@ -50,7 +52,7 @@ export function StatusToggles({ isDone, onToggleDone, isUrgent, onToggleUrgent }
           }
         </div>
         <span style={{ fontSize: 13, fontWeight: 700, color: isDone ? '#3db86a' : 'var(--text)' }}>
-          Terminée
+          {t('ctrl.done')}
         </span>
       </button>
 
@@ -78,7 +80,7 @@ export function StatusToggles({ isDone, onToggleDone, isUrgent, onToggleUrgent }
           color: isUrgent ? '#fff' : 'rgba(255,255,255,0.25)',
         }}>!</div>
         <span style={{ fontSize: 13, fontWeight: 700, color: isUrgent ? '#ff6060' : 'var(--text)' }}>
-          Urgent
+          {t('ctrl.urgent')}
         </span>
       </button>
 
@@ -88,6 +90,7 @@ export function StatusToggles({ isDone, onToggleDone, isUrgent, onToggleUrgent }
 
 // ── Sélecteur d'heure (créneaux de 1h) ───────────────────────────────────────
 function TimeSelect({ value, onChange }) {
+  const { t } = useLang();
   const hours = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0') + ':00');
   return (
     <select
@@ -100,7 +103,7 @@ function TimeSelect({ value, onChange }) {
         outline: 'none', width: '100%', colorScheme: 'dark',
       }}
     >
-      <option value="">⏰ Heure (optionnel)</option>
+      <option value="">{t('ctrl.time_opt')}</option>
       {hours.map(h => <option key={h} value={h}>{h}</option>)}
     </select>
   );
@@ -113,18 +116,19 @@ export function DatePicker({
   startDate, onStartDateChange, startTime, onStartTimeChange,
   endDate, onEndDateChange, endTime, onEndTimeChange,
 }) {
+  const { t } = useLang();
   return (
     <div>
       <label style={{ display: 'block', fontSize: 14, color: 'var(--text-muted)', marginBottom: 10 }}>
-        📅 Date <span style={{ opacity: 0.55 }}>(facultatif)</span>
+        {t('ctrl.date_label')} <span style={{ opacity: 0.55 }}>{t('ctrl.optional')}</span>
       </label>
 
       {/* Mode selector */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
         {[
-          ['none',   '✕  Aucune'],
-          ['single', '📌 Une date'],
-          ['period', '↔ Période'],
+          ['none',   t('ctrl.no_date')],
+          ['single', t('ctrl.one_date')],
+          ['period', t('ctrl.period')],
         ].map(([mode, lbl]) => (
           <button key={mode} type="button"
             onClick={() => onDateModeChange(mode)}
@@ -179,7 +183,7 @@ export function DatePicker({
           background: 'rgba(180,140,10,0.12)', border: '2px solid rgba(180,140,10,0.35)',
           fontSize: 13, color: 'var(--text-muted)',
         }}>
-          📅 Échéance : <strong style={{ color: '#d4b020' }}>{formatDateLabel(dueDate)}{dueTime ? ` à ${dueTime}` : ''}</strong>
+          {t('ctrl.due_label')}<strong style={{ color: '#d4b020' }}>{formatDateLabel(dueDate)}{dueTime ? `${t('ctrl.at')}${dueTime}` : ''}</strong>
         </div>
       )}
       {dateMode === 'period' && (startDate || endDate) && (
@@ -205,6 +209,7 @@ export function DatePicker({
 //   compact          — mode réduit pour GameCard (avatar 14px, bouton inline)
 //   stopPropagation  — ajoute e.stopPropagation() sur tous les clics (pour GameCard)
 export function AssigneeEditor({ assignees = [], appUsers = [], onUpdateAssignees, compact = false, stopPropagation = false }) {
+  const { t } = useLang();
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef(null);
 
@@ -255,7 +260,7 @@ export function AssigneeEditor({ assignees = [], appUsers = [], onUpdateAssignee
           <button
             onClick={e => { if (sp) sp(e); setShowMenu(v => !v); }}
             style={{ background: 'var(--surface3)', border: '2px dashed var(--border)', borderRadius: 20, padding: '2px 7px', fontSize: 11, color: 'var(--text-muted)', cursor: 'pointer' }}
-          >+ assigné</button>
+          >{t('ctrl.add_assignee_short')}</button>
         )}
       </div>
 
@@ -265,7 +270,7 @@ export function AssigneeEditor({ assignees = [], appUsers = [], onUpdateAssignee
           onClick={() => setShowMenu(v => !v)}
           style={{ width: '100%', padding: '8px 12px', textAlign: 'left', background: 'var(--surface3)', border: '2px solid var(--border)', borderRadius: 8, color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
         >
-          <span>+ Ajouter un assigné</span>
+          <span>{t('ctrl.add_assignee')}</span>
           <span style={{ marginLeft: 'auto', opacity: 0.4 }}>{showMenu ? '▲' : '▼'}</span>
         </button>
       )}
@@ -300,7 +305,7 @@ export function AssigneeEditor({ assignees = [], appUsers = [], onUpdateAssignee
           ))}
           {!compact && available.length === 0 && (
             <div style={{ padding: '12px', fontSize: 13, color: 'var(--text-muted)', textAlign: 'center' }}>
-              Tous les utilisateurs sont assignés
+              {t('ctrl.all_assigned')}
             </div>
           )}
         </div>

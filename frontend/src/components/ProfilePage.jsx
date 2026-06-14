@@ -9,15 +9,6 @@ export default function ProfilePage({ token, currentUser, onClose, onSaveSteam }
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // ── Mot de passe ──────────────────────────────────────────────────────────
-  const [showPwd, setShowPwd] = useState(false);
-  const [pwdCurrent, setPwdCurrent] = useState('');
-  const [pwdNew, setPwdNew] = useState('');
-  const [pwdConfirm, setPwdConfirm] = useState('');
-  const [pwdError, setPwdError] = useState('');
-  const [pwdSuccess, setPwdSuccess] = useState('');
-  const [pwdLoading, setPwdLoading] = useState(false);
-
   // ── Steam ─────────────────────────────────────────────────────────────────
   const [steamId, setSteamId] = useState('');
   const [savedSteamId, setSavedSteamId] = useState('');
@@ -45,27 +36,6 @@ export default function ProfilePage({ token, currentUser, onClose, onSaveSteam }
     }
     load();
   }, [token]);
-
-  async function handlePwdChange(e) {
-    e.preventDefault();
-    setPwdError(''); setPwdSuccess('');
-    if (pwdNew !== pwdConfirm) { setPwdError(t('profile.pwd_mismatch')); return; }
-    if (pwdNew.length < 6) { setPwdError(t('profile.pwd_short')); return; }
-    setPwdLoading(true);
-    try {
-      const res = await fetch(`${API}/user/password`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ currentPassword: pwdCurrent, newPassword: pwdNew }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || t('common.error'));
-      setPwdSuccess(t('profile.pwd_changed'));
-      setPwdCurrent(''); setPwdNew(''); setPwdConfirm('');
-      setTimeout(() => { setPwdSuccess(''); setShowPwd(false); }, 2000);
-    } catch (err) { setPwdError(err.message); }
-    finally { setPwdLoading(false); }
-  }
 
   async function handleSaveSteam(e) {
     e.preventDefault();
@@ -257,34 +227,6 @@ export default function ProfilePage({ token, currentUser, onClose, onSaveSteam }
             </>
           )}
 
-          {/* ── Changer mot de passe ── */}
-          {profile && !isSteamAuth && <div style={{ marginTop: 20, borderTop: '1px solid var(--border)', paddingTop: 16 }}>
-            <button onClick={() => { setShowPwd(v => !v); setPwdError(''); setPwdSuccess(''); }}
-              style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 14px', color: 'var(--text-muted)', fontSize: 12, fontWeight: 600, cursor: 'pointer', width: '100%', textAlign: 'left' }}>
-              🔑 {showPwd ? t('common.cancel') : t('profile.change_pwd')}
-            </button>
-            {showPwd && (
-              <form onSubmit={handlePwdChange} style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {[
-                  [t('profile.pwd_current'), pwdCurrent, setPwdCurrent],
-                  [t('profile.pwd_new'), pwdNew, setPwdNew],
-                  [t('profile.pwd_confirm'), pwdConfirm, setPwdConfirm],
-                ].map(([label, val, setter]) => (
-                  <div key={label}>
-                    <label style={{ display: 'block', fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>{label}</label>
-                    <input type="password" value={val} onChange={e => setter(e.target.value)} required
-                      style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 7, color: 'var(--text)', fontSize: 13, outline: 'none' }} />
-                  </div>
-                ))}
-                {pwdError && <div style={{ background: 'rgba(220,50,50,.15)', border: '1px solid rgba(220,50,50,.4)', borderRadius: 7, padding: '7px 10px', color: '#f88', fontSize: 12 }}>{pwdError}</div>}
-                {pwdSuccess && <div style={{ background: 'rgba(50,200,100,.15)', border: '1px solid rgba(50,200,100,.4)', borderRadius: 7, padding: '7px 10px', color: '#5c5', fontSize: 12 }}>✓ {pwdSuccess}</div>}
-                <button type="submit" disabled={pwdLoading}
-                  style={{ padding: '9px', background: 'var(--accent)', border: 'none', borderRadius: 7, color: '#fff', fontSize: 13, fontWeight: 700, cursor: pwdLoading ? 'not-allowed' : 'pointer', opacity: pwdLoading ? 0.7 : 1 }}>
-                  {pwdLoading ? t('profile.pwd_saving') : t('profile.pwd_save')}
-                </button>
-              </form>
-            )}
-          </div>}
         </div>
       </div>
     </div>

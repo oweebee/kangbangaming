@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import ModalBackdrop from './ModalBackdrop.jsx';
 import { GENRE_COLORS } from './SteamUI.jsx';
+import { useLang } from '../i18n.js';
 
 const GENRE_LIST = Object.entries(GENRE_COLORS);
 
@@ -199,14 +200,14 @@ function TabKanban() {
 }
 
 // ── Composant principal ────────────────────────────────────────────────────────
-const TABS = [
-  { id: 'colors',   label: '🎨 Couleurs' },
-  { id: 'features', label: '📖 Fonctionnalités' },
-  { id: 'kanban',   label: '❓ C\'est quoi le Kanban ?' },
-];
-
 export default function AppInfoModal({ onClose }) {
+  const { t } = useLang();
   const [tab, setTab] = useState('colors');
+  const TABS = [
+    { id: 'colors',   label: t('info.tab_colors') },
+    { id: 'features', label: t('info.tab_features') },
+    { id: 'kanban',   label: t('info.tab_kanban') },
+  ];
 
   return (
     <ModalBackdrop onClose={onClose} zIndex={1100}>
@@ -221,7 +222,7 @@ export default function AppInfoModal({ onClose }) {
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--accent)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
             </svg>
-            <span style={{ fontWeight: 800, fontSize: 14, color: 'var(--text)' }}>KangBanGaming — Infos & Aide</span>
+            <span style={{ fontWeight: 800, fontSize: 14, color: 'var(--text)' }}>{t('info.title')}</span>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 20, cursor: 'pointer', lineHeight: 1 }}>×</button>
         </div>

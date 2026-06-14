@@ -4,10 +4,12 @@ import { getDateInfo } from './TaskModal.jsx';
 import { progressColor } from './ProgressSlider.jsx';
 import AssigneeAvatars from './AssigneeAvatars.jsx';
 import { formatPlaytime } from '../utils.js';
+import { useLang } from '../i18n.js';
 
 const COMPACT_ICON_SIZE = 32; // 40 * 0.8 (-20%)
 
 export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArchive, onUnarchive, onDelete, onEdit, isDragging, readOnly, isTaskBoard, compact = false, assignees = [], appUsers = [], onToggleDone, onToggleUrgent, onUpdateAssignees, onClickNotes, genreColor = null, isHidden = false, onHide, onUnhide }) {
+  const { t } = useLang();
   const [imgError, setImgError] = useState(false);
   const [ttImgError, setTtImgError] = useState(false);
   const isCustom   = game.type === 'custom';
@@ -33,8 +35,10 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
         borderRadius: 8,
         overflow: 'hidden',
         cursor: readOnly || isArchived ? 'default' : 'grab',
-        opacity: isDragging ? 0.4 : isArchived ? 0.6 : isHidden ? 0.5 : 1,
-        transition: 'opacity 0.15s, transform 0.15s, box-shadow 0.15s',
+        opacity: isDragging ? 0.35 : isArchived ? 0.6 : isHidden ? 0.5 : 1,
+        transform: isDragging ? 'rotate(2deg) scale(1.03)' : undefined,
+        boxShadow: isDragging ? '0 8px 28px rgba(0,0,0,0.55)' : undefined,
+        transition: 'opacity 0.15s, transform 0.2s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.15s',
         userSelect: 'none',
         filter: isArchived ? 'saturate(0.3)' : isHidden ? 'saturate(0.4) brightness(0.75)' : 'none',
       }}
@@ -90,7 +94,7 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
               background: 'rgba(60,60,60,0.9)', color: '#aaa',
               fontSize: 8, fontWeight: 700, padding: '2px 6px',
               borderRadius: 4, letterSpacing: '0.06em',
-            }}>ARCHIVÉ</div>
+            }}>{t('card.badge_archived')}</div>
           )}
         </div>
       ) : !compact && isCustom ? (
@@ -117,7 +121,7 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
               background: 'rgba(60,60,60,0.9)', color: '#aaa',
               fontSize: 8, fontWeight: 700, padding: '2px 6px',
               borderRadius: 4, letterSpacing: '0.06em',
-            }}>ARCHIVÉ</div>
+            }}>{t('card.badge_archived')}</div>
           )}
         </div>
       ) : !compact && !imgError && game.header_img ? (
@@ -143,7 +147,7 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
               background: 'rgba(60,60,60,0.9)', color: '#aaa',
               fontSize: 8, fontWeight: 700, padding: '2px 6px',
               borderRadius: 4, letterSpacing: '0.06em',
-            }}>ARCHIVÉ</div>
+            }}>{t('card.badge_archived')}</div>
           )}
         </div>
       ) : !compact ? (
@@ -167,7 +171,7 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
               background: 'rgba(60,60,60,0.9)', color: '#aaa',
               fontSize: 8, fontWeight: 700, padding: '2px 6px',
               borderRadius: 4, letterSpacing: '0.06em',
-            }}>ARCHIVÉ</div>
+            }}>{t('card.badge_archived')}</div>
           )}
         </div>
       ) : null}
@@ -184,13 +188,13 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
           {/* Boutons inline — NON-compact seulement */}
           {!compact && (<>
             {!isArchived && onToggleDone && (
-              <button onClick={e => { e.stopPropagation(); onToggleDone(!isDone); }} title={isDone ? 'Marquer non terminée' : 'Marquer terminée'}
+              <button onClick={e => { e.stopPropagation(); onToggleDone(!isDone); }} title={isDone ? t('card.mark_undone') : t('card.mark_done')}
                 style={{ background: isDone ? 'rgba(61,184,106,0.22)' : 'rgba(255,255,255,0.10)', border: `1px solid ${isDone ? '#3db86a' : 'rgba(255,255,255,0.28)'}`, borderRadius: 4, width: 20, height: 20, padding: 0, cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: isDone ? '#3db86a' : 'rgba(255,255,255,0.65)', transition: 'all .15s' }}>
                 <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
               </button>
             )}
             {!isArchived && onToggleUrgent && (
-              <button onClick={e => { e.stopPropagation(); onToggleUrgent(!isUrgent); }} title={isUrgent ? 'Retirer urgence' : 'Marquer urgent'}
+              <button onClick={e => { e.stopPropagation(); onToggleUrgent(!isUrgent); }} title={isUrgent ? t('card.remove_urgent') : t('card.add_urgent')}
                 style={{ background: isUrgent ? 'rgba(220,60,60,0.22)' : 'rgba(255,255,255,0.10)', border: `1px solid ${isUrgent ? '#dc3c3c' : 'rgba(255,255,255,0.28)'}`, borderRadius: 4, width: 20, height: 20, padding: 0, cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: isUrgent ? '#ff6060' : 'rgba(255,255,255,0.65)', transition: 'all .15s' }}>
                 <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
               </button>
@@ -198,13 +202,13 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
             {!readOnly && (
               <div style={{ display: 'flex', gap: 3, flexShrink: 0, alignItems: 'center' }}>
                 {!isArchived && onEdit && isCustom && (
-                  <button onClick={e => { e.stopPropagation(); onEdit(game); }} title="Éditer"
+                  <button onClick={e => { e.stopPropagation(); onEdit(game); }} title={t('card.edit_title')}
                     style={{ background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.28)', borderRadius: 4, width: 20, height: 20, padding: 0, cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.65)' }}>
                     <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
                   </button>
                 )}
                 {!isArchived && (isHidden ? onUnhide : onHide) && (
-                  <button onClick={e => { e.stopPropagation(); isHidden ? onUnhide() : onHide(); }} title={isHidden ? 'Réafficher' : 'Masquer'}
+                  <button onClick={e => { e.stopPropagation(); isHidden ? onUnhide() : onHide(); }} title={isHidden ? t('card.show') : t('card.hide')}
                     style={{ background: isHidden ? 'rgba(60,150,240,0.18)' : 'rgba(255,255,255,0.10)', border: `1px solid ${isHidden ? 'rgba(60,150,240,0.55)' : 'rgba(255,255,255,0.28)'}`, borderRadius: 4, width: 20, height: 20, padding: 0, cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: isHidden ? '#70b8ff' : 'rgba(255,255,255,0.65)' }}>
                     <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                       {isHidden ? <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></> : <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></>}
@@ -212,10 +216,10 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
                   </button>
                 )}
                 {isArchived ? ((onUnarchive || onDelete) && <>
-                  {onUnarchive && <button onClick={e => { e.stopPropagation(); onUnarchive(); }} title="Restaurer" style={{ background: 'rgba(96,144,192,0.18)', border: '1px solid rgba(96,144,192,0.45)', borderRadius: 4, width: 20, height: 20, padding: 0, cursor: 'pointer', flexShrink: 0, fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6090c0' }}>↩</button>}
-                  {onDelete && <button onClick={e => { e.stopPropagation(); onDelete(); }} title="Supprimer définitivement" style={{ background: 'rgba(192,64,64,0.18)', border: '1px solid rgba(192,64,64,0.45)', borderRadius: 4, width: 20, height: 20, padding: 0, cursor: 'pointer', flexShrink: 0, fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🗑</button>}
+                  {onUnarchive && <button onClick={e => { e.stopPropagation(); onUnarchive(); }} title={t('card.restore')} style={{ background: 'rgba(96,144,192,0.18)', border: '1px solid rgba(96,144,192,0.45)', borderRadius: 4, width: 20, height: 20, padding: 0, cursor: 'pointer', flexShrink: 0, fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6090c0' }}>↩</button>}
+                  {onDelete && <button onClick={e => { e.stopPropagation(); onDelete(); }} title={t('card.delete_perm')} style={{ background: 'rgba(192,64,64,0.18)', border: '1px solid rgba(192,64,64,0.45)', borderRadius: 4, width: 20, height: 20, padding: 0, cursor: 'pointer', flexShrink: 0, fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🗑</button>}
                 </>) : (onArchive && (
-                  <button onClick={e => { e.stopPropagation(); onArchive(); }} title="Archiver"
+                  <button onClick={e => { e.stopPropagation(); onArchive(); }} title={t('card.archive_btn')}
                     style={{ background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.28)', borderRadius: 4, width: 20, height: 20, padding: 0, cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.65)' }}>
                     <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
                   </button>
@@ -252,25 +256,25 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
       {compact && !readOnly && (
         <div style={{ position: 'absolute', top: 4, right: 4, display: 'flex', flexDirection: 'row', gap: 2, zIndex: 5 }}>
           {!isArchived && onToggleDone && (
-            <button onClick={e => { e.stopPropagation(); onToggleDone(!isDone); }} title={isDone ? 'Marquer non terminée' : 'Marquer terminée'}
+            <button onClick={e => { e.stopPropagation(); onToggleDone(!isDone); }} title={isDone ? t('card.mark_undone') : t('card.mark_done')}
               style={{ background: isDone ? 'rgba(61,184,106,0.22)' : 'rgba(255,255,255,0.10)', border: `1px solid ${isDone ? '#3db86a' : 'rgba(255,255,255,0.28)'}`, borderRadius: 3, width: 16, height: 16, padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: isDone ? '#3db86a' : 'rgba(255,255,255,0.65)', flexShrink: 0 }}>
               <svg viewBox="0 0 24 24" width="9" height="9" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
             </button>
           )}
           {!isArchived && onToggleUrgent && (
-            <button onClick={e => { e.stopPropagation(); onToggleUrgent(!isUrgent); }} title={isUrgent ? 'Retirer urgence' : 'Marquer urgent'}
+            <button onClick={e => { e.stopPropagation(); onToggleUrgent(!isUrgent); }} title={isUrgent ? t('card.remove_urgent') : t('card.add_urgent')}
               style={{ background: isUrgent ? 'rgba(220,60,60,0.22)' : 'rgba(255,255,255,0.10)', border: `1px solid ${isUrgent ? '#dc3c3c' : 'rgba(255,255,255,0.28)'}`, borderRadius: 3, width: 16, height: 16, padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: isUrgent ? '#ff6060' : 'rgba(255,255,255,0.65)', flexShrink: 0 }}>
               <svg viewBox="0 0 24 24" width="9" height="9" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
             </button>
           )}
           {!isArchived && onEdit && isCustom && (
-            <button onClick={e => { e.stopPropagation(); onEdit(game); }} title="Éditer"
+            <button onClick={e => { e.stopPropagation(); onEdit(game); }} title={t('card.edit_title')}
               style={{ background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.22)', borderRadius: 3, width: 16, height: 16, padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.55)', flexShrink: 0 }}>
               <svg viewBox="0 0 24 24" width="9" height="9" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
             </button>
           )}
           {!isArchived && (isHidden ? onUnhide : onHide) && (
-            <button onClick={e => { e.stopPropagation(); isHidden ? onUnhide() : onHide(); }} title={isHidden ? 'Réafficher' : 'Masquer'}
+            <button onClick={e => { e.stopPropagation(); isHidden ? onUnhide() : onHide(); }} title={isHidden ? t('card.show') : t('card.hide')}
               style={{ background: isHidden ? 'rgba(60,150,240,0.18)' : 'rgba(255,255,255,0.10)', border: `1px solid ${isHidden ? 'rgba(60,150,240,0.5)' : 'rgba(255,255,255,0.22)'}`, borderRadius: 3, width: 16, height: 16, padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: isHidden ? '#70b8ff' : 'rgba(255,255,255,0.55)', flexShrink: 0 }}>
               <svg viewBox="0 0 24 24" width="9" height="9" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 {isHidden ? <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></> : <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></>}
@@ -278,10 +282,10 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
             </button>
           )}
           {isArchived ? (<>
-            {onUnarchive && <button onClick={e => { e.stopPropagation(); onUnarchive(); }} title="Restaurer" style={{ background: 'rgba(96,144,192,0.18)', border: '1px solid rgba(96,144,192,0.4)', borderRadius: 3, width: 16, height: 16, padding: 0, cursor: 'pointer', fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6090c0', flexShrink: 0 }}>↩</button>}
-            {onDelete && <button onClick={e => { e.stopPropagation(); onDelete(); }} title="Supprimer" style={{ background: 'rgba(192,64,64,0.18)', border: '1px solid rgba(192,64,64,0.4)', borderRadius: 3, width: 16, height: 16, padding: 0, cursor: 'pointer', fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>🗑</button>}
+            {onUnarchive && <button onClick={e => { e.stopPropagation(); onUnarchive(); }} title={t('card.restore')} style={{ background: 'rgba(96,144,192,0.18)', border: '1px solid rgba(96,144,192,0.4)', borderRadius: 3, width: 16, height: 16, padding: 0, cursor: 'pointer', fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6090c0', flexShrink: 0 }}>↩</button>}
+            {onDelete && <button onClick={e => { e.stopPropagation(); onDelete(); }} title={t('card.delete')} style={{ background: 'rgba(192,64,64,0.18)', border: '1px solid rgba(192,64,64,0.4)', borderRadius: 3, width: 16, height: 16, padding: 0, cursor: 'pointer', fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>🗑</button>}
           </>) : (onArchive && (
-            <button onClick={e => { e.stopPropagation(); onArchive(); }} title="Archiver"
+            <button onClick={e => { e.stopPropagation(); onArchive(); }} title={t('card.archive_btn')}
               style={{ background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.22)', borderRadius: 3, width: 16, height: 16, padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.55)', flexShrink: 0 }}>
               <svg viewBox="0 0 24 24" width="9" height="9" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
             </button>
@@ -349,7 +353,7 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
           display: 'flex', alignItems: 'center', gap: 3,
         }}>
           <svg viewBox="0 0 24 24" width="8" height="8" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-          TERMINÉE
+          {t('card.badge_done')}
         </div>
       )}
 

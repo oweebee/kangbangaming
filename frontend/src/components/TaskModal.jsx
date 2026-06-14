@@ -5,6 +5,7 @@ import NotesSection from './NotesSection.jsx';
 import ProgressSlider, { progressColor } from './ProgressSlider.jsx';
 import { StatusToggles, DatePicker, AssigneeEditor } from './CardControls.jsx';
 import ModalBackdrop from './ModalBackdrop.jsx';
+import { useLang } from '../i18n.js';
 
 // ── Date helpers ──────────────────────────────────────────────────────────────
 
@@ -49,11 +50,12 @@ function getDateInfo(game) {
   return null;
 }
 
-const STATUS_LABEL = { future: 'À venir', active: 'En cours', past: 'Passée' };
+// STATUS_LABEL is now handled via i18n t() calls inside components
 
 // ── Assignee row ──────────────────────────────────────────────────────────────
 
 function AssigneeRow({ assignees = [], appUsers = [], borderColor = 'var(--border)' }) {
+  const { t } = useLang();
   const [popup, setPopup] = useState(null); // { user, rect }
   const timerRef = useRef(null);
 
@@ -69,7 +71,7 @@ function AssigneeRow({ assignees = [], appUsers = [], borderColor = 'var(--borde
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-      <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0 }}>👥 Assignés</span>
+      <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0 }}>{t('task.assignees')}</span>
       <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
         {users.map(user => {
           const initials = user.username?.[0]?.toUpperCase() || '?';
@@ -145,7 +147,7 @@ function AssigneeRow({ assignees = [], appUsers = [], borderColor = 'var(--borde
               <svg viewBox="0 0 496 512" xmlns="http://www.w3.org/2000/svg" style={{ width: 9, height: 9, fill: '#c7d5e0', marginRight: 4, verticalAlign: 'middle' }}>
                 <path d="M496 256c0 137-111.2 248-248.4 248-113.8 0-209.7-76.3-239-180.4l95.2 39.3c6.4 32.1 34.9 56.4 68.9 56.4 38.2 0 69.1-31.1 68.9-69.3l84.5-60.2c52.1 1.3 95.8-40.9 95.8-93.5 0-51.6-42-93.5-93.7-93.5s-93.7 42-93.7 93.5v1.2L176.6 279c-15.5-.9-30.7 3.4-43.5 12.1L0 236.1C10.2 108.4 117.1 8 247.6 8 384.8 8 496 119 496 256z"/>
               </svg>
-              Voir profil Steam
+              {t('task.steam_profile')}
             </div>
           )}
         </div>,
@@ -158,6 +160,7 @@ function AssigneeRow({ assignees = [], appUsers = [], borderColor = 'var(--borde
 // ── TaskModal ─────────────────────────────────────────────────────────────────
 
 export default function TaskModal({ game, onClose, onEdit, appUsers = [], onPatchGame, isTaskBoard, token, defaultTab = 'infos', currentUser }) {
+  const { t } = useLang();
   const tt        = game.taskType ? getTaskType(game.taskType) : null;
   const TtIcon    = tt?.FallbackIcon;
   const [ttImgError, setTtImgError] = useState(false);
@@ -256,7 +259,7 @@ export default function TaskModal({ game, onClose, onEdit, appUsers = [], onPatc
             {onEdit && (
               <button
                 onClick={onEdit}
-                title="Éditer la tâche"
+                title={t('task.edit_title')}
                 style={{
                   background: 'rgba(0,0,0,0.55)', border: '2px solid rgba(255,255,255,0.18)',
                   borderRadius: 7, width: 32, height: 32, color: '#ccc', fontSize: 13, cursor: 'pointer',
@@ -294,16 +297,16 @@ export default function TaskModal({ game, onClose, onEdit, appUsers = [], onPatc
         {/* ── Tabs bar ── */}
         <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', flexShrink: 0, background: 'var(--surface)' }}>
           {[
-            { id: 'infos', label: 'Infos' },
-            { id: 'notes', label: `Notes${notesCount > 0 ? ` (${notesCount})` : ''}` },
-          ].map(t => (
-            <button key={t.id} onClick={() => setActiveTab(t.id)} style={{
+            { id: 'infos', label: t('task.tab_infos') },
+            { id: 'notes', label: `${t('task.tab_notes').replace('...', '')}${notesCount > 0 ? ` (${notesCount})` : ''}` },
+          ].map(tab => (
+            <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
               background: 'none', border: 'none',
-              borderBottom: activeTab === t.id ? '2px solid var(--accent)' : '2px solid transparent',
-              padding: '10px 18px', color: activeTab === t.id ? 'var(--text)' : 'var(--text-muted)',
-              fontWeight: activeTab === t.id ? 700 : 400, fontSize: 13,
+              borderBottom: activeTab === tab.id ? '2px solid var(--accent)' : '2px solid transparent',
+              padding: '10px 18px', color: activeTab === tab.id ? 'var(--text)' : 'var(--text-muted)',
+              fontWeight: activeTab === tab.id ? 700 : 400, fontSize: 13,
               cursor: 'pointer', marginBottom: -1, transition: 'color .15s',
-            }}>{t.label}</button>
+            }}>{tab.label}</button>
           ))}
         </div>
 
@@ -341,7 +344,7 @@ export default function TaskModal({ game, onClose, onEdit, appUsers = [], onPatc
             {isTaskBoard && appUsers.length > 0 && (
               <div style={{ background: 'var(--surface2)', border: `2px solid ${cardBorderColor}`, borderRadius: 9, padding: '10px 14px' }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: 8 }}>
-                  👥 Assignés
+                  {t('task.assignees')}
                 </div>
                 <AssigneeEditor
                   assignees={game.assignees || []}
@@ -363,7 +366,7 @@ export default function TaskModal({ game, onClose, onEdit, appUsers = [], onPatc
             {!isTaskBoard && (
               <div style={{ background: 'var(--surface2)', border: '2px solid var(--border)', borderRadius: 9, padding: '10px 14px' }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: 10 }}>
-                  🎨 Couleur de la carte
+                  {t('task.color_label')}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                   <input

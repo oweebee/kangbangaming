@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { initUserLang } from './i18n.js';
+import { initUserLang, useLang } from './i18n.js';
 import KanbanBoard from './components/KanbanBoard.jsx';
 import NowPlayingBanner from './components/NowPlayingBanner.jsx';
 import MobileBoard from './components/MobileBoard.jsx';
@@ -83,6 +83,7 @@ function useMobile() {
 
 function BoardEmojiPicker({ current, onSelect, onClose, anchorEl }) {
   const ref = useRef();
+  const { t } = useLang();
   const [coords, setCoords] = useState({ left: -9999, top: -9999 });
 
   useEffect(() => {
@@ -120,7 +121,7 @@ function BoardEmojiPicker({ current, onSelect, onClose, anchorEl }) {
     }}>
       {/* Effacer */}
       <div style={{ marginBottom: 6 }}>
-        <button onClick={() => onSelect('')} style={{ ...btnStyle(''), width: 'auto', padding: '0 10px', fontSize: 11, color: 'var(--text-muted)' }}>✕ Aucun</button>
+        <button onClick={() => onSelect('')} style={{ ...btnStyle(''), width: 'auto', padding: '0 10px', fontSize: 11, color: 'var(--text-muted)' }}>{t('board.emoji_no')}</button>
       </div>
       {EMOJI_CATS.map(cat => (
         <div key={cat.label} style={{ marginBottom: 8 }}>
@@ -163,6 +164,7 @@ const API = import.meta.env.VITE_API_URL || '/api';
 
 function HomeBoardCard({ board, isPublic, isFav, onToggleFav, onClick, typeColor = '#66c0f4', isHidden = false, onHide, onUnhide }) {
   const [favHover, setFavHover] = useState(false);
+  const { t } = useLang();
   return (
     <div
       style={{
@@ -198,7 +200,7 @@ function HomeBoardCard({ board, isPublic, isFav, onToggleFav, onClick, typeColor
         {isFav && <svg viewBox="0 0 24 24" width="10" height="10" fill="#f5c518" stroke="#f5c518" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>}
         <span style={{ flex: 1, fontWeight: 700, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text)' }}>{board.name}</span>
         <span style={{ fontSize: 10, fontWeight: 700, color: (isPublic || board.public) ? '#3db86a' : '#f5a500', border: `2px solid ${(isPublic || board.public) ? '#3db86a' : '#f5a500'}`, borderRadius: 4, padding: '1px 5px', flexShrink: 0 }}>
-          {(isPublic || board.public) ? 'Public' : 'Privé'}
+          {(isPublic || board.public) ? t('hbc.public') : t('hbc.private')}
         </span>
       </div>
       {/* Action bar */}
@@ -207,11 +209,11 @@ function HomeBoardCard({ board, isPublic, isFav, onToggleFav, onClick, typeColor
           <button
             onClick={onClick}
             style={{ flex: 1, background: 'var(--accent)', border: 'none', borderRadius: 6, padding: '5px 0', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
-          >▶ Afficher</button>
+          >{t('hbc.show')}</button>
           {(onHide || onUnhide) && (
             <button
               onClick={e => { e.stopPropagation(); isHidden ? onUnhide() : onHide(); }}
-              title={isHidden ? 'Réafficher ce board' : 'Masquer ce board'}
+              title={isHidden ? t('hbc.unhide_title') : t('hbc.hide_title')}
               style={{
                 background: isHidden ? 'rgba(60,150,240,0.18)' : 'var(--surface2)',
                 border: isHidden ? '1px solid rgba(60,150,240,0.55)' : '1px solid var(--border)',
@@ -247,11 +249,11 @@ function HomeBoardCard({ board, isPublic, isFav, onToggleFav, onClick, typeColor
           >
             {isPublic
               ? (isFav
-                ? (favHover ? <><span style={{ fontSize: 12, lineHeight: 1 }}>✕</span> Retirer</> : <>✓ Suivi</>)
-                : <>+ Suivre</>)
+                ? (favHover ? <><span style={{ fontSize: 12, lineHeight: 1 }}>✕</span> {t('hbc.unfollow')}</> : <>{t('hbc.following')}</>)
+                : <>{t('hbc.follow')}</>)
               : (isFav
-                ? (favHover ? <><span style={{ fontSize: 12, lineHeight: 1 }}>✕</span> Retirer</> : <>📌 Épinglé</>)
-                : <>📌 Épingler</>)
+                ? (favHover ? <><span style={{ fontSize: 12, lineHeight: 1 }}>✕</span> {t('hbc.unfollow')}</> : <>{t('hbc.pinned')}</>)
+                : <>{t('hbc.pin')}</>)
             }
           </button>
         </div>
@@ -260,7 +262,7 @@ function HomeBoardCard({ board, isPublic, isFav, onToggleFav, onClick, typeColor
           <button
             onClick={onClick}
             style={{ width: '100%', background: 'var(--accent)', border: 'none', borderRadius: 6, padding: '5px 0', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
-          >▶ Afficher</button>
+          >{t('hbc.show')}</button>
         </div>
       )}
     </div>
@@ -280,6 +282,7 @@ function authHeaders(token) {
 
 export default function App() {
   const isMobile = useMobile();
+  const { t } = useLang();
 
   // Auth
   const [currentUser, setCurrentUser] = useState(null);
@@ -797,12 +800,12 @@ export default function App() {
         method: 'POST', headers: authHeaders(token),
         body: JSON.stringify({ name, emoji: '', gameIcon: selectedBoardGame ? (selectedBoardGame.icon_img || selectedBoardGame.header_img) : null, headerImg: selectedBoardGame ? selectedBoardGame.header_img : null, gameBoard: !!selectedBoardGame }),
       });
-      if (!res.ok) { const e = await res.json().catch(() => ({})); alert('Erreur création board: ' + (e.error || res.status)); return; }
+      if (!res.ok) { const e = await res.json().catch(() => ({})); alert(t('err.board_create') + (e.error || res.status)); return; }
       const board = await res.json();
       setBoards(prev => [...prev, board]);
       setActiveBoardId(board.id); setColumns(board.columns || []); setGames([]);
       resetNewBoard();
-    } catch (err) { alert('Erreur réseau: ' + err.message); }
+    } catch (err) { alert(t('err.board_network') + err.message); }
   };
 
   const setBoardEmoji = async (boardId, emoji) => {
@@ -816,7 +819,7 @@ export default function App() {
   };
 
   const deleteBoard = async (boardId) => {
-    if (!confirm('Supprimer ce board ?')) return;
+    if (!confirm(t('err.del_board'))) return;
     await fetch(`${API}/boards/${boardId}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
     const remaining = boards.filter(b => b.id !== boardId);
     setBoards(remaining);
@@ -833,12 +836,12 @@ export default function App() {
   const addColumn = async () => {
     try {
       const boardApi = getBoardApi();
-      const res = await fetch(`${boardApi}/columns`, { method: 'POST', headers: authHeaders(token), body: JSON.stringify({ label: 'Nouvelle colonne' }) });
-      if (!res.ok) { const e = await res.json().catch(() => ({})); alert('Erreur colonne: ' + (e.error || res.status)); return; }
+      const res = await fetch(`${boardApi}/columns`, { method: 'POST', headers: authHeaders(token), body: JSON.stringify({ label: t('col.new_label') }) });
+      if (!res.ok) { const e = await res.json().catch(() => ({})); alert(t('err.col_create') + (e.error || res.status)); return; }
       const col = await res.json();
       setColumns(prev => [...prev, col]);
       if (!publicBoardMode) setBoards(prev => prev.map(b => b.id === activeBoardId ? { ...b, columns: [...(b.columns || []), col] } : b));
-    } catch (err) { alert('Erreur réseau: ' + err.message); }
+    } catch (err) { alert(t('err.col_network') + err.message); }
   };
   const renameColumn = async (colId, label) => {
     const boardApi = getBoardApi();
@@ -855,7 +858,7 @@ export default function App() {
     if (!publicBoardMode) setBoards(prev => prev.map(b => b.id === activeBoardId ? { ...b, columns: updated } : b));
   };
   const deleteColumn = async (colId) => {
-    if (!confirm('Supprimer cette colonne ? Les jeux seront déplacés dans la première colonne.')) return;
+    if (!confirm(t('col.del_confirm'))) return;
     const boardApi = getBoardApi();
     await fetch(`${boardApi}/columns/${colId}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
     const updated = columns.filter(c => c.id !== colId);
@@ -1117,7 +1120,7 @@ export default function App() {
       {hiddenBoardIds.size > 0 && (
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10 }}>
           <button onClick={() => setShowHiddenBoards(v => !v)} style={{ background: showHiddenBoards ? 'rgba(40,120,200,0.22)' : 'var(--surface2)', border: showHiddenBoards ? '1px solid rgba(60,150,240,0.6)' : '1px solid var(--border)', borderRadius: 6, padding: '5px 10px', cursor: 'pointer', color: showHiddenBoards ? '#70b8ff' : 'var(--text-muted)', fontSize: 11 }}>
-            Boards masqués ({hiddenBoardIds.size})
+            {t('board.hidden_toggle', { count: hiddenBoardIds.size })}
           </button>
         </div>
       )}
@@ -1125,11 +1128,11 @@ export default function App() {
       <div style={{ marginBottom: 28 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
           <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#3db86a" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="10" cy="7" r="4"/><path d="M4 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg>
-          <span style={{ fontSize: 11, fontWeight: 700, color: '#3db86a', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Boards Publics</span>
+          <span style={{ fontSize: 11, fontWeight: 700, color: '#3db86a', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{t('board.public_section')}</span>
           <span style={{ fontSize: 10, color: 'var(--text-muted)', background: 'var(--surface2)', borderRadius: 99, padding: '1px 6px' }}>{homePublicBoards.length}</span>
         </div>
         {homePublicBoards.length === 0
-          ? <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>Aucun board public disponible.</div>
+          ? <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>{t('board.no_public')}</div>
           : <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
               {applySectionOrder(homePublicBoards, homePublicOrder).filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).map(b => (
                 <HomeBoardCard key={b.id} board={b} isPublic isFav={favBoards.some(f => f.id === b.id)} onToggleFav={cur => toggleFavorite(b.id, b, cur)} onClick={() => openPublicBoard(b)} typeColor={getBoardTypeColor(b)} isHidden={hiddenBoardIds.has(b.id)} onHide={() => hideBoard(b.id)} onUnhide={() => unhideBoard(b.id)} />
@@ -1148,7 +1151,7 @@ export default function App() {
             <div style={{ marginBottom: 24 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
                 <svg viewBox="0 0 24 24" width="13" height="13" fill="#f5c518" stroke="#f5c518" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#f5c518', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Épinglés</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#f5c518', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{t('board.pinned_section')}</span>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
                 {applySectionOrder(favBoards2, homeFavOrder).filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).map(b => (
@@ -1160,12 +1163,12 @@ export default function App() {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
               <span style={{ fontSize: 13 }}>🔒</span>
-              <span style={{ fontSize: 11, fontWeight: 700, color: '#f5a500', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Mes Boards</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#f5a500', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{t('board.my_boards')}</span>
             </div>
             {sortedBoards.length === 0
-              ? <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>Crée un board pour commencer.</div>
+              ? <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>{t('board.create_start')}</div>
               : otherBoards.length === 0
-                ? <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>Tous tes boards sont épinglés 📌</div>
+                ? <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>{t('board.all_pinned')}</div>
                 : <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
                     {applySectionOrder(otherBoards, homeOtherOrder).filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).map(b => (
                       <HomeBoardCard key={b.id} board={b} isFav={false} onToggleFav={cur => togglePersonalFavorite(b.id, cur)} onClick={() => openBoard(b)} typeColor={getBoardTypeColor(b)} isHidden={hiddenBoardIds.has(b.id)} onHide={() => hideBoard(b.id)} onUnhide={() => unhideBoard(b.id)} />
@@ -1183,9 +1186,9 @@ export default function App() {
       {/* Barre d'onglets */}
       <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', flexShrink: 0, background: 'var(--surface)' }}>
         {[
-          { id: 'deadlines', label: '⚠ Échéances' },
-          { id: 'boards',    label: '📋 Boards'   },
-          { id: 'upcoming',  label: '🎮 Sorties'  },
+          { id: 'deadlines', label: t('home.deadlines_tab') },
+          { id: 'boards',    label: t('home.boards_tab')    },
+          { id: 'upcoming',  label: t('home.upcoming_tab')  },
         ].map(({ id, label }) => (
           <button key={id} onClick={() => setMobileHomeTab(id)} style={{
             flex: 1, background: 'none', border: 'none',
@@ -1262,7 +1265,7 @@ export default function App() {
                   : <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></>
                 }
               </svg>
-              Boards masqués ({hiddenBoardIds.size})
+              {t('board.hidden_toggle', { count: hiddenBoardIds.size })}
             </button>
           </div>
         )}
@@ -1272,11 +1275,11 @@ export default function App() {
             <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#3db86a" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="10" cy="7" r="4"/><path d="M4 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M15 3.13a4 4 0 0 1 0 7.75"/><path d="M20 21v-2a4 4 0 0 0-3-3.85"/>
             </svg>
-            <span style={{ fontSize: 12, fontWeight: 700, color: '#3db86a', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Boards Publics</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#3db86a', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{t('board.public_section')}</span>
             <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--surface2)', borderRadius: 99, padding: '1px 7px' }}>{homePublicBoards.length}</span>
           </div>
           {homePublicBoards.length === 0 ? (
-            <div style={{ color: 'var(--text-muted)', fontSize: 12, padding: '16px 0' }}>Aucun board public disponible pour l'instant.</div>
+            <div style={{ color: 'var(--text-muted)', fontSize: 12, padding: '16px 0' }}>{t('board.no_public_long')}</div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
               {applySectionOrder(homePublicBoards, homePublicOrder).filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).map(b => (
@@ -1316,7 +1319,7 @@ export default function App() {
                 <div style={{ marginBottom: 28 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
                     <svg viewBox="0 0 24 24" width="14" height="14" fill="#f5c518" stroke="#f5c518" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: '#f5c518', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Épinglés</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: '#f5c518', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{t('board.pinned_section')}</span>
                     <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--surface2)', borderRadius: 99, padding: '1px 7px' }}>{favBoards2.length}</span>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
@@ -1338,13 +1341,13 @@ export default function App() {
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
                   <span style={{ fontSize: 14 }}>🔒</span>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: '#f5a500', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Mes Boards</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: '#f5a500', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{t('board.my_boards')}</span>
                   <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--surface2)', borderRadius: 99, padding: '1px 7px' }}>{otherBoards.length}</span>
                 </div>
                 {sortedBoards.length === 0 ? (
-                  <div style={{ color: 'var(--text-muted)', fontSize: 12, padding: '16px 0' }}>Crée un board pour commencer.</div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: 12, padding: '16px 0' }}>{t('board.create_start')}</div>
                 ) : otherBoards.length === 0 ? (
-                  <div style={{ color: 'var(--text-muted)', fontSize: 12, padding: '8px 0' }}>Tous tes boards sont épinglés 📌</div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: 12, padding: '8px 0' }}>{t('board.all_pinned')}</div>
                 ) : (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
                     {applySectionOrder(otherBoards, homeOtherOrder).filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).map(b => (
@@ -1442,7 +1445,7 @@ export default function App() {
             fontSize: 13,
             letterSpacing: '0.02em',
             flex: 1,
-          }}>Tableau de Board</span>
+          }}>{t('board.dashboard')}</span>
           {showHome && !activeBoardId && !publicBoardMode && (
             <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent)', flexShrink: 0, opacity: 0.9 }} />
           )}
@@ -1456,7 +1459,7 @@ export default function App() {
           <>
             <div style={{ fontSize: 9, fontWeight: 700, color: '#f5c518', textTransform: 'uppercase', letterSpacing: '0.08em', padding: '4px 6px 2px', opacity: 0.8, display: 'flex', alignItems: 'center', gap: 4 }}>
               <svg viewBox="0 0 24 24" width="8" height="8" fill="#f5c518" stroke="#f5c518" strokeWidth="1.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-              Épinglés
+              {t('board.pinned_section')}
             </div>
             {sortedBoards.filter(b => personalFavIds.includes(b.id)).filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).map(b => (
           <div key={b.id}
@@ -1497,7 +1500,7 @@ export default function App() {
             {/* Public toggle */}
             <button
               onClick={e => { e.stopPropagation(); toggleBoardPublic(b.id, !b.public); }}
-              title={b.public ? 'Board public — cliquer pour rendre privé' : 'Board privé — cliquer pour rendre public'}
+              title={b.public ? t('board.make_private_title') : t('board.make_public_title')}
               style={{ background: 'none', border: 'none', fontSize: 11, padding: 0, cursor: 'pointer', flexShrink: 0, opacity: b.public ? 1 : 0.3, lineHeight: 1 }}
             >{b.public ? (
               <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="var(--accent)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -1514,7 +1517,7 @@ export default function App() {
         {personalFavIds.length > 0 && sortedBoards.some(b => personalFavIds.includes(b.id)) && sortedBoards.some(b => !personalFavIds.includes(b.id)) && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 4px 2px', margin: '2px 0 4px' }}>
             <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
-            <span style={{ fontSize: 9, color: 'var(--text-muted)', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.06em', flexShrink: 0 }}>Mes boards</span>
+            <span style={{ fontSize: 9, color: 'var(--text-muted)', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.06em', flexShrink: 0 }}>{t('board.my_boards_sep')}</span>
             <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
           </div>
         )}
@@ -1558,7 +1561,7 @@ export default function App() {
             <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 14, fontWeight: 700 }}>{b.name}</span>
             <button
               onClick={e => { e.stopPropagation(); toggleBoardPublic(b.id, !b.public); }}
-              title={b.public ? 'Board public — cliquer pour rendre privé' : 'Board privé — cliquer pour rendre public'}
+              title={b.public ? t('board.make_private_title') : t('board.make_public_title')}
               style={{ background: 'none', border: 'none', fontSize: 11, padding: 0, cursor: 'pointer', flexShrink: 0, opacity: b.public ? 1 : 0.3, lineHeight: 1 }}
             >{b.public ? (
               <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="var(--accent)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -1585,7 +1588,7 @@ export default function App() {
             <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               {showHiddenBoards ? <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></> : <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></>}
             </svg>
-            Boards masqués ({hiddenBoardIds.size})
+            {t('board.hidden_toggle', { count: hiddenBoardIds.size })}
           </button>
         )}
       </div>
@@ -1595,7 +1598,7 @@ export default function App() {
         <div style={{ padding: '4px 6px 0', borderTop: '1px solid var(--border)' }}>
           <div style={{ fontSize: 10, color: 'var(--text-muted)', padding: '4px 2px 4px 4px', letterSpacing: '0.06em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 4 }}>
             <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-            Boards publics suivis
+            {t('board.followed_public')}
           </div>
           {sortedFavBoards.filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).map(b => (
             <div key={b.id}
@@ -1647,11 +1650,11 @@ export default function App() {
               <div style={{ position: 'relative' }}>
                 {showBoardSearch ? (
                   <>
-                    <input autoFocus value={boardSearchQuery} onChange={e => handleBoardSearchInput(e.target.value)} placeholder="Rechercher un jeu..."
+                    <input autoFocus value={boardSearchQuery} onChange={e => handleBoardSearchInput(e.target.value)} placeholder={t('board.search_game_ph')}
                       style={{ width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 8px', color: 'var(--text)', fontSize: 12, outline: 'none', boxSizing: 'border-box' }} />
                     {(boardSearchLoading || boardSearchResults.length > 0) && (
                       <div style={{ position: 'absolute', bottom: '100%', left: 0, right: 0, zIndex: 200, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, marginBottom: 2, boxShadow: '0 -8px 20px rgba(0,0,0,.5)', maxHeight: 200, overflowY: 'auto' }}>
-                        {boardSearchLoading && <div style={{ padding: '8px 10px', fontSize: 11, color: 'var(--text-muted)' }}>Recherche...</div>}
+                        {boardSearchLoading && <div style={{ padding: '8px 10px', fontSize: 11, color: 'var(--text-muted)' }}>{t('board.searching')}</div>}
                         {[...boardSearchResults].reverse().map(g => (
                           <div key={g.appid} onClick={() => selectBoardGame(g)}
                             style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', cursor: 'pointer', borderBottom: '1px solid var(--border)' }}
@@ -1667,29 +1670,29 @@ export default function App() {
                 ) : (
                   <button onClick={() => setShowBoardSearch(true)} style={{ width: '100%', background: 'var(--surface2)', border: '1px dashed var(--border)', borderRadius: 6, padding: '5px 8px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 6 }}>
                     <svg viewBox="0 0 496 512" xmlns="http://www.w3.org/2000/svg" style={{ width: 12, height: 12, fill: 'var(--accent)', flexShrink: 0 }}><path d="M496 256c0 137-111.2 248-248.4 248-113.8 0-209.7-76.3-239-180.4l95.2 39.3c6.4 32.1 34.9 56.4 68.9 56.4 38.2 0 69.1-31.1 68.9-69.3l84.5-60.2c52.1 1.3 95.8-40.9 95.8-93.5 0-51.6-42-93.5-93.7-93.5s-93.7 42-93.7 93.5v1.2L176.6 279c-15.5-.9-30.7 3.4-43.5 12.1L0 236.1C10.2 108.4 117.1 8 247.6 8 384.8 8 496 119 496 256z"/></svg>
-                    Associer un jeu Steam...
+                    {t('board.search_game')}
                   </button>
                 )}
               </div>
             )}
-            <input autoFocus={!showBoardSearch} value={newBoardName} onChange={e => setNewBoardName(e.target.value)} onKeyDown={e => e.key === 'Enter' && createBoard()} placeholder="Board Personnalisée"
+            <input autoFocus={!showBoardSearch} value={newBoardName} onChange={e => setNewBoardName(e.target.value)} onKeyDown={e => e.key === 'Enter' && createBoard()} placeholder={t('board.new_placeholder')}
               style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 8px', color: 'var(--text)', fontSize: 12, outline: 'none' }} />
             <div style={{ display: 'flex', gap: 4 }}>
-              <button onClick={createBoard} style={{ flex: 1, background: 'var(--accent)', border: 'none', borderRadius: 5, padding: '5px', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Créer</button>
-              <button onClick={resetNewBoard} style={{ flex: 1, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 5, padding: '5px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>Annuler</button>
+              <button onClick={createBoard} style={{ flex: 1, background: 'var(--accent)', border: 'none', borderRadius: 5, padding: '5px', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>{t('board.create_btn')}</button>
+              <button onClick={resetNewBoard} style={{ flex: 1, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 5, padding: '5px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>{t('common.cancel')}</button>
             </div>
           </div>
         ) : (
-          <button onClick={() => setShowNewBoard(true)} style={{ width: '100%', background: 'var(--accent)', border: 'none', borderRadius: 7, padding: '9px', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>+ Nouveau board</button>
+          <button onClick={() => setShowNewBoard(true)} style={{ width: '100%', background: 'var(--accent)', border: 'none', borderRadius: 7, padding: '9px', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>{t('board.new')}</button>
         )}
       </div>
 
       {/* User footer */}
       <div style={{ padding: '8px 10px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 5 }}>
         {currentUser.steamAvatar ? (
-          <img src={currentUser.steamAvatar} alt="" style={{ width: 28, height: 28, borderRadius: 4, border: '1px solid var(--border)', flexShrink: 0, cursor: 'pointer' }} onClick={() => setShowProfile(true)} title="Mon profil" />
+          <img src={currentUser.steamAvatar} alt="" style={{ width: 28, height: 28, borderRadius: 4, border: '1px solid var(--border)', flexShrink: 0, cursor: 'pointer' }} onClick={() => setShowProfile(true)} title={t('nav.my_profile')} />
         ) : (
-          <div style={{ width: 28, height: 28, borderRadius: 4, background: 'var(--surface3)', border: '1px solid var(--border)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 14 }} onClick={() => setShowProfile(true)} title="Mon profil">
+          <div style={{ width: 28, height: 28, borderRadius: 4, background: 'var(--surface3)', border: '1px solid var(--border)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 14 }} onClick={() => setShowProfile(true)} title={t('nav.my_profile')}>
             👤
           </div>
         )}
@@ -1699,16 +1702,16 @@ export default function App() {
           </div>
           {currentUser.role === 'admin' && <div style={{ fontSize: 9, color: '#f5a500', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>admin</div>}
         </div>
-        <button onClick={() => setShowProfile(true)} title="Mon profil" style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 5, padding: '4px 7px', color: 'var(--text-muted)', fontSize: 11, cursor: 'pointer', flexShrink: 0, fontWeight: 600 }}>Profil</button>
+        <button onClick={() => setShowProfile(true)} title={t('nav.my_profile')} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 5, padding: '4px 7px', color: 'var(--text-muted)', fontSize: 11, cursor: 'pointer', flexShrink: 0, fontWeight: 600 }}>{t('nav.profile')}</button>
         {currentUser.role === 'admin' && (
-          <button onClick={() => setShowAdmin(true)} title="Panneau admin" style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 5, padding: '4px 7px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>⚙️</button>
+          <button onClick={() => setShowAdmin(true)} title={t('nav.admin_panel')} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 5, padding: '4px 7px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>⚙️</button>
         )}
-        <button onClick={() => setShowAppInfo(true)} title="Infos & aide" style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 5, padding: '4px 7px', color: 'var(--text-muted)', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+        <button onClick={() => setShowAppInfo(true)} title={t('nav.info')} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 5, padding: '4px 7px', color: 'var(--text-muted)', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center' }}>
           <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
           </svg>
         </button>
-        <button onClick={handleLogout} title="Déconnexion" style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 5, padding: '4px 7px', color: 'var(--text-muted)', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+        <button onClick={handleLogout} title={t('nav.logout')} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 5, padding: '4px 7px', color: 'var(--text-muted)', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center' }}>
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M18.36 6.64a9 9 0 1 1-12.73 0"/>
             <line x1="12" y1="2" x2="12" y2="12"/>
@@ -1741,10 +1744,10 @@ export default function App() {
                 <span style={{ fontSize: 20, flexShrink: 0 }}>{publicBoardMode.emoji || '🎮'}</span>
               )}
               <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{publicBoardMode.name}</span>
-              <span style={{ fontSize: 10, fontWeight: 700, color: '#3db86a', border: '2px solid #3db86a', borderRadius: 4, padding: '1px 5px', flexShrink: 0 }}>Public</span>
-              <button onClick={toggleCompact} title="Compact" style={{ background: compactView ? 'rgba(192,87,10,0.15)' : 'rgba(255,255,255,.06)', border: compactView ? '1px solid var(--accent)' : '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', color: compactView ? 'var(--accent)' : 'var(--text-muted)', fontSize: 11, cursor: 'pointer', flexShrink: 0 }}>⊟</button>
-              <button onClick={() => setShowSearch(true)} style={{ background: 'var(--accent)', border: 'none', borderRadius: 7, padding: '7px 10px', color: '#fff', fontWeight: 700, fontSize: 12, flexShrink: 0 }}>+ {isTaskBoard ? 'Tâche' : 'Jeu'}</button>
-              <button onClick={refreshPublicBoard} title="Rafraîchir" style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', color: 'var(--text-muted)', fontSize: 14, cursor: 'pointer', flexShrink: 0, lineHeight: 1 }}>↻</button>
+              <span style={{ fontSize: 10, fontWeight: 700, color: '#3db86a', border: '2px solid #3db86a', borderRadius: 4, padding: '1px 5px', flexShrink: 0 }}>{t('common.public')}</span>
+              <button onClick={toggleCompact} title={t('nav.compact')} style={{ background: compactView ? 'rgba(192,87,10,0.15)' : 'rgba(255,255,255,.06)', border: compactView ? '1px solid var(--accent)' : '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', color: compactView ? 'var(--accent)' : 'var(--text-muted)', fontSize: 11, cursor: 'pointer', flexShrink: 0 }}>⊟</button>
+              <button onClick={() => setShowSearch(true)} style={{ background: 'var(--accent)', border: 'none', borderRadius: 7, padding: '7px 10px', color: '#fff', fontWeight: 700, fontSize: 12, flexShrink: 0 }}>+ {isTaskBoard ? t('nav.add_task_short').slice(2) : t('nav.add_game_short').slice(2)}</button>
+              <button onClick={refreshPublicBoard} title={t('nav.refresh')} style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', color: 'var(--text-muted)', fontSize: 14, cursor: 'pointer', flexShrink: 0, lineHeight: 1 }}>↻</button>
               <button onClick={closePublicBoard} style={{ background: 'rgba(255,255,255,.08)', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 10px', color: 'var(--text-muted)', fontSize: 11, cursor: 'pointer', flexShrink: 0 }}>✕</button>
             </>
           ) : (
@@ -1757,10 +1760,10 @@ export default function App() {
               <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{activeBoard?.name || 'KangBanGaming'}</span>
               {activeBoard && (
                 <span style={{ fontSize: 10, fontWeight: 700, color: activeBoard.public ? '#3db86a' : '#f5a500', border: `2px solid ${activeBoard.public ? '#3db86a' : '#f5a500'}`, borderRadius: 4, padding: '1px 5px', flexShrink: 0 }}>
-                  {activeBoard.public ? 'Public' : 'Privé'}
+                  {activeBoard.public ? t('common.public') : t('common.private')}
                 </span>
               )}
-              {activeBoardId && <button onClick={() => setShowSearch(true)} style={{ background: 'var(--accent)', border: 'none', borderRadius: 7, padding: '7px 14px', color: '#fff', fontWeight: 700, fontSize: 12, flexShrink: 0 }}>{isTaskBoard ? '+ Ajouter une tâche' : '+ Ajouter un jeu'}</button>}
+              {activeBoardId && <button onClick={() => setShowSearch(true)} style={{ background: 'var(--accent)', border: 'none', borderRadius: 7, padding: '7px 14px', color: '#fff', fontWeight: 700, fontSize: 12, flexShrink: 0 }}>{isTaskBoard ? t('nav.add_task') : t('nav.add_game')}</button>}
             </>
           )}
         </header>

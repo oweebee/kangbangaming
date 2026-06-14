@@ -3,8 +3,10 @@ import NotesSection from './NotesSection.jsx';
 import { StatusToggles, DatePicker } from './CardControls.jsx';
 import { formatPlaytime } from '../utils.js';
 import ModalBackdrop from './ModalBackdrop.jsx';
+import { useLang } from '../i18n.js';
 
 export default function GameModal({ game, onClose, api, token, onPatchGame, defaultTab = 'achievements', currentUser, appUsers = [] }) {
+  const { t } = useLang();
   const [achievements, setAchievements] = useState(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState(defaultTab);
@@ -92,10 +94,10 @@ export default function GameModal({ game, onClose, api, token, onPatchGame, defa
           <div style={{ position: 'absolute', bottom: 12, left: 16, right: 16 }}>
             <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 4 }}>{game.name}</div>
             <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>
-              ⏱ {formatPlaytime(game.playtime_minutes, 'Jamais joué')}
+              ⏱ {formatPlaytime(game.playtime_minutes, t('game.never_played'))}
               {achievements && achievements.total > 0 && (
                 <span style={{ marginLeft: 12 }}>
-                  🏆 {achievements.unlocked}/{achievements.total} succès ({achievements.percent}%)
+                  🏆 {achievements.unlocked}/{achievements.total} {t('game.tab_achievements').replace('🏆 ', '')} ({achievements.percent}%)
                 </span>
               )}
             </div>
@@ -117,7 +119,7 @@ export default function GameModal({ game, onClose, api, token, onPatchGame, defa
 
         {/* Tabs */}
         <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', padding: '8px 16px 0', flexShrink: 0 }}>
-          {[['achievements', '🏆 Succès'], ['info', 'ℹ️ Infos'], ['notes', `📝 Notes${notesCount > 0 ? ` (${notesCount})` : ''}`]].map(([id, label]) => (
+          {[['achievements', t('game.tab_achievements')], ['info', t('game.tab_info')], ['notes', `${t('game.tab_notes')}${notesCount > 0 ? ` (${notesCount})` : ''}`]].map(([id, label]) => (
             <button key={id} onClick={() => setTab(id)} style={{
               background: 'none', border: 'none',
               borderBottom: tab === id ? '2px solid var(--accent)' : '2px solid transparent',
@@ -133,7 +135,7 @@ export default function GameModal({ game, onClose, api, token, onPatchGame, defa
             <>
               {achievements && achievements.total > 0 && (
                 <div style={{ padding: '10px 16px', flexShrink: 0, display: 'flex', gap: 6 }}>
-                  {[['all', 'Tous', achievements.total], ['unlocked', '✅ Débloqués', achievements.unlocked], ['locked', '🔒 Verrouillés', achievements.total - achievements.unlocked]].map(([id, label, count]) => (
+                  {[['all', t('game.filter_all'), achievements.total], ['unlocked', t('game.filter_unlocked'), achievements.unlocked], ['locked', t('game.filter_locked'), achievements.total - achievements.unlocked]].map(([id, label, count]) => (
                     <button key={id} onClick={() => setFilter(id)} style={{
                       background: filter === id ? 'var(--accent)' : 'var(--surface2)',
                       border: '2px solid var(--border)', borderRadius: 6, padding: '4px 10px',
@@ -144,9 +146,9 @@ export default function GameModal({ game, onClose, api, token, onPatchGame, defa
                 </div>
               )}
               <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px 16px' }}>
-                {loading && <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 32 }}>Chargement des succès...</div>}
-                {!loading && !achievements && <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 32 }}>Aucun succès disponible pour ce jeu.</div>}
-                {!loading && achievements?.total === 0 && <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 32 }}>Ce jeu n'a pas de succès.</div>}
+                {loading && <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 32 }}>{t('game.loading_ach')}</div>}
+                {!loading && !achievements && <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 32 }}>{t('game.no_ach')}</div>}
+                {!loading && achievements?.total === 0 && <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 32 }}>{t('game.no_ach_game')}</div>}
                 {!loading && filteredAchievements.map((a, i) => (
                   <div key={a.apiname || i} style={{
                     display: 'flex', alignItems: 'center', gap: 10,
@@ -198,8 +200,8 @@ export default function GameModal({ game, onClose, api, token, onPatchGame, defa
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {[
                   ['App ID', game.appid],
-                  ['Temps de jeu', formatPlaytime(game.playtime_minutes, 'Jamais joué')],
-                  ['Store Steam', <a href={`https://store.steampowered.com/app/${game.appid}`} target="_blank" rel="noreferrer" style={{ color: 'var(--accent)' }}>Ouvrir ↗</a>],
+                  [t('game.playtime'), formatPlaytime(game.playtime_minutes, t('game.never_played'))],
+                  [t('game.store'), <a href={`https://store.steampowered.com/app/${game.appid}`} target="_blank" rel="noreferrer" style={{ color: 'var(--accent)' }}>{t('game.open')}</a>],
                 ].map(([label, value]) => (
                   <div key={label} style={{ display: 'flex', gap: 12 }}>
                     <span style={{ color: 'var(--text-muted)', minWidth: 100, fontSize: 13 }}>{label}</span>

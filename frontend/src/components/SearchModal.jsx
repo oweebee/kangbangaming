@@ -4,6 +4,7 @@ import NotesSection from './NotesSection.jsx';
 import ProgressSlider from './ProgressSlider.jsx';
 import { StatusToggles, DatePicker, AssigneeEditor } from './CardControls.jsx';
 import ModalBackdrop from './ModalBackdrop.jsx';
+import { useLang } from '../i18n.js';
 
 const CARD_EMOJI_CATS = [
   { label: '🎮 Gaming', emojis: ['🎮','🕹️','👾','🎲','🃏','🧩','🎯','🏹','⚔️','🗡️','🛡️','🪃','🔫','💣','🧲','🪄','🎪','🎡','🎠','🎢'] },
@@ -19,6 +20,7 @@ const CARD_EMOJI_CATS = [
 ];
 
 function LibraryBadge() {
+  const { t } = useLang();
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 4,
@@ -27,7 +29,7 @@ function LibraryBadge() {
       padding: '2px 8px', borderRadius: 4, flexShrink: 0,
     }}>
       <svg width="9" height="9" viewBox="0 0 256 256" fill="#c7d5e0"><circle cx="128" cy="128" r="128"/></svg>
-      Bibliothèque
+      {t('search.library_badge')}
     </span>
   );
 }
@@ -40,6 +42,7 @@ function LibraryBadge() {
 //   onSave       — called with updated game object in edit mode
 
 export default function SearchModal({ api, token, boardGames, onAdd, onRemove, onClose, customOnly, initialGame, onSave, isTaskBoard, appUsers = [], currentUser }) {
+  const { t } = useLang();
   const isEditMode = !!initialGame;
 
   const [tab, setTab] = useState(customOnly || isEditMode ? 'custom' : 'steam');
@@ -171,7 +174,7 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
         <div style={{ padding: '16px 20px 0', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', marginBottom: 10 }}>
             <span style={{ fontWeight: 700, fontSize: 17 }}>
-              {isEditMode ? '✏ Modifier la tâche' : 'Ajouter une carte'}
+              {isEditMode ? t('search.header_edit') : t('search.header_add')}
             </span>
             <button onClick={onClose} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 22, cursor: 'pointer', lineHeight: 1 }}>✕</button>
           </div>
@@ -182,10 +185,10 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
                 <svg viewBox="0 0 496 512" xmlns="http://www.w3.org/2000/svg" style={{ width: 13, height: 13, fill: 'currentColor', marginRight: 5, verticalAlign: 'middle' }}>
                   <path d="M496 256c0 137-111.2 248-248.4 248-113.8 0-209.7-76.3-239-180.4l95.2 39.3c6.4 32.1 34.9 56.4 68.9 56.4 38.2 0 69.1-31.1 68.9-69.3l84.5-60.2c52.1 1.3 95.8-40.9 95.8-93.5 0-51.6-42-93.5-93.7-93.5s-93.7 42-93.7 93.5v1.2L176.6 279c-15.5-.9-30.7 3.4-43.5 12.1L0 236.1C10.2 108.4 117.1 8 247.6 8 384.8 8 496 119 496 256z"/>
                 </svg>
-                Jeu Steam
+                {t('search.tab_steam')}
               </button>
               <button style={tabStyle(tab === 'custom')} onClick={() => setTab('custom')}>
-                ✦ Carte personnalisée
+                {t('search.tab_custom')}
               </button>
             </div>
           )}
@@ -201,21 +204,20 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
                 </svg>
                 <input
                   autoFocus type="search"
-                  placeholder="Rechercher un jeu Steam..."
+                  placeholder={t('search.steam_ph')}
                   value={query} onChange={handleInput}
                   style={{ ...inputStyle, paddingLeft: 38 }}
                 />
               </div>
             </div>
             <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px 20px' }}>
-              {loading && <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 36, fontSize: 14 }}>Recherche...</div>}
+              {loading && <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 36, fontSize: 14 }}>{t('search.loading')}</div>}
               {!loading && query && results.length === 0 && (
-                <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 36, fontSize: 14 }}>Aucun résultat</div>
+                <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 36, fontSize: 14 }}>{t('search.no_results')}</div>
               )}
               {!loading && !query && (
                 <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 36, fontSize: 14, lineHeight: 1.8 }}>
-                  Tape le nom d'un jeu.<br/>
-                  Les jeux dans ta bibliothèque Steam sont identifiés.
+                  {t('search.hint').split('\n').map((line, i) => <span key={i}>{line}{i === 0 && <br/>}</span>)}
                 </div>
               )}
               {results.map(game => {
@@ -231,18 +233,18 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
                         {game.in_library && <LibraryBadge />}
                       </div>
                       <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>
-                        {game.in_library && game.playtime_hours > 0 ? `⏱ ${game.playtime_hours}h jouées` : game.in_library ? 'Jamais joué' : ''}
+                        {game.in_library && game.playtime_hours > 0 ? `⏱ ${game.playtime_hours}h` : game.in_library ? t('search.never_played') : ''}
                       </div>
                     </div>
                     {isAdded ? (
                       <button onClick={() => handleRemove(game)}
                         style={{ background: 'var(--surface3)', border: '1px solid var(--border)', borderRadius: 7, padding: '6px 12px', color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer', flexShrink: 0 }}>
-                        ✓ Retirer
+                        {t('search.remove')}
                       </button>
                     ) : (
                       <button onClick={() => handleAdd(game)}
                         style={{ background: 'var(--accent)', border: 'none', borderRadius: 7, padding: '6px 12px', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>
-                        + Ajouter
+                        {t('search.add')}
                       </button>
                     )}
                   </div>
@@ -260,16 +262,16 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
           {isEditMode && (
           <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', padding: '0 22px', flexShrink: 0 }}>
             {[
-              { id: 'fiche', label: 'Fiche' },
-              { id: 'notes', label: `Notes${notes.length > 0 ? ` (${notes.length})` : ''}` },
-            ].map(t => (
-              <button key={t.id} onClick={() => setCustomSubTab(t.id)} style={{
+              { id: 'fiche', label: t('search.subtab_sheet') },
+              { id: 'notes', label: `${t('game.tab_notes').replace('📝 ', '')}${notes.length > 0 ? ` (${notes.length})` : ''}` },
+            ].map(tab => (
+              <button key={tab.id} onClick={() => setCustomSubTab(tab.id)} style={{
                 background: 'none', border: 'none',
-                borderBottom: customSubTab === t.id ? '2px solid var(--accent)' : '2px solid transparent',
-                padding: '9px 14px', color: customSubTab === t.id ? 'var(--text)' : 'var(--text-muted)',
-                fontWeight: customSubTab === t.id ? 700 : 400, fontSize: 13,
+                borderBottom: customSubTab === tab.id ? '2px solid var(--accent)' : '2px solid transparent',
+                padding: '9px 14px', color: customSubTab === tab.id ? 'var(--text)' : 'var(--text-muted)',
+                fontWeight: customSubTab === tab.id ? 700 : 400, fontSize: 13,
                 cursor: 'pointer', marginBottom: -1, transition: 'color .15s',
-              }}>{t.label}</button>
+              }}>{tab.label}</button>
             ))}
           </div>
           )}
@@ -278,7 +280,7 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
           <div style={{ flex: 1, overflowY: 'auto', padding: '20px 22px 0', display: 'flex', flexDirection: 'column', gap: 18 }}>
             {!isEditMode && (
               <p style={{ margin: 0, fontSize: 14, color: 'var(--text-muted)' }}>
-                Crée une carte libre : projet perso, objectif, note de jeu…
+                {t('search.custom_desc')}
               </p>
             )}
 
@@ -314,7 +316,7 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
                 </div>
                 <div style={{ padding: '8px 10px' }}>
                   <div style={{ fontWeight: 600, fontSize: 13, color: customName ? 'var(--text)' : 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {customName || (customOnly ? 'Nom de la tâche…' : 'Nom de la carte…')}
+                    {customName || (customOnly ? t('search.ph_task') : t('search.ph_card'))}
                   </div>
                 </div>
               </div>
@@ -323,7 +325,7 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
             {/* ── Emoji picker — hidden when type is set ── */}
             {!customTaskType && (
               <div>
-                <label style={{ display: 'block', fontSize: 14, color: 'var(--text-muted)', marginBottom: 9 }}>Icône</label>
+                <label style={{ display: 'block', fontSize: 14, color: 'var(--text-muted)', marginBottom: 9 }}>{t('search.icon_label')}</label>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <button
                     onClick={() => setShowEmojiPicker(p => !p)}
@@ -333,7 +335,7 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}
                   >{customEmoji}</button>
-                  <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Clique pour changer</span>
+                  <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>{t('search.icon_click')}</span>
                 </div>
                 {showEmojiPicker && (
                   <div style={{ marginTop: 10, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 9, padding: 10, maxHeight: 260, overflowY: 'auto' }}>
@@ -361,14 +363,14 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
             {/* ── Name ── */}
             <div>
               <label style={{ display: 'block', fontSize: 14, color: 'var(--text-muted)', marginBottom: 7 }}>
-                {customOnly ? 'Nom de la tâche' : 'Nom de la carte'}
+                {customOnly ? t('search.name_task') : t('search.name_card')}
               </label>
               <input
                 autoFocus
                 value={customName}
                 onChange={e => setCustomName(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleSubmitCustom()}
-                placeholder={customOnly ? 'Ex: Terminer la campagne principale…' : 'Ex: Mon projet…'}
+                placeholder={customOnly ? t('search.input_ph_task') : t('search.input_ph_card')}
                 style={inputStyle}
               />
             </div>
@@ -377,7 +379,7 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
             {!isTaskBoard && (
               <div>
                 <label style={{ display: 'block', fontSize: 14, color: 'var(--text-muted)', marginBottom: 9 }}>
-                  Couleur de la carte
+                  {t('search.color_label')}
                 </label>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <input
@@ -400,7 +402,7 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
             {customOnly && (
               <div>
                 <label style={{ display: 'block', fontSize: 14, color: 'var(--text-muted)', marginBottom: 10 }}>
-                  Type de tâche <span style={{ opacity: 0.55 }}>(facultatif)</span>
+                  {t('search.type_label')} <span style={{ opacity: 0.55 }}>{t('search.optional')}</span>
                 </label>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                   {TASK_TYPES.map(t => {
@@ -459,7 +461,7 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
             {isTaskBoard && appUsers.length > 0 && (
               <div>
                 <label style={{ display: 'block', fontSize: 14, color: 'var(--text-muted)', marginBottom: 10 }}>
-                  👥 Assignés <span style={{ opacity: 0.55 }}>(facultatif)</span>
+                  {t('search.assignees')} <span style={{ opacity: 0.55 }}>{t('search.optional')}</span>
                 </label>
                 <AssigneeEditor
                   assignees={assignees}
@@ -494,7 +496,7 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
                 opacity: customName.trim() ? 1 : 0.5,
               }}
             >
-              {isEditMode ? '✓ Enregistrer les modifications' : (customOnly ? '+ Créer la tâche' : '+ Créer la carte')}
+              {isEditMode ? t('search.save_edit') : (customOnly ? t('search.create_task') : t('search.create_card'))}
             </button>
           </div>
           </div>

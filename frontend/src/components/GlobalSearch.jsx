@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useLang } from '../i18n.js';
 
 const API = '/api';
 
@@ -17,14 +18,16 @@ function highlight(text, q) {
   );
 }
 
-const BADGE = {
-  board: { label: 'Board', color: '#f5a500' },
-  name:  { label: 'Tâche', color: '#4cd882' },
-  note:  { label: 'Note',  color: '#a78bfa' },
-};
 const PUBLIC_COLOR = '#47a7f5';
 
 export default function GlobalSearch({ token, onGoToBoard, onOpenGame }) {
+  const { t } = useLang();
+  const BADGE = {
+    board: { label: 'Board',           color: '#f5a500' },
+    name:  { label: t('gsearch.badge_task'), color: '#4cd882' },
+    note:  { label: t('gsearch.badge_note'), color: '#a78bfa' },
+  };
+
   const [query, setQuery]         = useState('');
   const [results, setResults]     = useState([]);
   const [loading, setLoading]     = useState(false);
@@ -96,7 +99,7 @@ export default function GlobalSearch({ token, onGoToBoard, onOpenGame }) {
       {/* Icône loupe — seul élément dans le flux du header */}
       <button
         onClick={handleIconClick}
-        title="Rechercher"
+        title={t('gsearch.title')}
         style={{
           background: expanded ? 'rgba(192,87,10,0.18)' : 'none',
           border: expanded ? '1px solid var(--accent)' : '1px solid transparent',
@@ -123,7 +126,7 @@ export default function GlobalSearch({ token, onGoToBoard, onOpenGame }) {
             <input
               ref={inputRef}
               type="search"
-              placeholder="Boards, tâches, notes…"
+              placeholder={t('gsearch.placeholder')}
               value={query}
               onChange={e => handleInput(e.target.value)}
               onFocus={() => query && results.length > 0 && setOpen(true)}
@@ -160,7 +163,7 @@ export default function GlobalSearch({ token, onGoToBoard, onOpenGame }) {
             }}>
               {!loading && results.length === 0 ? (
                 <div style={{ padding: '18px 16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
-                  Aucun résultat pour «&nbsp;{query}&nbsp;»
+                  {t('gsearch.no_results', { query })}
                 </div>
               ) : results.map((r, idx) => {
                 const badge = BADGE[r.matchedIn] || { label: r.matchedIn, color: '#fff' };

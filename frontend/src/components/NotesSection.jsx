@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import LinkPreview from './LinkPreview.jsx';
+import { useLang } from '../i18n.js';
 
 // Renders text with URLs turned into clickable links + rich preview cards
 function NoteText({ text, token }) {
@@ -40,6 +41,7 @@ function formatNoteDate(isoStr) {
 //   currentUser – { id, role } — used to control edit/delete permissions
 //   appUsers    – array of user objects (for avatar lookup)
 export default function NotesSection({ notes: externalNotes = [], onSave, onDraftChange, compact = false, token, currentUser, appUsers = [] }) {
+  const { t } = useLang();
   const [notes, setNotes]         = useState(externalNotes);
   const [newNote, setNewNote]     = useState('');
   const [editingId, setEditingId] = useState(null);
@@ -107,14 +109,14 @@ export default function NotesSection({ notes: externalNotes = [], onSave, onDraf
 
   return (
     <div>
-      <label style={labelStyle}>📝 Notes</label>
+      <label style={labelStyle}>{t('notes.label')}</label>
 
       {/* ── New note input — always at top ── */}
       <textarea
         value={newNote}
         onChange={e => setNewNoteWithDraft(e.target.value)}
         onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) addNote(); }}
-        placeholder={notes.length === 0 ? 'Ajouter une note… (Ctrl+Entrée pour valider)' : 'Nouvelle note…'}
+        placeholder={notes.length === 0 ? t('notes.ph_first') : t('notes.ph_more')}
         style={inputStyle}
       />
       <button
@@ -132,7 +134,7 @@ export default function NotesSection({ notes: externalNotes = [], onSave, onDraf
           opacity: newNote.trim() ? 1 : 0.5,
           transition: 'all .15s',
         }}
-      >+ Ajouter la note</button>
+      >{t('notes.add_btn')}</button>
 
       {/* ── Existing notes — newest first, scroll auto si trop de notes ── */}
       {notes.length > 0 && (
@@ -160,10 +162,10 @@ export default function NotesSection({ notes: externalNotes = [], onSave, onDraf
                   <div style={{ display: 'flex', gap: 6 }}>
                     <button onClick={saveEdit}
                       style={{ flex: 1, background: 'var(--accent)', border: 'none', borderRadius: 6, padding: '6px 0', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
-                    >✓ Enregistrer</button>
+                    >{t('notes.save')}</button>
                     <button onClick={() => setEditingId(null)}
                       style={{ background: 'var(--surface3)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 10px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}
-                    >Annuler</button>
+                    >{t('notes.cancel')}</button>
                   </div>
                 </div>
               ) : (
@@ -178,29 +180,29 @@ export default function NotesSection({ notes: externalNotes = [], onSave, onDraf
                           : <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#fff', flexShrink: 0, border: '1.5px solid var(--border)' }}>{initials}</div>
                         }
                         <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text)', opacity: 0.85, maxWidth: 90, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {author?.steamPersonaName || author?.username || 'Inconnu'}
+                          {author?.steamPersonaName || author?.username || t('notes.unknown')}
                         </span>
                       </div>
                     )}
                     <span style={{ fontSize: 10, color: 'var(--text-muted)', opacity: 0.7, flex: 1 }}>
                       {formatNoteDate(note.createdAt)}
-                      {note.editedAt && <span style={{ marginLeft: 5, fontStyle: 'italic' }}>(modifié)</span>}
+                      {note.editedAt && <span style={{ marginLeft: 5, fontStyle: 'italic' }}>{t('notes.modified')}</span>}
                     </span>
                     {/* Boutons edit / delete — uniquement si autorisé */}
                     {modifiable && (<>
                       <button
                         onClick={e => { e.stopPropagation(); setEditingId(note.id); setEditText(note.text); }}
                         style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', opacity: 0.55, padding: '2px 4px', lineHeight: 1, display: 'flex', alignItems: 'center', flexShrink: 0 }}
-                        title="Modifier"
+                        title={t('card.edit_title')}
                       >
                         <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
                         </svg>
                       </button>
                       <button
-                        onClick={e => { e.stopPropagation(); if (window.confirm('Supprimer cette note ?')) deleteNote(note.id); }}
+                        onClick={e => { e.stopPropagation(); if (window.confirm(t('notes.del_confirm'))) deleteNote(note.id); }}
                         style={{ background: 'none', border: 'none', color: '#c05050', cursor: 'pointer', opacity: 0.6, padding: '2px 4px', lineHeight: 1, display: 'flex', alignItems: 'center', flexShrink: 0 }}
-                        title="Supprimer"
+                        title={t('card.delete')}
                       >
                         <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                           <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>

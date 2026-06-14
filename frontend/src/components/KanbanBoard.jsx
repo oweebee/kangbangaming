@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import GameCard from './GameCard.jsx';
 import AssigneeAvatars from './AssigneeAvatars.jsx';
 import { getTaskType } from '../taskTypes.jsx';
+import { useLang } from '../i18n.js';
 
 const EMOJI_CATS = [
   { label: '🎮 Gaming', emojis: ['🎮','🕹️','👾','🎲','🃏','🧩','🎯','🏹','⚔️','🗡️','🛡️','🪃','🔫','💣','🧲','🪄','🎪','🎡','🎠','🎢'] },
@@ -17,6 +18,7 @@ const EMOJI_CATS = [
 ];
 
 function EmojiPicker({ current, onSelect, onClose, anchorRef }) {
+  const { t } = useLang();
   const ref = useRef();
   const [coords, setCoords] = useState({ left: -9999, top: -9999 });
 
@@ -55,8 +57,8 @@ function EmojiPicker({ current, onSelect, onClose, anchorRef }) {
     }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid var(--border)' }}>
-        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Icône de colonne</span>
-        <button onClick={() => onSelect('')} style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '2px 8px', fontSize: 11, color: 'var(--text-muted)', cursor: 'pointer' }}>✕ Aucun</button>
+        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{t('col.icon_header')}</span>
+        <button onClick={() => onSelect('')} style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '2px 8px', fontSize: 11, color: 'var(--text-muted)', cursor: 'pointer' }}>{t('col.no_emoji')}</button>
       </div>
       {EMOJI_CATS.map(cat => (
         <div key={cat.label} style={{ marginBottom: 10 }}>
@@ -71,6 +73,7 @@ function EmojiPicker({ current, onSelect, onClose, anchorRef }) {
 }
 
 function ColumnHeader({ col, onRename, onDelete, onSetEmoji, onColDragStart, onColDragEnd, isDragOver }) {
+  const { t } = useLang();
   const [editing, setEditing] = useState(false);
   const [label, setLabel] = useState(col.label);
   const [showEmoji, setShowEmoji] = useState(false);
@@ -94,12 +97,12 @@ function ColumnHeader({ col, onRename, onDelete, onSetEmoji, onColDragStart, onC
         draggable
         onDragStart={e => { e.stopPropagation(); e.dataTransfer.effectAllowed = 'move'; onColDragStart(col.id); }}
         onDragEnd={onColDragEnd}
-        title="Deplacer la colonne"
+        title={t('col.move_title')}
         style={{ cursor: 'grab', color: 'var(--text-muted)', opacity: 0.35, fontSize: 14, lineHeight: 1, flexShrink: 0, padding: '0 2px', userSelect: 'none' }}
       >⠇</div>
 
       <div style={{ position: 'relative' }}>
-        <button ref={emojiButtonRef} onClick={() => setShowEmoji(v => !v)} title="Choisir un emoji" style={{
+        <button ref={emojiButtonRef} onClick={() => setShowEmoji(v => !v)} title={t('col.emoji_title')} style={{
           background: col.emoji ? 'transparent' : 'var(--surface3)',
           border: '1px solid var(--border)', borderRadius: 5,
           width: 26, height: 26, fontSize: col.emoji ? 16 : 11,
@@ -118,14 +121,14 @@ function ColumnHeader({ col, onRename, onDelete, onSetEmoji, onColDragStart, onC
           style={{ flex: 1, background: 'var(--surface3)', border: '1px solid var(--accent)', borderRadius: 5, padding: '3px 7px', color: 'var(--text)', fontSize: 13, fontWeight: 700, outline: 'none', letterSpacing: '0.06em', textTransform: 'uppercase' }}
         />
       ) : (
-        <span onDoubleClick={() => setEditing(true)} title="Double-clic pour renommer"
+        <span onDoubleClick={() => setEditing(true)} title={t('col.rename_title')}
           style={{ flex: 1, fontWeight: 700, fontSize: 13, letterSpacing: '0.07em', textTransform: 'uppercase', cursor: 'text', userSelect: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: col.color || 'var(--text)' }}
         >{col.label}</span>
       )}
 
       <span style={{ background: 'var(--surface3)', borderRadius: 99, padding: '1px 7px', fontSize: 11, color: 'var(--text-muted)', flexShrink: 0 }}>{col._count || 0}</span>
 
-      <button onClick={() => onDelete(col.id)} title="Supprimer la colonne" style={{
+      <button onClick={() => onDelete(col.id)} title={t('col.del_title')} style={{
         background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer', opacity: 0.45, padding: '0 2px', flexShrink: 0,
       }}>✕</button>
     </div>
@@ -133,6 +136,7 @@ function ColumnHeader({ col, onRename, onDelete, onSetEmoji, onColDragStart, onC
 }
 
 export default function KanbanBoard({ columns, byColumn, dragging, setDragging, moveGame, onCardClick, onArchiveGame, onUnarchiveGame, onDeleteGame, onEditGame, onRenameColumn, onDeleteColumn, onSetEmoji, onReorderColumns, onAddToColumn, onReorderGames, isTaskBoard, appUsers = [], compactView = false, leftOffset = 0, rightOffset = 0, onToggleDone, onToggleUrgent, onUpdateAssignees, onClickNotes, genreColors = {}, hiddenCardIds = new Set(), showHiddenCards = false, onHideCard, onUnhideCard }) {
+  const { t } = useLang();
   const [draggingColId, setDraggingColId] = useState(null);
   const [dragOverColId, setDragOverColId] = useState(null);
   const [dragInsert, setDragInsert] = useState(null); // { colId, beforeAppid: string|null }
@@ -155,7 +159,7 @@ export default function KanbanBoard({ columns, byColumn, dragging, setDragging, 
     <div style={{ display: 'flex', flex: 1, gap: '10px', padding: '14px', paddingLeft: 14 + leftOffset, paddingRight: 14 + rightOffset, overflowX: 'auto', overflowY: 'hidden', transition: 'padding-left 0.32s cubic-bezier(0.4,0,0.2,1), padding-right 0.32s cubic-bezier(0.4,0,0.2,1)' }}>
       {columns.length === 0 && (
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
-          Ajoute une colonne pour commencer
+          {t('col.empty_start')}
         </div>
       )}
       {columns.map(col => {
@@ -218,7 +222,7 @@ export default function KanbanBoard({ columns, byColumn, dragging, setDragging, 
             <div style={{ flex: 1, overflowY: 'auto', padding: '8px', display: 'flex', flexDirection: 'column', gap: '7px' }}>
               {games.length === 0 && (
                 <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 11, padding: '20px 8px', border: '1px dashed var(--border)', borderRadius: 7 }}>
-                  {isTaskBoard ? 'Glisse une tâche ici' : 'Glisse des jeux ici'}
+                  {isTaskBoard ? t('col.empty_task') : t('col.empty_game')}
                 </div>
               )}
               {games.map((game, idx) => {
@@ -229,7 +233,7 @@ export default function KanbanBoard({ columns, byColumn, dragging, setDragging, 
                 return (
                   <div
                     key={game.appid}
-                    style={{ position: 'relative', paddingTop: hasAssignees && !compactView ? 40 : 0 }}
+                    style={{ position: 'relative', paddingTop: hasAssignees && !compactView ? 40 : 0, animation: 'card-appear .2s ease' }}
                     onDragOver={e => {
                       if (draggingColId || !dragging || dragging.appid === game.appid) return;
                       e.preventDefault();
@@ -243,7 +247,7 @@ export default function KanbanBoard({ columns, byColumn, dragging, setDragging, 
                     }}
                   >
                     {dragInsert?.colId === col.id && dragInsert?.beforeAppid === game.appid && (
-                      <div style={{ height: 3, background: 'var(--accent)', borderRadius: 3, margin: '0 2px 4px', opacity: 0.85 }} />
+                      <div style={{ height: 3, background: 'var(--accent)', borderRadius: 3, margin: '0 2px 4px', opacity: 0.9, animation: 'drop-line-in .12s ease' }} />
                     )}
                     {hasAssignees && !compactView && (
                       <AssigneeAvatars
@@ -279,7 +283,7 @@ export default function KanbanBoard({ columns, byColumn, dragging, setDragging, 
                 );
               })}
               {dragInsert?.colId === col.id && dragInsert?.beforeAppid === null && (
-                <div style={{ height: 3, background: 'var(--accent)', borderRadius: 3, margin: '4px 2px 0', opacity: 0.85 }} />
+                <div style={{ height: 3, background: 'var(--accent)', borderRadius: 3, margin: '4px 2px 0', opacity: 0.9, animation: 'drop-line-in .12s ease' }} />
               )}
               {onAddToColumn && (
                 <button
@@ -296,7 +300,7 @@ export default function KanbanBoard({ columns, byColumn, dragging, setDragging, 
                   onMouseEnter={e => { e.currentTarget.style.opacity = 1; e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.color = 'var(--accent)'; }}
                   onMouseLeave={e => { e.currentTarget.style.opacity = 0.6; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; e.currentTarget.style.color = 'var(--text-muted)'; }}
                 >
-                  + {isTaskBoard ? 'Ajouter une tâche' : 'Ajouter une tâche / Un jeu'}
+                  + {isTaskBoard ? t('col.add_task') : t('col.add_card_game')}
                 </button>
               )}
             </div>
