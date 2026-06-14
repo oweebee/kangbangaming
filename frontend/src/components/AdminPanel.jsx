@@ -37,6 +37,11 @@ export default function AdminPanel({ token, currentUser, onClose }) {
   const [settings, setSettings] = useState(null);
   const [settingsSaving, setSettingsSaving] = useState(false);
 
+  // Export / Restore
+  const [restoreMsg, setRestoreMsg] = useState('');
+  const [restoreErr, setRestoreErr] = useState('');
+  const [restoring, setRestoring] = useState(false);
+
   // Boards tab
   const [boards, setBoards] = useState([]);
   const [boardsLoading, setBoardsLoading] = useState(false);
@@ -73,6 +78,44 @@ export default function AdminPanel({ token, currentUser, onClose }) {
     fetch(`${API}/admin/settings`, { headers: h })
       .then(r => r.json()).then(setSettings).catch(() => {});
   }, [tab]);
+
+  function handleExport() {
+    const a = document.createElement('a');
+    a.href = `/api/admin/export`;
+    // Inject token via fetch to get the file
+    fetch('/api/admin/export', { headers: h })
+      .then(r => r.blob())
+      .then(blob => {
+        const url = URL.createObjectURL(blob);
+        const date = new Date().toISOString().slice(0, 10);
+        a.href = url;
+        a.download = `kangbangaming-backup-${date}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+      });
+  }
+
+  function handleRestoreFile(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setRestoreMsg(''); setRestoreErr('');
+    const reader = new FileReader();
+    reader.onload = async ev => {
+      let data;
+      try { data = JSON.parse(ev.target.result); } catch { setRestoreErr('Fichier JSON invalide.'); return; }
+      if (!confirm(`⚠ Restauration : ceci va écraser TOUTES les données actuelles (${data.users?.length ?? '?'} users, boards, paramètres). Confirmer ?`)) return;
+      setRestoring(true);
+      try {
+        const res = await fetch('/api/admin/restore', { method: 'POST', headers: h, body: JSON.stringify(data) });
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.error || 'Erreur');
+        setRestoreMsg(`✓ ${result.message}`);
+        fetchUsers();
+      } catch (err) { setRestoreErr(err.message); }
+      finally { setRestoring(false); e.target.value = ''; }
+    };
+    reader.readAsText(file);
+  }
 
   async function toggleSetting(key, value) {
     setSettingsSaving(true);
@@ -312,6 +355,38 @@ export default function AdminPanel({ token, currentUser, onClose }) {
                     transition: 'left .2s', display: 'block',
                   }} />
                 </button>
+              </div>
+
+              {/* Export / Restore */}
+              <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Sauvegarde des données</div>
+
+                {/* Export */}
+                <button onClick={handleExport}
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: 'rgba(60,200,100,.1)', border: '1px solid rgba(60,200,100,.3)', borderRadius: 9, color: '#4cd882', fontSize: 13, fontWeight: 700, cursor: 'pointer', textAlign: 'left' }}>
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                  </svg>
+                  <div>
+                    <div>Exporter les données</div>
+                    <div style={{ fontSize: 10, fontWeight: 400, color: 'rgba(76,216,130,.7)', marginTop: 1 }}>Télécharge un fichier JSON avec tous les users, boards et paramètres</div>
+                  </div>
+                </button>
+
+                {/* Restore */}
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: 'rgba(220,50,50,.08)', border: '1px solid rgba(220,50,50,.25)', borderRadius: 9, color: '#f88', fontSize: 13, fontWeight: 700, cursor: restoring ? 'not-allowed' : 'pointer' }}>
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+                  </svg>
+                  <div>
+                    <div>{restoring ? 'Restauration…' : 'Restaurer depuis une sauvegarde'}</div>
+                    <div style={{ fontSize: 10, fontWeight: 400, color: 'rgba(248,136,136,.7)', marginTop: 1 }}>⚠ Écrase toutes les données actuelles</div>
+                  </div>
+                  <input type="file" accept=".json" onChange={handleRestoreFile} disabled={restoring} style={{ display: 'none' }} />
+                </label>
+
+                {restoreErr && <div style={{ background: 'rgba(220,50,50,.12)', border: '1px solid rgba(220,50,50,.3)', borderRadius: 7, padding: '8px 10px', color: '#f88', fontSize: 12 }}>{restoreErr}</div>}
+                {restoreMsg && <div style={{ background: 'rgba(60,200,100,.1)', border: '1px solid rgba(60,200,100,.3)', borderRadius: 7, padding: '8px 10px', color: '#4cd882', fontSize: 12 }}>{restoreMsg}</div>}
               </div>
             </div>
           )}

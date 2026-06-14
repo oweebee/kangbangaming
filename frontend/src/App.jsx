@@ -1974,6 +1974,7 @@ export default function App() {
         : displayedGame && <GameModal game={displayedGame} onClose={() => { setSelectedGame(null); setSelectedGameDefaultTab('infos'); }} api={API} token={token} onPatchGame={patchGame} defaultTab={selectedGameDefaultTab === 'notes' ? 'notes' : 'achievements'} currentUser={currentUser} appUsers={appUsers} />
       }
       {showAdmin && <AdminPanel token={token} currentUser={currentUser} onClose={() => setShowAdmin(false)} />}
+      {showAppInfo && <AppInfoModal onClose={() => setShowAppInfo(false)} />}
       {showProfile && <ProfilePage token={token} currentUser={currentUser} onClose={() => setShowProfile(false)} onSaveSteam={handleSteamSave} />}
       {activeBoard?.gameIcon && !showHome && <NowPlayingBanner gameIconUrl={activeBoard.gameIcon} token={token} />}
       {/* Game stats widget — shown only when viewing a Steam-based board */}

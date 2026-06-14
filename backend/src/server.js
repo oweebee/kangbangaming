@@ -587,6 +587,37 @@ app.delete('/api/admin/boards/:userId/:boardId', requireAdmin, (req, res) => {
   res.json({ ok: true });
 });
 
+// ── Admin export / restore ────────────────────────────────────────────────────
+
+app.get('/api/admin/export', requireAdmin, (req, res) => {
+  const backup = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    users: readUsers(),
+    boards: readBoards(),
+    settings: readSettings(),
+  };
+  res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Content-Disposition', `attachment; filename="kangbangaming-backup-${new Date().toISOString().slice(0,10)}.json"`);
+  res.send(JSON.stringify(backup, null, 2));
+});
+
+app.post('/api/admin/restore', requireAdmin, (req, res) => {
+  const { users, boards, settings, version } = req.body;
+  if (version !== 1) return res.status(400).json({ error: 'Format de sauvegarde non reconnu (version incompatible).' });
+  if (!Array.isArray(users)) return res.status(400).json({ error: 'Champ "users" manquant ou invalide.' });
+  if (typeof boards !== 'object' || Array.isArray(boards)) return res.status(400).json({ error: 'Champ "boards" manquant ou invalide.' });
+  // Vérification minimale des users
+  for (const u of users) {
+    if (!u.id || !u.username || !u.role) return res.status(400).json({ error: `Utilisateur invalide dans la sauvegarde : ${JSON.stringify(u).slice(0, 80)}` });
+  }
+  // Écriture
+  writeUsers(users);
+  writeBoards(boards);
+  if (settings && typeof settings === 'object') writeSettings({ ...DEFAULT_SETTINGS, ...settings });
+  res.json({ ok: true, message: `Restauration réussie : ${users.length} utilisateurs, ${Object.keys(boards).length} owners de boards.` });
+});
+
 // ── Admin settings ────────────────────────────────────────────────────────────
 
 app.get('/api/admin/settings', requireAdmin, (req, res) => {
