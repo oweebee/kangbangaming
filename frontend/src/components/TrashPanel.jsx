@@ -16,6 +16,7 @@ export default function TrashPanel({ token, isAdmin = false }) {
   const { t } = useLang();
   const [items, setItems]     = useState([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(null);
   const [purging, setPurging] = useState(false);
   const [acting, setActing]   = useState(new Set()); // noteIds en cours d'action
 
@@ -23,10 +24,19 @@ export default function TrashPanel({ token, isAdmin = false }) {
 
   async function load() {
     setLoading(true);
+    setFetchError(null);
     try {
       const res = await fetch(baseUrl, { headers: { Authorization: `Bearer ${token}` } });
-      if (res.ok) setItems(await res.json());
-    } catch {}
+      if (res.ok) {
+        setItems(await res.json());
+      } else {
+        setFetchError(`Erreur ${res.status}`);
+        console.error('[TrashPanel] fetch error', res.status);
+      }
+    } catch (e) {
+      setFetchError('Erreur réseau');
+      console.error('[TrashPanel] network error', e);
+    }
     setLoading(false);
   }
 
@@ -70,25 +80,44 @@ export default function TrashPanel({ token, isAdmin = false }) {
     </div>
   );
 
+  if (fetchError) return (
+    <div style={{ textAlign: 'center', padding: '48px 20px' }}>
+      <div style={{ fontSize: 13, color: '#d07070', marginBottom: 12 }}>{fetchError}</div>
+      <button onClick={load} style={{ background: 'rgba(255,255,255,.07)', border: '1px solid var(--border)', borderRadius: 7, padding: '6px 16px', color: 'var(--text)', fontSize: 12, cursor: 'pointer' }}>
+        ⟳ Réessayer
+      </button>
+    </div>
+  );
+
   if (items.length === 0) return (
     <div style={{ textAlign: 'center', padding: '48px 20px' }}>
       <div style={{ fontSize: 40, marginBottom: 12 }}>🗑️</div>
       <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)', marginBottom: 6 }}>
         {t('trash.empty_title')}
       </div>
-      <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+      <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 14 }}>
         {t('trash.empty_desc')}
       </div>
+      <button onClick={load} style={{ background: 'rgba(255,255,255,.07)', border: '1px solid var(--border)', borderRadius: 7, padding: '6px 16px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>
+        ⟳ Rafraîchir
+      </button>
     </div>
   );
 
   return (
     <div>
       {/* En-tête */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-        <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, gap: 8 }}>
+        <div style={{ fontSize: 12, color: 'var(--text-muted)', flex: 1 }}>
           {t('trash.count', { count: items.length })}
         </div>
+        <button
+          onClick={load}
+          title="Rafraîchir"
+          style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 7, padding: '4px 9px', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 13, lineHeight: 1 }}
+        >
+          ⟳
+        </button>
         <button
           onClick={purgeAll}
           disabled={purging}

@@ -12,7 +12,7 @@ export default function GameModal({ game, onClose, api, token, onPatchGame, defa
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState(defaultTab);
   const [filter, setFilter] = useState('all');
-  const notesCount = (game.notes || []).length;
+  const notesCount = (game.notes || []).filter(n => !n.deletedAt).length;
   const isDone   = !!game.done;
   const isUrgent = !!game.urgent;
   const handleSaveNotes    = (notes)   => { if (onPatchGame) onPatchGame(game.appid, { notes }); };

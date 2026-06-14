@@ -169,7 +169,7 @@ export default function TaskModal({ game, onClose, onEdit, appUsers = [], onPatc
   const dateInfo  = getDateInfo(game);
   const isUrgent  = !!game.urgent;
   const isDone    = !!game.done;
-  const notesCount = (game.notes || []).length;
+  const notesCount = (game.notes || []).filter(n => !n.deletedAt).length;
   const customColor = !tt && game.color ? game.color : null;
   const cardBorderColor = isDone ? 'rgba(61,184,106,0.6)' : isUrgent ? 'rgba(220,60,60,0.6)' : tt ? tt.border : customColor || 'var(--border)';
 

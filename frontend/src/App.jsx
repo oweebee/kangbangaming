@@ -973,10 +973,27 @@ export default function App() {
     // Auto-done when progress hits 100
     if (fields.progress === 100 && !fields.hasOwnProperty('done')) fields = { ...fields, done: true };
     const boardApi = getBoardApi();
-    await fetch(`${boardApi}/games/${appid}`, {
-      method: 'PATCH', headers: authHeaders(token),
-      body: JSON.stringify(fields),
-    });
+    try {
+      const res = await fetch(`${boardApi}/games/${appid}`, {
+        method: 'PATCH', headers: authHeaders(token),
+        body: JSON.stringify(fields),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        console.error('[patchGame] HTTP', res.status, err);
+        if (fields.notes !== undefined) {
+          alert(`Erreur lors de la sauvegarde des notes (${res.status}). Rechargez la page.`);
+          return;
+        }
+      }
+    } catch (e) {
+      console.error('[patchGame] network error', e);
+      if (fields.notes !== undefined) {
+        alert(`Erreur réseau lors de la sauvegarde des notes. Vérifiez votre connexion.`);
+        return;
+      }
+      return;
+    }
     setGames(prev => prev.map(g => g.appid === appid ? { ...g, ...fields } : g));
     // Rafraîchir le panel Échéances si un champ qui l'affecte a changé
     if ('done' in fields || 'urgent' in fields || 'dueDate' in fields || 'startDate' in fields || 'endDate' in fields) {
