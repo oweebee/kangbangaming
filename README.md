@@ -61,6 +61,27 @@ npm run dev   # démarre sur http://localhost:5173
 
 En local, les variables d'env peuvent être définies dans un fichier `.env` à la racine (voir `.env.example`).
 
+### Auth Steam en développement
+
+Steam OpenID valide le domaine du callback — **`localhost` est refusé**. Pour tester la connexion Steam en local, il faut exposer le backend via un tunnel public :
+
+```bash
+# Cloudflare Tunnel (recommandé)
+cloudflared tunnel --url http://localhost:3001
+
+# ou ngrok
+ngrok http 3001
+```
+
+Puis définir les variables d'env avec l'URL générée :
+
+```env
+BACKEND_URL=https://xxx.trycloudflare.com
+FRONTEND_URL=http://localhost:5173
+```
+
+> L'URL du tunnel change à chaque redémarrage (sauf tunnel nommé Cloudflare ou plan payant ngrok). Pour le dev quotidien sans auth Steam, il suffit de se connecter via le compte `admin`.
+
 ---
 
 ## Variables d'environnement
