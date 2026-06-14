@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write   # nécessaire pour créer des releases
+  contents: write
 
 jobs:
   build-and-release:
@@ -22,26 +22,28 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
+      - name: Install Gradle 8.6
+        run: |
+          wget -q https://services.gradle.org/distributions/gradle-8.6-bin.zip -P /tmp
+          unzip -q /tmp/gradle-8.6-bin.zip -d /opt/gradle
+          echo "/opt/gradle/gradle-8.6/bin" >> $GITHUB_PATH
+
+      - name: Generate Gradle wrapper
+        run: |
+          gradle wrapper --gradle-version=8.6 --distribution-type=bin
+          chmod +x gradlew
+
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Setup Gradle 8.6
-        uses: gradle/actions/setup-gradle@v3
-        with:
-          gradle-version: '8.6'
-
       - name: Build debug APK
-        run: gradle assembleDebug
-
-      - name: Get version
-        id: version
-        run: echo "tag=build-$(date +'%Y%m%d-%H%M')" >> $GITHUB_OUTPUT
+        run: ./gradlew assembleDebug --stacktrace
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.version.outputs.tag }}
-          name: KangBanGaming ${{ steps.version.outputs.tag }}
+          tag_name: build-${{ github.run_number }}
+          name: KangBanGaming v${{ github.run_number }}
           body: |
             APK Android — WebView KangBanGaming
 
@@ -49,8 +51,8 @@ jobs:
             1. Télécharge `KangBanGaming.apk`
             2. Transfère sur ton téléphone Android
             3. Paramètres → Sécurité → Sources inconnues → Autoriser
-            4. Ouvre le fichier `.apk` pour installer
-            5. Au premier lancement, entre l'URL de ton serveur
+            4. Ouvre le `.apk` pour installer
+            5. Premier lancement : entre l'URL de ton serveur
           files: app/build/outputs/apk/debug/app-debug.apk
           make_latest: true
         env:
