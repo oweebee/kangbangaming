@@ -973,8 +973,13 @@ export default function App() {
     // Auto-done when progress hits 100
     if (fields.progress === 100 && !fields.hasOwnProperty('done')) fields = { ...fields, done: true };
     const boardApi = getBoardApi();
+    const url = `${boardApi}/games/${appid}`;
+    if (fields.notes !== undefined) {
+      const trashed = fields.notes.filter(n => n.deletedAt);
+      console.log(`[patchGame] PATCH ${url} — notes: ${fields.notes.length} total, ${trashed.length} en corbeille`, trashed);
+    }
     try {
-      const res = await fetch(`${boardApi}/games/${appid}`, {
+      const res = await fetch(url, {
         method: 'PATCH', headers: authHeaders(token),
         body: JSON.stringify(fields),
       });
@@ -985,6 +990,8 @@ export default function App() {
           alert(`Erreur lors de la sauvegarde des notes (${res.status}). Rechargez la page.`);
           return;
         }
+      } else if (fields.notes !== undefined) {
+        console.log('[patchGame] ✓ notes sauvegardées OK');
       }
     } catch (e) {
       console.error('[patchGame] network error', e);

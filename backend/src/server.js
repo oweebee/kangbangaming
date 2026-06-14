@@ -619,7 +619,9 @@ function scanUserTrash(userId, userBoards, saveIfChanged = true) {
 // GET /api/trash/notes — corbeille de l'utilisateur connecté
 app.get('/api/trash/notes', requireAuth, (req, res) => {
   const userBoards = getUserBoards(req.user.id);
-  res.json(scanUserTrash(req.user.id, userBoards));
+  const result = scanUserTrash(req.user.id, userBoards);
+  console.log(`[GET trash] user=${req.user.id} boards=${Object.keys(userBoards).length} trashed=${result.length}`);
+  res.json(result);
 });
 
 // POST /api/trash/notes/restore — restaurer une note (retire deletedAt)
@@ -1767,11 +1769,15 @@ app.post('/api/boards/:boardId/games', requireAuth, (req, res) => {
 app.patch('/api/boards/:boardId/games/:appid', requireAuth, (req, res) => {
   const userBoards = getUserBoards(req.user.id);
   const board = userBoards[req.params.boardId];
-  if (!board) return res.status(404).json({ error: 'Board not found' });
+  if (!board) { console.warn('[PATCH game] board not found', req.params.boardId, 'user', req.user.id); return res.status(404).json({ error: 'Board not found' }); }
   const game = (board.games || {})[req.params.appid];
-  if (!game) return res.status(404).json({ error: 'Game not found' });
+  if (!game) { console.warn('[PATCH game] game not found', req.params.appid, 'board', req.params.boardId); return res.status(404).json({ error: 'Game not found' }); }
   if (req.body.column !== undefined) game.column = req.body.column;
-  if (req.body.notes !== undefined) game.notes = req.body.notes;
+  if (req.body.notes !== undefined) {
+    const trashed = req.body.notes.filter(n => n.deletedAt);
+    console.log(`[PATCH game] user=${req.user.id} board=${req.params.boardId} game=${req.params.appid} notes=${req.body.notes.length} trashed=${trashed.length}`);
+    game.notes = req.body.notes;
+  }
   if (req.body.name !== undefined) game.name = req.body.name;
   if (req.body.emoji !== undefined) game.emoji = req.body.emoji;
   if (req.body.taskType !== undefined) game.taskType = req.body.taskType;

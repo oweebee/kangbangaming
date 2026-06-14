@@ -91,7 +91,7 @@ export default function ProfilePage({ token, currentUser, onClose, onSaveSteam }
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,.7)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div style={{ background: 'var(--surface1)', border: '1px solid var(--border)', borderRadius: 16, width: '100%', maxWidth: 480, maxHeight: '85vh', display: 'flex', flexDirection: 'column', boxShadow: '0 8px 40px rgba(0,0,0,.6)', overflow: 'hidden' }}>
+      <div style={{ background: 'var(--surface1)', border: '1px solid var(--border)', borderRadius: 16, width: '100%', maxWidth: 480, height: '85vh', maxHeight: 720, display: 'flex', flexDirection: 'column', boxShadow: '0 8px 40px rgba(0,0,0,.6)', overflow: 'hidden' }}>
 
         {/* Avatar header */}
         <div style={{ position: 'relative', background: 'linear-gradient(135deg, #0e1117 0%, #1a1f2e 100%)', padding: '32px 24px 20px', textAlign: 'center', flexShrink: 0 }}>

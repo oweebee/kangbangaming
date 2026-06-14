@@ -28,7 +28,9 @@ export default function TrashPanel({ token, isAdmin = false }) {
     try {
       const res = await fetch(baseUrl, { headers: { Authorization: `Bearer ${token}` } });
       if (res.ok) {
-        setItems(await res.json());
+        const data = await res.json();
+        console.log('[TrashPanel] GET', baseUrl, '→', data.length, 'items', data);
+        setItems(data);
       } else {
         setFetchError(`Erreur ${res.status}`);
         console.error('[TrashPanel] fetch error', res.status);
