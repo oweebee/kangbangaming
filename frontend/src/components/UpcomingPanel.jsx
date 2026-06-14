@@ -46,7 +46,7 @@ function FeaturedCard({ token, wishlist = new Set() }) {
         onMouseLeave={e => e.currentTarget.style.background = `linear-gradient(var(--surface), var(--surface)) padding-box, linear-gradient(135deg, ${gc}, ${gc}55) border-box`}
       >
         {/* Image bannière */}
-        <div style={{ width: '100%', height: 120, overflow: 'hidden', position: 'relative', background: 'var(--surface2)' }}>
+        <div style={{ width: '100%', height: 138, overflow: 'hidden', position: 'relative', background: 'var(--surface2)' }}>
           <img src={game.headerImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none'; }} />
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 35%, rgba(0,0,0,0.75) 100%)' }} />
           {/* Dots navigation */}
@@ -67,7 +67,7 @@ function FeaturedCard({ token, wishlist = new Set() }) {
           </div>
         </div>
         {/* Détails — hauteur fixe pour que la carte ne change pas de taille selon le jeu */}
-        <div style={{ padding: '7px 11px 9px', height: 94, boxSizing: 'border-box', overflow: 'hidden' }}>
+        <div style={{ padding: '7px 11px 9px', height: 108, boxSizing: 'border-box', overflow: 'hidden' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, marginBottom: 4 }}>
             {game.developers?.length > 0 && (
               <div style={{ fontSize: 10, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

@@ -604,6 +604,39 @@ app.patch('/api/admin/settings', requireAdmin, (req, res) => {
   res.json(updated);
 });
 
+// Pré-enregistrement d'un compte Steam par l'admin
+app.post('/api/admin/preregister', requireAdmin, async (req, res) => {
+  const { steamId } = req.body;
+  if (!steamId || !/^\d{17}$/.test(steamId.trim())) return res.status(400).json({ error: 'Steam ID invalide (17 chiffres requis).' });
+  const sid = steamId.trim();
+  const users = readUsers();
+  if (users.find(u => u.steamId === sid)) return res.status(409).json({ error: 'Un compte avec ce Steam ID existe déjà.' });
+
+  let steamAvatar = null, steamPersonaName = null;
+  if (GLOBAL_STEAM_API_KEY) {
+    try {
+      const data = await steamFetch(`https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=${GLOBAL_STEAM_API_KEY}&steamids=${sid}`);
+      const player = data.response?.players?.[0];
+      if (player) { steamAvatar = player.avatarmedium || player.avatar || null; steamPersonaName = player.personaname || null; }
+    } catch { /* pas critique */ }
+  }
+
+  let base = (steamPersonaName || `steam_${sid.slice(-6)}`).replace(/[^a-zA-Z0-9_]/g, '_').slice(0, 20);
+  if (base.length < 3) base = `user_${sid.slice(-6)}`;
+  let username = base; let n = 1;
+  while (users.find(u => u.username === username)) { username = `${base}${n++}`; }
+
+  const newUser = {
+    id: `user_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    username, passwordHash: null, role: 'user', status: 'active',
+    steamId: sid, steamAvatar, steamPersonaName, steamAuth: true,
+    createdAt: new Date().toISOString(),
+  };
+  users.push(newUser);
+  writeUsers(users);
+  res.status(201).json({ success: true, message: `Compte pré-enregistré pour "${steamPersonaName || sid}".`, user: userPublicInfo(newUser) });
+});
+
 // ── Steam wishlist ────────────────────────────────────────────────────────────
 
 const wishlistCache = new Map(); // userId → { appids: Set, fetchedAt }

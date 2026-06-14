@@ -28,7 +28,7 @@ export default function AdminPanel({ token, currentUser, onClose }) {
   const [tab, setTab] = useState('pending');
 
   // Create user tab
-  const [createForm, setCreateForm] = useState({ username: '', password: '', steamId: '' });
+  const [steamIdInput, setSteamIdInput] = useState('');
   const [createMsg, setCreateMsg] = useState('');
   const [createErr, setCreateErr] = useState('');
   const [creating, setCreating] = useState(false);
@@ -101,23 +101,18 @@ export default function AdminPanel({ token, currentUser, onClose }) {
     fetchUsers();
   }
 
-  async function handleCreateUser(e) {
+  async function handlePreregister(e) {
     e.preventDefault();
     setCreateErr(''); setCreateMsg('');
-    const { username, password, steamId } = createForm;
-    if (!username || !password) { setCreateErr('Nom d\'utilisateur et mot de passe requis.'); return; }
-    if (password.length < 6) { setCreateErr('Mot de passe trop court (min 6 caractères).'); return; }
+    const sid = steamIdInput.trim();
+    if (!/^\d{17}$/.test(sid)) { setCreateErr('Steam ID invalide — il doit faire exactement 17 chiffres.'); return; }
     setCreating(true);
     try {
-      const res = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: h,
-        body: JSON.stringify({ username: username.trim(), password, steamId: steamId.trim() || undefined }),
-      });
+      const res = await fetch('/api/admin/preregister', { method: 'POST', headers: h, body: JSON.stringify({ steamId: sid }) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || data.error || 'Erreur');
       setCreateMsg(`✓ ${data.message}`);
-      setCreateForm({ username: '', password: '', steamId: '' });
+      setSteamIdInput('');
       fetchUsers();
     } catch (err) {
       setCreateErr(err.message);
@@ -322,33 +317,24 @@ export default function AdminPanel({ token, currentUser, onClose }) {
           )}
 
           {tab === 'create' && (
-            <form onSubmit={handleCreateUser} style={{ maxWidth: 380, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <p style={{ color: 'var(--text-muted)', fontSize: 12, margin: '0 0 4px' }}>
-                Crée un compte utilisateur actif directement. Le mot de passe peut être changé ensuite.
+            <form onSubmit={handlePreregister} style={{ maxWidth: 380, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <p style={{ color: 'var(--text-muted)', fontSize: 12, margin: '0 0 4px', lineHeight: 1.6 }}>
+                Pré-enregistre un compte Steam. Le profil (pseudo, avatar) est récupéré automatiquement depuis Steam. L'utilisateur n'a qu'à se connecter via Steam pour accéder à son compte.
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <label style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Nom d'utilisateur *</label>
-                <input value={createForm.username} onChange={e => setCreateForm(f => ({ ...f, username: e.target.value }))}
-                  placeholder="ex: john_doe" required minLength={3}
-                  style={{ padding: '8px 10px', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 7, color: 'var(--text)', fontSize: 13, outline: 'none' }} />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <label style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Mot de passe *</label>
-                <input type="password" value={createForm.password} onChange={e => setCreateForm(f => ({ ...f, password: e.target.value }))}
-                  placeholder="Min 6 caractères" required minLength={6}
-                  style={{ padding: '8px 10px', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 7, color: 'var(--text)', fontSize: 13, outline: 'none' }} />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <label style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Steam ID <span style={{ fontWeight: 400, textTransform: 'none' }}>(optionnel, 17 chiffres)</span></label>
-                <input value={createForm.steamId} onChange={e => setCreateForm(f => ({ ...f, steamId: e.target.value }))}
-                  placeholder="ex: 76561198012345678"
-                  style={{ padding: '8px 10px', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 7, color: 'var(--text)', fontSize: 13, outline: 'none' }} />
+                <label style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Steam ID <span style={{ fontWeight: 400, textTransform: 'none' }}>(17 chiffres)</span></label>
+                <input value={steamIdInput} onChange={e => setSteamIdInput(e.target.value)}
+                  placeholder="ex: 76561198012345678" required
+                  style={{ padding: '8px 10px', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 7, color: 'var(--text)', fontSize: 13, outline: 'none', fontFamily: 'monospace' }} />
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                  Trouve le Steam ID sur <a href="https://www.steamidfinder.com" target="_blank" rel="noreferrer" style={{ color: 'var(--accent)' }}>steamidfinder.com</a>
+                </div>
               </div>
               {createErr && <div style={{ background: 'rgba(220,50,50,.12)', border: '1px solid rgba(220,50,50,.3)', borderRadius: 7, padding: '8px 10px', color: '#f88', fontSize: 12 }}>{createErr}</div>}
               {createMsg && <div style={{ background: 'rgba(60,200,100,.1)', border: '1px solid rgba(60,200,100,.3)', borderRadius: 7, padding: '8px 10px', color: '#4cd882', fontSize: 12 }}>{createMsg}</div>}
               <button type="submit" disabled={creating}
                 style={{ padding: '10px', background: 'var(--accent)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 14, fontWeight: 700, cursor: creating ? 'not-allowed' : 'pointer', opacity: creating ? 0.7 : 1 }}>
-                {creating ? 'Création…' : 'Créer le compte'}
+                {creating ? 'Enregistrement…' : 'Pré-enregistrer'}
               </button>
             </form>
           )}
