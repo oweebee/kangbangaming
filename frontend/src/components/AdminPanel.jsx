@@ -245,7 +245,7 @@ export default function AdminPanel({ token, currentUser, onClose }) {
 
   return (
     <ModalBackdrop onClose={onClose} zIndex={1000}>
-      <div style={{ background: 'var(--surface1)', border: '1px solid var(--border)', borderRadius: 14, width: '100%', maxWidth: 580, maxHeight: '85vh', display: 'flex', flexDirection: 'column', boxShadow: '0 8px 40px rgba(0,0,0,.5)' }}>
+      <div style={{ background: 'var(--surface1)', border: '1px solid var(--border)', borderRadius: 14, width: '660px', height: '78vh', minHeight: 500, maxHeight: 820, display: 'flex', flexDirection: 'column', boxShadow: '0 8px 40px rgba(0,0,0,.5)' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 20px 0', borderBottom: '1px solid var(--border)' }}>
           <h2 style={{ margin: '0 0 12px', fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>⚙️ Panneau Admin</h2>
