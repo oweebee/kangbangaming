@@ -6,7 +6,7 @@ import ModalBackdrop from './ModalBackdrop.jsx';
 import SwipeTabs from './SwipeTabs.jsx';
 import { useLang } from '../i18n.js';
 
-export default function GameModal({ game, onClose, api, token, onPatchGame, defaultTab = 'achievements', currentUser, appUsers = [] }) {
+export default function GameModal({ game, onClose, api, token, onPatchGame, onSoftDeleteNote, defaultTab = 'achievements', currentUser, appUsers = [] }) {
   const { t } = useLang();
   const [achievements, setAchievements] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -212,6 +212,7 @@ export default function GameModal({ game, onClose, api, token, onPatchGame, defa
             <NotesSection
               notes={game.notes || []}
               onSave={handleSaveNotes}
+              onSoftDeleteNote={onSoftDeleteNote ? (noteId) => onSoftDeleteNote(game.appid, noteId) : undefined}
               compact={false}
               token={token}
               currentUser={currentUser}

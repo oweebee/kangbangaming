@@ -1007,6 +1007,20 @@ export default function App() {
       setDeadlineRefreshKey(k => k + 1);
     }
   };
+  // Soft-delete atomique d'une note — contourne patchGame, endpoint dédié
+  const softDeleteNote = async (appid, noteId) => {
+    const boardApi = getBoardApi();
+    const res = await fetch(`${boardApi}/games/${appid}/notes/${noteId}/trash`, {
+      method: 'POST', headers: authHeaders(token),
+    });
+    if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || res.status); }
+    const { deletedAt } = await res.json();
+    setGames(prev => prev.map(g => g.appid === appid
+      ? { ...g, notes: (g.notes || []).map(n => n.id === noteId ? { ...n, deletedAt } : n) }
+      : g
+    ));
+  };
+
   // Open card directly on the Notes tab (from badge click)
   const handleCardNotesClick = (game) => {
     setSelectedGame(game);
@@ -1876,8 +1890,8 @@ export default function App() {
         {showSearch && <SearchModal api={API} token={token} boardGames={games} onAdd={g => addGame(g, searchTargetCol)} onRemove={removeGame} onClose={() => { setShowSearch(false); setSearchTargetCol(null); }} customOnly={isTaskBoard} isTaskBoard={isTaskBoard} appUsers={appUsers} currentUser={currentUser} />}
         {editingGame && <SearchModal api={API} token={token} boardGames={games} onAdd={addGame} onRemove={removeGame} onClose={() => setEditingGame(null)} customOnly={isTaskBoard} isTaskBoard={isTaskBoard} appUsers={appUsers} currentUser={currentUser} initialGame={editingGame} onSave={async g => { await updateGame(g); setEditingGame(null); }} />}
         {displayedGame && displayedGame.type === 'custom'
-          ? <TaskModal game={displayedGame} appUsers={appUsers} onPatchGame={patchGame} onClose={() => { setSelectedGame(null); setSelectedGameDefaultTab('infos'); }} onEdit={() => { setEditingGame(displayedGame); setSelectedGame(null); setSelectedGameDefaultTab('infos'); }} isTaskBoard={isTaskBoard} token={token} defaultTab={selectedGameDefaultTab} currentUser={currentUser} />
-          : displayedGame && <GameModal game={displayedGame} onClose={() => { setSelectedGame(null); setSelectedGameDefaultTab('infos'); }} api={API} token={token} onPatchGame={patchGame} defaultTab={selectedGameDefaultTab === 'notes' ? 'notes' : 'achievements'} currentUser={currentUser} appUsers={appUsers} />
+          ? <TaskModal game={displayedGame} appUsers={appUsers} onPatchGame={patchGame} onSoftDeleteNote={softDeleteNote} onClose={() => { setSelectedGame(null); setSelectedGameDefaultTab('infos'); }} onEdit={() => { setEditingGame(displayedGame); setSelectedGame(null); setSelectedGameDefaultTab('infos'); }} isTaskBoard={isTaskBoard} token={token} defaultTab={selectedGameDefaultTab} currentUser={currentUser} />
+          : displayedGame && <GameModal game={displayedGame} onClose={() => { setSelectedGame(null); setSelectedGameDefaultTab('infos'); }} api={API} token={token} onPatchGame={patchGame} onSoftDeleteNote={softDeleteNote} defaultTab={selectedGameDefaultTab === 'notes' ? 'notes' : 'achievements'} currentUser={currentUser} appUsers={appUsers} />
         }
         {showAdmin && <AdminPanel token={token} currentUser={currentUser} onClose={() => setShowAdmin(false)} />}
 

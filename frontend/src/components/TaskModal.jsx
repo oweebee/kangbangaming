@@ -160,7 +160,7 @@ function AssigneeRow({ assignees = [], appUsers = [], borderColor = 'var(--borde
 
 // ── TaskModal ─────────────────────────────────────────────────────────────────
 
-export default function TaskModal({ game, onClose, onEdit, appUsers = [], onPatchGame, isTaskBoard, token, defaultTab = 'infos', currentUser }) {
+export default function TaskModal({ game, onClose, onEdit, appUsers = [], onPatchGame, onSoftDeleteNote, isTaskBoard, token, defaultTab = 'infos', currentUser }) {
   const { t } = useLang();
   const tt        = game.taskType ? getTaskType(game.taskType) : null;
   const TtIcon    = tt?.FallbackIcon;
@@ -401,6 +401,7 @@ export default function TaskModal({ game, onClose, onEdit, appUsers = [], onPatc
             <NotesSection
               notes={game.notes || []}
               onSave={handleSaveNotes}
+              onSoftDeleteNote={onSoftDeleteNote ? (noteId) => onSoftDeleteNote(game.appid, noteId) : undefined}
               compact={false}
               token={token}
               currentUser={currentUser}

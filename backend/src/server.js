@@ -616,6 +616,21 @@ function scanUserTrash(userId, userBoards, saveIfChanged = true) {
   return trash.sort((a, b) => new Date(b.deletedAt) - new Date(a.deletedAt));
 }
 
+// POST /api/boards/:boardId/games/:appid/notes/:noteId/trash — soft-delete atomique d'une note
+app.post('/api/boards/:boardId/games/:appid/notes/:noteId/trash', requireAuth, (req, res) => {
+  const userBoards = getUserBoards(req.user.id);
+  const board = userBoards[req.params.boardId];
+  if (!board) return res.status(404).json({ error: 'Board not found' });
+  const game = (board.games || {})[req.params.appid];
+  if (!game) return res.status(404).json({ error: 'Game not found' });
+  const note = (game.notes || []).find(n => n.id === req.params.noteId);
+  if (!note) return res.status(404).json({ error: 'Note not found' });
+  note.deletedAt = new Date().toISOString();
+  setUserBoards(req.user.id, userBoards);
+  console.log(`[soft-delete note] user=${req.user.id} board=${req.params.boardId} game=${req.params.appid} note=${req.params.noteId} deletedAt=${note.deletedAt}`);
+  res.json({ ok: true, deletedAt: note.deletedAt });
+});
+
 // GET /api/trash/notes — corbeille de l'utilisateur connecté
 app.get('/api/trash/notes', requireAuth, (req, res) => {
   const userBoards = getUserBoards(req.user.id);

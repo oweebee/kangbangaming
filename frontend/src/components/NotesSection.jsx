@@ -40,7 +40,7 @@ function formatNoteDate(isoStr) {
 //   compact     – compact styling (SearchModal)
 //   currentUser – { id, role } — used to control edit/delete permissions
 //   appUsers    – array of user objects (for avatar lookup)
-export default function NotesSection({ notes: externalNotes = [], onSave, onDraftChange, compact = false, token, currentUser, appUsers = [] }) {
+export default function NotesSection({ notes: externalNotes = [], onSave, onSoftDeleteNote, onDraftChange, compact = false, token, currentUser, appUsers = [] }) {
   const { t } = useLang();
   const [notes, setNotes]         = useState(externalNotes);
   const [newNote, setNewNote]     = useState('');
@@ -76,9 +76,23 @@ export default function NotesSection({ notes: externalNotes = [], onSave, onDraf
     setNewNoteWithDraft('');
   };
 
-  // Soft-delete : ajoute deletedAt (→ corbeille 30 j) au lieu de retirer la note
-  const deleteNote = (id) => {
-    push(notes.map(n => n.id === id ? { ...n, deletedAt: new Date().toISOString() } : n));
+  // Soft-delete : appelle l'endpoint dédié si disponible, sinon fallback via push
+  const deleteNote = async (id) => {
+    if (onSoftDeleteNote) {
+      // Optimistic update immédiat
+      const updated = notes.map(n => n.id === id ? { ...n, deletedAt: new Date().toISOString() } : n);
+      setNotes(updated);
+      try {
+        await onSoftDeleteNote(id);
+        onSave?.(updated);
+      } catch (e) {
+        console.error('[deleteNote] soft-delete failed', e);
+        setNotes(notes); // revert
+        alert('Erreur : impossible de déplacer la note vers la corbeille.');
+      }
+    } else {
+      push(notes.map(n => n.id === id ? { ...n, deletedAt: new Date().toISOString() } : n));
+    }
   };
 
   const saveEdit = () => {
