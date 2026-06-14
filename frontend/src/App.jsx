@@ -282,7 +282,7 @@ function authHeaders(token) {
 
 export default function App() {
   const isMobile = useMobile();
-  const { t } = useLang();
+  const { t, lang } = useLang();
 
   // Auth
   const [currentUser, setCurrentUser] = useState(null);
@@ -798,7 +798,7 @@ export default function App() {
     try {
       const res = await fetch(`${API}/boards`, {
         method: 'POST', headers: authHeaders(token),
-        body: JSON.stringify({ name, emoji: '', gameIcon: selectedBoardGame ? (selectedBoardGame.icon_img || selectedBoardGame.header_img) : null, headerImg: selectedBoardGame ? selectedBoardGame.header_img : null, gameBoard: !!selectedBoardGame }),
+        body: JSON.stringify({ name, emoji: '', gameIcon: selectedBoardGame ? (selectedBoardGame.icon_img || selectedBoardGame.header_img) : null, headerImg: selectedBoardGame ? selectedBoardGame.header_img : null, gameBoard: !!selectedBoardGame, lang }),
       });
       if (!res.ok) { const e = await res.json().catch(() => ({})); alert(t('err.board_create') + (e.error || res.status)); return; }
       const board = await res.json();

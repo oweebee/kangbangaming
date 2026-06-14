@@ -1467,22 +1467,44 @@ app.get('/api/boards', requireAuth, (req, res) => {
   }));
 });
 
+const DEFAULT_COL_LABELS = {
+  game: {
+    fr: ['À jouer',   'En cours',    'Terminé'],
+    en: ['To play',   'Playing',     'Done'],
+    es: ['Por jugar', 'Jugando',     'Terminado'],
+    de: ['Zu spielen','Spiele',      'Fertig'],
+    ru: ['Играть',    'Играю',       'Пройдено'],
+    zh: ['待玩',       '游戏中',       '已完成'],
+  },
+  task: {
+    fr: ['Tâches à accomplir', 'Tâches en cours', 'Tâches en pause', 'Tâches abandonnées', 'Tâches accomplies'],
+    en: ['To do',              'In progress',     'On hold',         'Abandoned',           'Done'],
+    es: ['Por hacer',          'En curso',        'En pausa',        'Abandonado',          'Listo'],
+    de: ['Zu erledigen',       'In Bearbeitung',  'Pausiert',        'Abgebrochen',         'Erledigt'],
+    ru: ['К выполнению',       'В процессе',      'На паузе',        'Отменено',            'Готово'],
+    zh: ['待办',                '进行中',           '暂停',            '已放弃',              '已完成'],
+  },
+};
+
 app.post('/api/boards', requireAuth, (req, res) => {
   try {
-    const { name, emoji, gameIcon, headerImg, gameBoard } = req.body;
+    const { name, emoji, gameIcon, headerImg, gameBoard, lang } = req.body;
     if (!name) return res.status(400).json({ error: 'Missing name' });
     const id = `board_${Date.now()}`;
-    const t = Date.now();
-    const defaultColumns = (gameBoard || gameIcon) ? [
-      { id: `col_${t}_1`, label: 'Tâches à accomplir', emoji: '⏳' },
-      { id: `col_${t}_2`, label: 'Tâches en cours',    emoji: '⛏️' },
-      { id: `col_${t}_3`, label: 'Tâches en pause',    emoji: '⏸️' },
-      { id: `col_${t}_4`, label: 'Tâches abandonnées', emoji: '❌' },
-      { id: `col_${t}_5`, label: 'Tâches accomplies',  emoji: '✅', color: '#3db86a' },
+    const ts = Date.now();
+    const safeLang = ['fr','en','es','de','ru','zh'].includes(lang) ? lang : 'fr';
+    const isTask = !!(gameBoard || gameIcon);
+    const labels = isTask ? DEFAULT_COL_LABELS.task[safeLang] : DEFAULT_COL_LABELS.game[safeLang];
+    const defaultColumns = isTask ? [
+      { id: `col_${ts}_1`, label: labels[0], emoji: '⏳' },
+      { id: `col_${ts}_2`, label: labels[1], emoji: '⛏️' },
+      { id: `col_${ts}_3`, label: labels[2], emoji: '⏸️' },
+      { id: `col_${ts}_4`, label: labels[3], emoji: '❌' },
+      { id: `col_${ts}_5`, label: labels[4], emoji: '✅', color: '#3db86a' },
     ] : [
-      { id: `col_${t}_1`, label: 'À jouer', emoji: '📋' },
-      { id: `col_${t}_2`, label: 'En cours', emoji: '🎮' },
-      { id: `col_${t}_3`, label: 'Terminé',  emoji: '✅' },
+      { id: `col_${ts}_1`, label: labels[0], emoji: '📋' },
+      { id: `col_${ts}_2`, label: labels[1], emoji: '🎮' },
+      { id: `col_${ts}_3`, label: labels[2], emoji: '✅' },
     ];
     const board = { name, emoji: emoji || '🎮', gameIcon: gameIcon || null, headerImg: headerImg || null, public: false, columns: defaultColumns, games: {} };
     const userBoards = getUserBoards(req.user.id);
