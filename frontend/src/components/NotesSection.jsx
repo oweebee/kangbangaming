@@ -84,14 +84,13 @@ export default function NotesSection({ notes: externalNotes = [], onSave, onSoft
       try {
         await onSoftDeleteNote(id);
         onSave?.(updated);
-        console.log('[deleteNote] ✓ endpoint dédié OK, noteId=', id);
+        alert('✓ Endpoint dédié OK — noteId: ' + id);
       } catch (e) {
-        console.error('[deleteNote] soft-delete failed', e);
-        setNotes(notes); // revert
-        alert('Erreur : impossible de déplacer la note vers la corbeille. (' + e.message + ')');
+        setNotes(notes);
+        alert('✗ Endpoint dédié ERREUR: ' + e.message + ' — noteId: ' + id);
       }
     } else {
-      console.warn('[deleteNote] onSoftDeleteNote absent, fallback push, noteId=', id);
+      alert('⚠ onSoftDeleteNote absent, fallback push — noteId: ' + id);
       push(updated);
     }
   };
