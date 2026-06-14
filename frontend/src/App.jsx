@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { initUserLang } from './i18n.js';
 import KanbanBoard from './components/KanbanBoard.jsx';
 import NowPlayingBanner from './components/NowPlayingBanner.jsx';
 import MobileBoard from './components/MobileBoard.jsx';
@@ -418,6 +419,9 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    // Détection langue navigateur pour l'état non-authentifié
+    initUserLang(null);
+
     // Retour depuis Steam OpenID — token dans l'URL
     const params = new URLSearchParams(window.location.search);
     const steamToken = params.get('steam_token');
@@ -430,6 +434,7 @@ export default function App() {
         localStorage.setItem('user', JSON.stringify(steamUser));
         setCurrentUser(steamUser);
         setToken(steamToken);
+        initUserLang(steamUser.id);
         window.history.replaceState({}, '', window.location.pathname);
         // Récupérer steamAvatar + steamPersonaName depuis /api/auth/me
         fetch('/api/auth/me', { headers: { Authorization: `Bearer ${steamToken}` } })
@@ -446,10 +451,10 @@ export default function App() {
     }
     if (steamError) {
       setSteamLoginError(
-        steamError === 'suspended' ? 'Ton compte a été suspendu. Contacte un administrateur.' :
-        steamError === 'pending'   ? 'Ton compte est en attente de validation par un administrateur.' :
-        steamError === 'invalid'   ? 'Authentification Steam invalide. Réessaie.' :
-        'Erreur lors de la connexion Steam. Réessaie.'
+        steamError === 'suspended' ? 'steam.err.suspended' :
+        steamError === 'pending'   ? 'steam.err.pending'   :
+        steamError === 'invalid'   ? 'steam.err.invalid'   :
+        'steam.err.default'
       );
       window.history.replaceState({}, '', window.location.pathname);
     }
@@ -458,6 +463,7 @@ export default function App() {
     if (!saved) return;
     setCurrentUser(saved.user);
     setToken(saved.token);
+    initUserLang(saved.user.id);
     // Rafraîchir le rôle depuis le serveur (ex: si un admin a changé le rôle pendant la session)
     fetch('/api/auth/me', { headers: { Authorization: `Bearer ${saved.token}` } })
       .then(r => r.ok ? r.json() : null)
@@ -471,7 +477,7 @@ export default function App() {
       .catch(() => {});
   }, []);
 
-  const handleLogin = (user, tok) => { setCurrentUser(user); setToken(tok); };
+  const handleLogin = (user, tok) => { setCurrentUser(user); setToken(tok); initUserLang(user.id); };
   const handleSteamSave = ({ steamAvatar, steamPersonaName }) => {
     setCurrentUser(prev => ({ ...prev, steamAvatar: steamAvatar || null, steamPersonaName: steamPersonaName || null }));
     // Persist to localStorage

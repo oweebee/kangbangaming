@@ -1,24 +1,27 @@
 import { useState, useEffect } from 'react';
 import ModalBackdrop from './ModalBackdrop.jsx';
+import { useLang } from '../i18n.js';
 
 const API = '/api';
 
 function StatusBadge({ status }) {
+  const { t } = useLang();
   const map = {
-    pending:   { bg: 'rgba(255,200,0,.18)',   color: '#ffc800', label: 'En attente' },
-    active:    { bg: 'rgba(60,200,100,.18)',   color: '#4cd882', label: 'Actif' },
-    suspended: { bg: 'rgba(220,50,50,.18)',    color: '#f87575', label: 'Suspendu' },
-    admin:     { bg: 'rgba(245,165,0,.18)',    color: '#f5a500', label: 'Admin' },
+    pending:   { bg: 'rgba(255,200,0,.18)',   color: '#ffc800', key: 'status.pending' },
+    active:    { bg: 'rgba(60,200,100,.18)',   color: '#4cd882', key: 'status.active' },
+    suspended: { bg: 'rgba(220,50,50,.18)',    color: '#f87575', key: 'status.suspended' },
+    admin:     { bg: 'rgba(245,165,0,.18)',    color: '#f5a500', key: 'status.admin' },
   };
   const s = map[status] || map.active;
   return (
     <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 20, fontSize: 10, fontWeight: 700, background: s.bg, color: s.color, textTransform: 'uppercase' }}>
-      {s.label}
+      {t(s.key)}
     </span>
   );
 }
 
 export default function AdminPanel({ token, currentUser, onClose }) {
+  const { t } = useLang();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -129,7 +132,7 @@ export default function AdminPanel({ token, currentUser, onClose }) {
     setDiscordSaving(true); setDiscordMsg('');
     try {
       const res = await fetch(`${API}/admin/settings`, { method: 'PATCH', headers: h, body: JSON.stringify({ discordUrl: discordUrl.trim(), discordIconUrl: discordIconUrl.trim() }) });
-      if (res.ok) { setSettings(await res.json()); setDiscordMsg('✓ Sauvegardé'); setTimeout(() => setDiscordMsg(''), 2500); }
+      if (res.ok) { setSettings(await res.json()); setDiscordMsg(t('admin.discord_saved')); setTimeout(() => setDiscordMsg(''), 2500); }
     } finally { setDiscordSaving(false); }
   }
 
@@ -142,7 +145,7 @@ export default function AdminPanel({ token, currentUser, onClose }) {
   }
 
   async function handleDeleteBoard(ownerId, boardId, boardName) {
-    if (!confirm(`Supprimer le board "${boardName}" ?`)) return;
+    if (!confirm(t('admin.del_board_confirm', { name: boardName }))) return;
     await fetch(`${API}/admin/boards/${ownerId}/${boardId}`, { method: 'DELETE', headers: h });
     fetchBoards();
   }
@@ -155,7 +158,7 @@ export default function AdminPanel({ token, currentUser, onClose }) {
   }
 
   async function handleDelete(id) {
-    if (!confirm('Supprimer cet utilisateur et tous ses boards ?')) return;
+    if (!confirm(t('admin.del_user_confirm'))) return;
     await fetch(`${API}/admin/users/${id}`, { method: 'DELETE', headers: h });
     fetchUsers();
   }
@@ -223,7 +226,7 @@ export default function AdminPanel({ token, currentUser, onClose }) {
                 )}
               </div>
               <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
-                Inscrit le {new Date(u.createdAt).toLocaleDateString('fr-FR')}
+                {t('admin.registered_on', { date: new Date(u.createdAt).toLocaleDateString() })}
                 {u.steamPersonaName && u.steamPersonaName !== u.username && <span style={{ marginLeft: 6, opacity: 0.7 }}>· {u.steamPersonaName}</span>}
               </div>
             </div>
@@ -232,41 +235,41 @@ export default function AdminPanel({ token, currentUser, onClose }) {
             {showApprove && (
               <button onClick={() => patch(u.id, { status: 'active' })} disabled={saving}
                 style={{ background: 'rgba(60,200,100,.2)', border: '1px solid rgba(60,200,100,.4)', borderRadius: 6, padding: '5px 12px', color: '#4cd882', fontSize: 12, cursor: 'pointer', fontWeight: 700 }}>
-                ✓ Approuver
+                ✓ {t('admin.approve')}
               </button>
             )}
             {showApprove && (
               <button onClick={() => handleDelete(u.id)} disabled={saving}
                 style={{ background: 'rgba(220,50,50,.15)', border: '1px solid rgba(220,50,50,.3)', borderRadius: 6, padding: '5px 12px', color: '#f88', fontSize: 12, cursor: 'pointer' }}>
-                ✗ Rejeter
+                {t('admin.reject')}
               </button>
             )}
             {!showApprove && u.id !== 'admin' && (
               <>
                 {/* Toggle rôle admin — seulement si pas le super-admin */}
                 {u.role === 'admin' ? (
-                  <button onClick={() => { if (confirm(`Retirer les droits admin à ${u.username} ?`)) patch(u.id, { role: 'user' }); }} disabled={saving}
-                    title="Retirer les droits admin"
+                  <button onClick={() => { if (confirm(t('admin.del_admin_confirm', { name: u.username }))) patch(u.id, { role: 'user' }); }} disabled={saving}
+                    title={t('admin.remove_admin')}
                     style={{ background: 'rgba(245,165,0,.15)', border: '1px solid rgba(245,165,0,.4)', borderRadius: 6, padding: '5px 10px', color: '#f5a500', fontSize: 11, cursor: 'pointer', fontWeight: 700 }}>
-                    👑 Retirer admin
+                    {t('admin.remove_admin')}
                   </button>
                 ) : (
-                  <button onClick={() => { if (confirm(`Passer ${u.username} en admin ? Il aura accès au panneau admin.`)) patch(u.id, { role: 'admin', status: 'active' }); }} disabled={saving}
-                    title="Donner les droits admin"
+                  <button onClick={() => { if (confirm(t('admin.add_admin_confirm', { name: u.username }))) patch(u.id, { role: 'admin', status: 'active' }); }} disabled={saving}
+                    title={t('admin.make_admin')}
                     style={{ background: 'rgba(245,165,0,.08)', border: '1px solid rgba(245,165,0,.2)', borderRadius: 6, padding: '5px 10px', color: 'var(--text-muted)', fontSize: 11, cursor: 'pointer' }}>
-                    👑 Admin
+                    {t('admin.make_admin')}
                   </button>
                 )}
                 {/* Suspendre/Réactiver — désactivé pour les admins */}
                 {u.role !== 'admin' && ((u.status || 'active') === 'active' ? (
                   <button onClick={() => patch(u.id, { status: 'suspended' })} disabled={saving}
                     style={{ background: 'rgba(220,50,50,.1)', border: '1px solid rgba(220,50,50,.25)', borderRadius: 6, padding: '5px 10px', color: '#f88', fontSize: 11, cursor: 'pointer' }}>
-                    Suspendre
+                    {t('admin.suspend')}
                   </button>
                 ) : (
                   <button onClick={() => patch(u.id, { status: 'active' })} disabled={saving}
                     style={{ background: 'rgba(60,200,100,.1)', border: '1px solid rgba(60,200,100,.25)', borderRadius: 6, padding: '5px 10px', color: '#4cd882', fontSize: 11, cursor: 'pointer' }}>
-                    Réactiver
+                    {t('admin.reactivate')}
                   </button>
                 ))}
                 <button onClick={() => { setEditingId(editingId === u.id ? null : u.id); setEditPwd(''); }}
@@ -275,7 +278,7 @@ export default function AdminPanel({ token, currentUser, onClose }) {
                 </button>
                 <button onClick={() => handleDelete(u.id)}
                   style={{ background: 'rgba(220,50,50,.12)', border: '1px solid rgba(220,50,50,.25)', borderRadius: 6, padding: '5px 10px', color: '#f88', fontSize: 11, cursor: 'pointer' }}>
-                  Supprimer
+                  {t('admin.delete_user')}
                 </button>
               </>
             )}
@@ -285,7 +288,7 @@ export default function AdminPanel({ token, currentUser, onClose }) {
         {editingId === u.id && (
           <div style={{ marginTop: 10, display: 'flex', gap: 8, alignItems: 'center' }}>
             <input type="password" value={editPwd} onChange={e => setEditPwd(e.target.value)}
-              placeholder="Nouveau mot de passe"
+              placeholder={t('admin.new_pwd')}
               style={{ flex: 1, padding: '7px 10px', background: 'var(--surface1)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)', fontSize: 13, outline: 'none' }}
             />
             <button onClick={() => handleSavePwd(u.id)} disabled={saving || !editPwd.trim()}
@@ -314,46 +317,46 @@ export default function AdminPanel({ token, currentUser, onClose }) {
         {/* Tabs */}
         <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', padding: '0 20px', flexShrink: 0 }}>
           <button style={tabStyle('pending')} onClick={() => setTab('pending')}>
-            En attente {pending.length > 0 && <span style={{ background: 'var(--accent)', color: '#fff', borderRadius: '50%', fontSize: 9, padding: '1px 5px', marginLeft: 4 }}>{pending.length}</span>}
+            {t('admin.tab_pending')} {pending.length > 0 && <span style={{ background: 'var(--accent)', color: '#fff', borderRadius: '50%', fontSize: 9, padding: '1px 5px', marginLeft: 4 }}>{pending.length}</span>}
           </button>
-          <button style={tabStyle('active')} onClick={() => setTab('active')}>Actifs ({active.length})</button>
-          <button style={tabStyle('suspended')} onClick={() => setTab('suspended')}>Suspendus ({suspended.length})</button>
-          <button style={tabStyle('boards')} onClick={() => setTab('boards')}>Boards</button>
-          <button style={tabStyle('create')} onClick={() => { setTab('create'); setCreateMsg(''); setCreateErr(''); }}>+ Créer</button>
-          <button style={tabStyle('settings')} onClick={() => setTab('settings')}>⚙ Paramètres</button>
+          <button style={tabStyle('active')} onClick={() => setTab('active')}>{t('admin.tab_active')} ({active.length})</button>
+          <button style={tabStyle('suspended')} onClick={() => setTab('suspended')}>{t('admin.tab_suspended')} ({suspended.length})</button>
+          <button style={tabStyle('boards')} onClick={() => setTab('boards')}>{t('admin.tab_boards')}</button>
+          <button style={tabStyle('create')} onClick={() => { setTab('create'); setCreateMsg(''); setCreateErr(''); }}>{t('admin.tab_create')}</button>
+          <button style={tabStyle('settings')} onClick={() => setTab('settings')}>{t('admin.tab_settings')}</button>
         </div>
 
         {/* Body */}
         <div style={{ flex: 1, overflowY: 'auto', padding: 20 }}>
-          {loading && <p style={{ color: 'var(--text-muted)', fontSize: 13, textAlign: 'center' }}>Chargement…</p>}
+          {loading && <p style={{ color: 'var(--text-muted)', fontSize: 13, textAlign: 'center' }}>{t('admin.loading')}</p>}
           {error && <p style={{ color: '#f88', fontSize: 13 }}>{error}</p>}
 
           {!loading && tab === 'pending' && (
             pending.length === 0
-              ? <p style={{ color: 'var(--text-muted)', fontSize: 13, textAlign: 'center', marginTop: 32 }}>Aucune demande en attente ✓</p>
+              ? <p style={{ color: 'var(--text-muted)', fontSize: 13, textAlign: 'center', marginTop: 32 }}>{t('admin.no_pending')}</p>
               : pending.map(u => renderUser(u, true))
           )}
           {!loading && tab === 'active' && (
             active.length === 0
-              ? <p style={{ color: 'var(--text-muted)', fontSize: 13, textAlign: 'center', marginTop: 32 }}>Aucun autre utilisateur actif</p>
+              ? <p style={{ color: 'var(--text-muted)', fontSize: 13, textAlign: 'center', marginTop: 32 }}>{t('admin.no_active')}</p>
               : active.map(u => renderUser(u, false))
           )}
           {!loading && tab === 'suspended' && (
             suspended.length === 0
-              ? <p style={{ color: 'var(--text-muted)', fontSize: 13, textAlign: 'center', marginTop: 32 }}>Aucun utilisateur suspendu</p>
+              ? <p style={{ color: 'var(--text-muted)', fontSize: 13, textAlign: 'center', marginTop: 32 }}>{t('admin.no_suspended')}</p>
               : suspended.map(u => renderUser(u, false))
           )}
 
           {tab === 'settings' && (
             <div style={{ maxWidth: 420, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <p style={{ color: 'var(--text-muted)', fontSize: 12, margin: '0 0 16px' }}>Paramètres globaux de l'application.</p>
+              <p style={{ color: 'var(--text-muted)', fontSize: 12, margin: '0 0 16px' }}>{t('admin.settings_desc')}</p>
 
               {/* Toggle : validation à l'inscription */}
               <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)', marginBottom: 3 }}>Validation à la première connexion</div>
+                  <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)', marginBottom: 3 }}>{t('admin.approval_title')}</div>
                   <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5 }}>
-                    Si activé, les nouveaux utilisateurs Steam sont mis en attente et doivent être approuvés depuis l'onglet "En attente" avant d'accéder à l'app.
+                    {t('admin.approval_desc')}
                   </div>
                 </div>
                 <button
@@ -375,28 +378,28 @@ export default function AdminPanel({ token, currentUser, onClose }) {
 
               {/* Discord */}
               <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Serveur Discord</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>{t('admin.discord_title')}</div>
                 <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    <label style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>Lien d'invitation</label>
+                    <label style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>{t('admin.discord_url')}</label>
                     <input value={discordUrl} onChange={e => setDiscordUrl(e.target.value)} placeholder="https://discord.gg/xxxxxx"
                       style={{ padding: '7px 10px', background: 'var(--surface1)', border: '1px solid var(--border)', borderRadius: 7, color: 'var(--text)', fontSize: 13, outline: 'none' }} />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    <label style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>URL icône du serveur</label>
+                    <label style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>{t('admin.discord_icon')}</label>
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                       <input value={discordIconUrl} onChange={e => setDiscordIconUrl(e.target.value)} placeholder="https://cdn.discordapp.com/icons/…"
                         style={{ flex: 1, padding: '7px 10px', background: 'var(--surface1)', border: '1px solid var(--border)', borderRadius: 7, color: 'var(--text)', fontSize: 13, outline: 'none' }} />
                       {discordIconUrl && <img src={discordIconUrl} alt="" style={{ width: 32, height: 32, borderRadius: '50%', border: '2px solid var(--border)', flexShrink: 0 }} onError={e => e.target.style.display = 'none'} />}
                     </div>
                     <div style={{ fontSize: 10, color: 'var(--text-muted)', lineHeight: 1.5 }}>
-                      Trouve l'URL dans les paramètres Discord : Serveur → Modifier → icône → clic droit → Copier l'adresse de l'image.
+                      {t('admin.discord_icon_hint')}
                     </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <button onClick={saveDiscord} disabled={discordSaving}
                       style={{ padding: '7px 18px', background: 'var(--accent)', border: 'none', borderRadius: 7, color: '#fff', fontSize: 13, fontWeight: 700, cursor: discordSaving ? 'not-allowed' : 'pointer', opacity: discordSaving ? 0.7 : 1 }}>
-                      {discordSaving ? '…' : 'Enregistrer'}
+                      {discordSaving ? '…' : t('admin.save')}
                     </button>
                     {discordMsg && <span style={{ fontSize: 12, color: '#4cd882' }}>{discordMsg}</span>}
                   </div>
@@ -405,7 +408,7 @@ export default function AdminPanel({ token, currentUser, onClose }) {
 
               {/* Export / Restore */}
               <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Sauvegarde des données</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>{t('admin.backup_title')}</div>
 
                 {/* Export */}
                 <button onClick={handleExport}
@@ -414,8 +417,8 @@ export default function AdminPanel({ token, currentUser, onClose }) {
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
                   </svg>
                   <div>
-                    <div>Exporter les données</div>
-                    <div style={{ fontSize: 10, fontWeight: 400, color: 'rgba(76,216,130,.7)', marginTop: 1 }}>Télécharge un fichier JSON avec tous les users, boards et paramètres</div>
+                    <div>{t('admin.export_btn')}</div>
+                    <div style={{ fontSize: 10, fontWeight: 400, color: 'rgba(76,216,130,.7)', marginTop: 1 }}>{t('admin.export_desc')}</div>
                   </div>
                 </button>
 
@@ -425,8 +428,8 @@ export default function AdminPanel({ token, currentUser, onClose }) {
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
                   </svg>
                   <div>
-                    <div>{restoring ? 'Restauration…' : 'Restaurer depuis une sauvegarde'}</div>
-                    <div style={{ fontSize: 10, fontWeight: 400, color: 'rgba(248,136,136,.7)', marginTop: 1 }}>⚠ Écrase toutes les données actuelles</div>
+                    <div>{restoring ? t('admin.restoring') : t('admin.restore_btn')}</div>
+                    <div style={{ fontSize: 10, fontWeight: 400, color: 'rgba(248,136,136,.7)', marginTop: 1 }}>{t('admin.restore_desc')}</div>
                   </div>
                   <input type="file" accept=".json" onChange={handleRestoreFile} disabled={restoring} style={{ display: 'none' }} />
                 </label>
@@ -440,22 +443,22 @@ export default function AdminPanel({ token, currentUser, onClose }) {
           {tab === 'create' && (
             <form onSubmit={handlePreregister} style={{ maxWidth: 380, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 14 }}>
               <p style={{ color: 'var(--text-muted)', fontSize: 12, margin: '0 0 4px', lineHeight: 1.6 }}>
-                Pré-enregistre un compte Steam. Le profil (pseudo, avatar) est récupéré automatiquement depuis Steam. L'utilisateur n'a qu'à se connecter via Steam pour accéder à son compte.
+                {t('admin.prereg_desc')}
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <label style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Steam ID <span style={{ fontWeight: 400, textTransform: 'none' }}>(17 chiffres)</span></label>
+                <label style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{t('admin.steam_id_hint')}</label>
                 <input value={steamIdInput} onChange={e => setSteamIdInput(e.target.value)}
                   placeholder="ex: 76561198012345678" required
                   style={{ padding: '8px 10px', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 7, color: 'var(--text)', fontSize: 13, outline: 'none', fontFamily: 'monospace' }} />
                 <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
-                  Trouve le Steam ID sur <a href="https://www.steamidfinder.com" target="_blank" rel="noreferrer" style={{ color: 'var(--accent)' }}>steamidfinder.com</a>
+                  {t('admin.prereg_steam_hint')} <a href="https://www.steamidfinder.com" target="_blank" rel="noreferrer" style={{ color: 'var(--accent)' }}>steamidfinder.com</a>
                 </div>
               </div>
               {createErr && <div style={{ background: 'rgba(220,50,50,.12)', border: '1px solid rgba(220,50,50,.3)', borderRadius: 7, padding: '8px 10px', color: '#f88', fontSize: 12 }}>{createErr}</div>}
               {createMsg && <div style={{ background: 'rgba(60,200,100,.1)', border: '1px solid rgba(60,200,100,.3)', borderRadius: 7, padding: '8px 10px', color: '#4cd882', fontSize: 12 }}>{createMsg}</div>}
               <button type="submit" disabled={creating}
                 style={{ padding: '10px', background: 'var(--accent)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 14, fontWeight: 700, cursor: creating ? 'not-allowed' : 'pointer', opacity: creating ? 0.7 : 1 }}>
-                {creating ? 'Enregistrement…' : 'Pré-enregistrer'}
+                {creating ? t('admin.prereg_ing') : t('admin.prereg_btn')}
               </button>
             </form>
           )}
@@ -493,7 +496,7 @@ export default function AdminPanel({ token, currentUser, onClose }) {
                           onClick={() => handleDeleteBoard(b.ownerId, b.id, b.name)}
                           style={{ background: 'rgba(220,50,50,.12)', border: '1px solid rgba(220,50,50,.25)', borderRadius: 6, padding: '5px 10px', color: '#f88', fontSize: 11, cursor: 'pointer', flexShrink: 0 }}
                         >
-                          🗑 Supprimer
+                          🗑 {t('admin.delete_user')}
                         </button>
                       </div>
                     ))

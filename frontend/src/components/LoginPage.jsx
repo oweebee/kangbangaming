@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import React from 'react';
+import { useLang } from '../i18n.js';
 
 const GITHUB = 'https://github.com/oweebee/kangbangaming';
 const DISCORD_FALLBACK_URL  = 'https://discord.gg/9mXpM9wv';
@@ -17,13 +18,15 @@ function DiscordServerIcon({ size = 22, borderColor = 'var(--surface1)', iconUrl
 }
 
 export default function LoginPage({ onLogin, steamError = '', discordConfig = {} }) {
-  const discordUrl  = discordConfig.discordUrl  || DISCORD_FALLBACK_URL;
-  const discordIcon = discordConfig.discordIconUrl || '';
+  const { t } = useLang();
   const [showAdmin, setShowAdmin] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const discordUrl  = discordConfig.discordUrl  || DISCORD_FALLBACK_URL;
+  const discordIcon = discordConfig.discordIconUrl || '';
 
   async function handleAdminLogin(e) {
     e.preventDefault();
@@ -61,14 +64,14 @@ export default function LoginPage({ onLogin, steamError = '', discordConfig = {}
           </div>
           <div>
             <div style={{ fontWeight: 800, fontSize: 18, letterSpacing: '0.04em', color: 'var(--text)', textAlign: 'center' }}>KangBanGaming</div>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center', marginTop: 3 }}>Ton kanban gaming, connecté à Steam</div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center', marginTop: 3 }}>{t('login.subtitle')}</div>
           </div>
         </div>
 
         {/* Erreur Steam */}
         {(steamError || error) && (
           <div style={{ background: 'rgba(220,50,50,.15)', border: '1px solid rgba(220,50,50,.4)', borderRadius: 8, padding: '8px 12px', color: '#f88', fontSize: 13, marginBottom: 16 }}>
-            {steamError || error}
+            {(steamError ? t(steamError) : null) || error}
           </div>
         )}
 
@@ -86,12 +89,12 @@ export default function LoginPage({ onLogin, steamError = '', discordConfig = {}
             <svg viewBox="0 0 496 512" xmlns="http://www.w3.org/2000/svg" style={{ width: 22, height: 22, fill: '#c6d4df' }}>
               <path d="M496 256c0 137-111.2 248-248.4 248-113.8 0-209.7-76.3-239-180.4l95.2 39.3c6.4 32.1 34.9 56.4 68.9 56.4 38.2 0 69.1-31.1 68.9-69.3l84.5-60.2c52.1 1.3 95.8-40.9 95.8-93.5 0-51.6-42-93.5-93.7-93.5s-93.7 42-93.7 93.5v1.2L176.6 279c-15.5-.9-30.7 3.4-43.5 12.1L0 236.1C10.2 108.4 117.1 8 247.6 8 384.8 8 496 119 496 256zM155.7 384.3l-30.5-12.6a52.79 52.79 0 0 0 27.2 25.8c26.9 11.2 57.8-1.6 69-28.4 5.4-13 5.5-27.3.1-40.3-5.4-13-15.5-23.2-28.5-28.6-12.7-5.3-26.4-5.5-38.8-1.4l31.5 13c19.8 8.2 29.2 30.9 20.9 50.7-8.3 19.9-31 29.2-50.9 21zm173.8-129.9c-34.4 0-62.4-28-62.4-62.3s28-62.3 62.4-62.3 62.4 28 62.4 62.3-27.9 62.3-62.4 62.3zm.1-15.6c25.9 0 46.9-21 46.9-46.8 0-25.9-21-46.8-46.9-46.8s-46.9 21-46.9 46.8c.1 25.8 21.1 46.8 46.9 46.8z"/>
             </svg>
-            Se connecter avec Steam
+            {t('login.steam_btn')}
           </button>
         </a>
 
         <div style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'center', marginTop: 12, lineHeight: 1.5 }}>
-          Première connexion ? Un compte est créé automatiquement.
+          {t('login.first_time')}
         </div>
 
         <div style={{ marginTop: 10, background: 'rgba(102,192,244,0.07)', border: '1px solid rgba(102,192,244,0.25)', borderRadius: 8, padding: '8px 12px', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
@@ -99,8 +102,8 @@ export default function LoginPage({ onLogin, steamError = '', discordConfig = {}
             <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
           </svg>
           <div style={{ fontSize: 10, color: 'var(--text-muted)', lineHeight: 1.6 }}>
-            Pour une expérience complète (succès, wishlist, bannière "En jeu"), ton profil Steam doit être <span style={{ color: '#66c0f4', fontWeight: 700 }}>public</span>.{' '}
-            <a href="https://help.steampowered.com/fr/faqs/view/588C-C67D-0251-C276" target="_blank" rel="noreferrer" style={{ color: '#66c0f4', textDecoration: 'underline' }}>Comment faire ?</a>
+            {t('login.steam_note')}{' '}
+            <a href="https://help.steampowered.com/fr/faqs/view/588C-C67D-0251-C276" target="_blank" rel="noreferrer" style={{ color: '#66c0f4', textDecoration: 'underline' }}>{t('login.steam_how')}</a>
           </div>
         </div>
 
@@ -122,25 +125,25 @@ export default function LoginPage({ onLogin, steamError = '', discordConfig = {}
           </a>
         </div>
 
-        {/* Accès admin — discret, en bas */}
+        {/* Accès admin — discret */}
         <div style={{ marginTop: 20, textAlign: 'center' }}>
           <button onClick={() => { setShowAdmin(v => !v); setError(''); }}
             style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 10, cursor: 'pointer', opacity: 0.35, padding: '4px 8px', letterSpacing: '0.04em' }}>
-            ⚙ Administration
+            {t('login.admin_toggle')}
           </button>
         </div>
 
         {showAdmin && (
           <form onSubmit={handleAdminLogin} style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 10, padding: '14px', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 10 }}>
-            <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Connexion administrateur</div>
-            <input value={username} onChange={e => setUsername(e.target.value)} placeholder="Nom d'utilisateur" autoFocus required
+            <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>{t('login.admin_title')}</div>
+            <input value={username} onChange={e => setUsername(e.target.value)} placeholder={t('login.username')} autoFocus required
               style={{ padding: '8px 10px', background: 'var(--surface1)', border: '1px solid var(--border)', borderRadius: 7, color: 'var(--text)', fontSize: 13, outline: 'none' }} />
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Mot de passe" required
+            <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder={t('login.password')} required
               style={{ padding: '8px 10px', background: 'var(--surface1)', border: '1px solid var(--border)', borderRadius: 7, color: 'var(--text)', fontSize: 13, outline: 'none' }} />
             {error && <div style={{ color: '#f88', fontSize: 12 }}>{error}</div>}
             <button type="submit" disabled={loading}
               style={{ padding: '8px', background: 'var(--accent)', border: 'none', borderRadius: 7, color: '#fff', fontSize: 13, fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }}>
-              {loading ? '…' : 'Connexion'}
+              {loading ? '…' : t('login.connect')}
             </button>
           </form>
         )}

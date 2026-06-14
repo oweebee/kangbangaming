@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
+import { useLang, LANG_META, SUPPORTED_LANGS } from '../i18n.js';
 
 const API = '/api';
 
 export default function ProfilePage({ token, currentUser, onClose, onSaveSteam }) {
+  const { t, lang, setLang } = useLang();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -47,8 +49,8 @@ export default function ProfilePage({ token, currentUser, onClose, onSaveSteam }
   async function handlePwdChange(e) {
     e.preventDefault();
     setPwdError(''); setPwdSuccess('');
-    if (pwdNew !== pwdConfirm) { setPwdError('Les mots de passe ne correspondent pas'); return; }
-    if (pwdNew.length < 6) { setPwdError('Minimum 6 caractères'); return; }
+    if (pwdNew !== pwdConfirm) { setPwdError(t('profile.pwd_mismatch')); return; }
+    if (pwdNew.length < 6) { setPwdError(t('profile.pwd_short')); return; }
     setPwdLoading(true);
     try {
       const res = await fetch(`${API}/user/password`, {
@@ -57,8 +59,8 @@ export default function ProfilePage({ token, currentUser, onClose, onSaveSteam }
         body: JSON.stringify({ currentPassword: pwdCurrent, newPassword: pwdNew }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Erreur');
-      setPwdSuccess('Mot de passe modifié !');
+      if (!res.ok) throw new Error(data.error || t('common.error'));
+      setPwdSuccess(t('profile.pwd_changed'));
       setPwdCurrent(''); setPwdNew(''); setPwdConfirm('');
       setTimeout(() => { setPwdSuccess(''); setShowPwd(false); }, 2000);
     } catch (err) { setPwdError(err.message); }
@@ -85,11 +87,11 @@ export default function ProfilePage({ token, currentUser, onClose, onSaveSteam }
         setSteamPreview(null);
         setProfile(p => ({ ...p, steamId: steamId, steamAvatar: null, steamPersonaName: null }));
       }
-      setSteamMsg('✓ Sauvegardé !');
+      setSteamMsg(t('profile.steam_saved'));
       if (onSaveSteam) onSaveSteam({ steamAvatar: data.steamAvatar, steamPersonaName: data.steamPersonaName });
       setTimeout(() => setSteamMsg(''), 2500);
     } else {
-      let errMsg = 'Erreur lors de la sauvegarde';
+      let errMsg = t('common.error');
       try { const d = await res.json(); errMsg = d.error || errMsg; } catch {}
       setSteamMsg(errMsg);
     }
@@ -124,28 +126,53 @@ export default function ProfilePage({ token, currentUser, onClose, onSaveSteam }
               <svg viewBox="0 0 496 512" xmlns="http://www.w3.org/2000/svg" style={{ width: 10, height: 10, fill: '#47a7f5' }}>
                 <path d="M496 256c0 137-111.2 248-248.4 248-113.8 0-209.7-76.3-239-180.4l95.2 39.3c6.4 32.1 34.9 56.4 68.9 56.4 38.2 0 69.1-31.1 68.9-69.3l84.5-60.2c52.1 1.3 95.8-40.9 95.8-93.5 0-51.6-42-93.5-93.7-93.5s-93.7 42-93.7 93.5v1.2L176.6 279c-15.5-.9-30.7 3.4-43.5 12.1L0 236.1C10.2 108.4 117.1 8 247.6 8 384.8 8 496 119 496 256z"/>
               </svg>
-              <span style={{ fontSize: 10, color: '#47a7f5', fontWeight: 700, letterSpacing: '0.04em' }}>Connexion Steam</span>
+              <span style={{ fontSize: 10, color: '#47a7f5', fontWeight: 700, letterSpacing: '0.04em' }}>{t('profile.steam_connexion')}</span>
             </div>
           )}
         </div>
 
         {/* Body */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
-          {loading && <p style={{ color: 'var(--text-muted)', textAlign: 'center' }}>Chargement…</p>}
+          {loading && <p style={{ color: 'var(--text-muted)', textAlign: 'center' }}>{t('common.loading')}</p>}
           {error && <p style={{ color: '#f88', textAlign: 'center' }}>{error}</p>}
 
           {profile && (
             <>
+              {/* ── Langue ── */}
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
+                  🌐 {t('profile.language')}
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {SUPPORTED_LANGS.map(l => {
+                    const meta = LANG_META[l];
+                    const active = lang === l;
+                    return (
+                      <button key={l} onClick={() => setLang(l)} style={{
+                        display: 'flex', alignItems: 'center', gap: 6,
+                        padding: '6px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: active ? 700 : 400,
+                        background: active ? 'var(--accent)' : 'var(--surface2)',
+                        border: `1px solid ${active ? 'var(--accent)' : 'var(--border)'}`,
+                        color: active ? '#fff' : 'var(--text)',
+                        transition: 'all .15s',
+                      }}>
+                        <span style={{ fontSize: 16 }}>{meta.flag}</span>
+                        {meta.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               {/* ── Section Steam ── */}
               <div style={{ marginBottom: 20 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
                   <svg viewBox="0 0 496 512" xmlns="http://www.w3.org/2000/svg" style={{ width: 12, height: 12, fill: 'currentColor' }}>
                     <path d="M496 256c0 137-111.2 248-248.4 248-113.8 0-209.7-76.3-239-180.4l95.2 39.3c6.4 32.1 34.9 56.4 68.9 56.4 38.2 0 69.1-31.1 68.9-69.3l84.5-60.2c52.1 1.3 95.8-40.9 95.8-93.5 0-51.6-42-93.5-93.7-93.5s-93.7 42-93.7 93.5v1.2L176.6 279c-15.5-.9-30.7 3.4-43.5 12.1L0 236.1C10.2 108.4 117.1 8 247.6 8 384.8 8 496 119 496 256z"/>
                   </svg>
-                  Steam
+                  {t('profile.steam_section')}
                 </div>
 
-                {/* Compte lié */}
                 {hasSteam && !editingSteam && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'var(--surface2)', border: '1px solid rgba(61,184,106,0.35)', borderRadius: 10, padding: '12px 14px', marginBottom: 10 }}>
                     {steamPreview?.avatar
@@ -153,54 +180,48 @@ export default function ProfilePage({ token, currentUser, onClose, onSaveSteam }
                       : <div style={{ width: 40, height: 40, borderRadius: 6, background: 'var(--surface3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>👤</div>
                     }
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)' }}>{steamPreview?.personaName || 'Compte lié'}</div>
-                      <div style={{ fontSize: 10, color: 'rgba(61,184,106,0.8)', marginTop: 1 }}>✓ Compte Steam lié</div>
+                      <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)' }}>{steamPreview?.personaName || t('profile.steam_linked')}</div>
+                      <div style={{ fontSize: 10, color: 'rgba(61,184,106,0.8)', marginTop: 1 }}>✓ {t('profile.steam_linked')}</div>
                       <div style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{savedSteamId}</div>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'flex-end', flexShrink: 0 }}>
-                      <a href={`https://steamcommunity.com/profiles/${savedSteamId}`} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: 'var(--accent)', textDecoration: 'none' }}>Profil ↗</a>
-                      <a href={`https://steamcommunity.com/profiles/${savedSteamId}/games`} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: 'var(--accent)', textDecoration: 'none' }}>Biblio ↗</a>
+                      <a href={`https://steamcommunity.com/profiles/${savedSteamId}`} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: 'var(--accent)', textDecoration: 'none' }}>{t('profile.steam_profile')}</a>
+                      <a href={`https://steamcommunity.com/profiles/${savedSteamId}/games`} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: 'var(--accent)', textDecoration: 'none' }}>{t('profile.steam_library')}</a>
                     </div>
                     {!isSteamAuth && (
                       <button onClick={() => setEditingSteam(true)}
                         style={{ background: 'var(--surface3)', border: '1px solid var(--border)', borderRadius: 7, padding: '6px 12px', color: 'var(--text-muted)', fontSize: 11, cursor: 'pointer', fontWeight: 600, flexShrink: 0 }}>
-                        ✏ Modifier
+                        ✏ {t('common.edit')}
                       </button>
                     )}
                   </div>
                 )}
 
-                {/* Formulaire lier/modifier — caché pour les comptes Steam OpenID */}
                 {!isSteamAuth && (!hasSteam || editingSteam) && (
                   <form onSubmit={handleSaveSteam} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                     <div style={{ background: 'rgba(180,130,0,0.1)', border: '1px solid rgba(200,150,0,0.35)', borderRadius: 9, padding: '10px 12px', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
                       <span style={{ fontSize: 14, flexShrink: 0 }}>⚠️</span>
                       <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5 }}>
-                        Ton profil Steam doit être <strong style={{ color: 'var(--text)' }}>public</strong>.{' '}
-                        <a href="https://help.steampowered.com/fr/faqs/view/588C-C67D-0251-C276" target="_blank" rel="noreferrer" style={{ color: '#47a7f5', textDecoration: 'underline' }}>Comment faire ↗</a>
+                        {t('profile.steam_warn')}{' '}
+                        <a href="https://help.steampowered.com/fr/faqs/view/588C-C67D-0251-C276" target="_blank" rel="noreferrer" style={{ color: '#47a7f5', textDecoration: 'underline' }}>{t('profile.steam_how')}</a>
                       </div>
                     </div>
                     <div>
                       <label style={{ display: 'block', fontSize: 11, color: 'var(--text-muted)', marginBottom: 5, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                        Steam ID (64-bit) — <a href="https://steamid.io" target="_blank" rel="noreferrer" style={{ color: 'var(--accent)', fontWeight: 400 }}>steamid.io ↗</a>
+                        {t('profile.steam_id_label')} — <a href="https://steamid.io" target="_blank" rel="noreferrer" style={{ color: 'var(--accent)', fontWeight: 400 }}>steamid.io ↗</a>
                       </label>
-                      <input
-                        autoFocus
-                        value={steamId}
-                        onChange={e => setSteamId(e.target.value)}
-                        placeholder="Ex: 76561197969409733"
-                        style={{ width: '100%', boxSizing: 'border-box', padding: '9px 12px', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', fontSize: 13, outline: 'none', fontFamily: 'monospace' }}
-                      />
+                      <input autoFocus value={steamId} onChange={e => setSteamId(e.target.value)} placeholder="Ex: 76561197969409733"
+                        style={{ width: '100%', boxSizing: 'border-box', padding: '9px 12px', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', fontSize: 13, outline: 'none', fontFamily: 'monospace' }} />
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <button type="submit" disabled={steamSaving || !steamId.trim()}
                         style={{ padding: '8px 18px', background: 'var(--accent)', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, fontSize: 13, cursor: (steamSaving || !steamId.trim()) ? 'not-allowed' : 'pointer', opacity: (steamSaving || !steamId.trim()) ? 0.6 : 1 }}>
-                        {steamSaving ? 'Sauvegarde…' : 'Sauvegarder'}
+                        {steamSaving ? t('profile.saving_steam') : t('profile.save_steam')}
                       </button>
                       {editingSteam && (
                         <button type="button" onClick={() => { setSteamId(savedSteamId); setEditingSteam(false); setSteamMsg(''); }}
                           style={{ padding: '8px 14px', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer' }}>
-                          Annuler
+                          {t('common.cancel')}
                         </button>
                       )}
                       {steamMsg && <span style={{ fontSize: 12, color: steamMsg.startsWith('✓') ? '#3db86a' : '#f88' }}>{steamMsg}</span>}
@@ -218,12 +239,12 @@ export default function ProfilePage({ token, currentUser, onClose, onSaveSteam }
                 <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>KangBanGaming</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                   {[
-                    ['🗂️', profile.stats.boardCount, 'Boards'],
-                    ['🌐', profile.stats.publicBoardCount, 'Boards publics'],
-                    ['🎮', profile.stats.totalGames - profile.stats.customCards, 'Jeux Steam'],
-                    ['✨', profile.stats.customCards, 'Cartes perso'],
-                    ['📋', profile.stats.totalColumns, 'Colonnes'],
-                    ['📅', profile.createdAt ? new Date(profile.createdAt).toLocaleDateString('fr-FR') : '—', 'Membre depuis'],
+                    ['🗂️', profile.stats.boardCount, t('profile.stat_boards')],
+                    ['🌐', profile.stats.publicBoardCount, t('profile.stat_public')],
+                    ['🎮', profile.stats.totalGames - profile.stats.customCards, t('profile.stat_games')],
+                    ['✨', profile.stats.customCards, t('profile.stat_custom')],
+                    ['📋', profile.stats.totalColumns, t('profile.stat_columns')],
+                    ['📅', profile.createdAt ? new Date(profile.createdAt).toLocaleDateString() : '—', t('profile.stat_since')],
                   ].map(([icon, value, label]) => (
                     <div key={label} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px', textAlign: 'center' }}>
                       <div style={{ fontSize: 22, marginBottom: 4 }}>{icon}</div>
@@ -236,30 +257,30 @@ export default function ProfilePage({ token, currentUser, onClose, onSaveSteam }
             </>
           )}
 
-          {/* ── Changer mot de passe — caché pour les comptes Steam OpenID ── */}
+          {/* ── Changer mot de passe ── */}
           {profile && !isSteamAuth && <div style={{ marginTop: 20, borderTop: '1px solid var(--border)', paddingTop: 16 }}>
             <button onClick={() => { setShowPwd(v => !v); setPwdError(''); setPwdSuccess(''); }}
               style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 14px', color: 'var(--text-muted)', fontSize: 12, fontWeight: 600, cursor: 'pointer', width: '100%', textAlign: 'left' }}>
-              🔑 {showPwd ? 'Annuler' : 'Changer le mot de passe'}
+              🔑 {showPwd ? t('common.cancel') : t('profile.change_pwd')}
             </button>
             {showPwd && (
               <form onSubmit={handlePwdChange} style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {['Mot de passe actuel', 'Nouveau mot de passe', 'Confirmer le nouveau'].map((label, i) => {
-                  const vals = [pwdCurrent, pwdNew, pwdConfirm];
-                  const setters = [setPwdCurrent, setPwdNew, setPwdConfirm];
-                  return (
-                    <div key={i}>
-                      <label style={{ display: 'block', fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>{label}</label>
-                      <input type="password" value={vals[i]} onChange={e => setters[i](e.target.value)} required
-                        style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 7, color: 'var(--text)', fontSize: 13, outline: 'none' }} />
-                    </div>
-                  );
-                })}
+                {[
+                  [t('profile.pwd_current'), pwdCurrent, setPwdCurrent],
+                  [t('profile.pwd_new'), pwdNew, setPwdNew],
+                  [t('profile.pwd_confirm'), pwdConfirm, setPwdConfirm],
+                ].map(([label, val, setter]) => (
+                  <div key={label}>
+                    <label style={{ display: 'block', fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>{label}</label>
+                    <input type="password" value={val} onChange={e => setter(e.target.value)} required
+                      style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 7, color: 'var(--text)', fontSize: 13, outline: 'none' }} />
+                  </div>
+                ))}
                 {pwdError && <div style={{ background: 'rgba(220,50,50,.15)', border: '1px solid rgba(220,50,50,.4)', borderRadius: 7, padding: '7px 10px', color: '#f88', fontSize: 12 }}>{pwdError}</div>}
                 {pwdSuccess && <div style={{ background: 'rgba(50,200,100,.15)', border: '1px solid rgba(50,200,100,.4)', borderRadius: 7, padding: '7px 10px', color: '#5c5', fontSize: 12 }}>✓ {pwdSuccess}</div>}
                 <button type="submit" disabled={pwdLoading}
                   style={{ padding: '9px', background: 'var(--accent)', border: 'none', borderRadius: 7, color: '#fff', fontSize: 13, fontWeight: 700, cursor: pwdLoading ? 'not-allowed' : 'pointer', opacity: pwdLoading ? 0.7 : 1 }}>
-                  {pwdLoading ? 'Enregistrement…' : 'Enregistrer'}
+                  {pwdLoading ? t('profile.pwd_saving') : t('profile.pwd_save')}
                 </button>
               </form>
             )}
