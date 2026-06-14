@@ -310,6 +310,27 @@ export default function App() {
   // Home view
   const [showHome, setShowHome] = useState(true);
   const [mobileHomeTab, setMobileHomeTab] = useState('boards'); // 'deadlines' | 'boards' | 'upcoming'
+  const mobileHomeTabs = ['deadlines', 'boards', 'upcoming'];
+  const mobileSwipeStartX = useRef(null);
+  const mobileSwipeStartY = useRef(null);
+  const handleMobileTouchStart = (e) => {
+    mobileSwipeStartX.current = e.touches[0].clientX;
+    mobileSwipeStartY.current = e.touches[0].clientY;
+  };
+  const handleMobileTouchEnd = (e) => {
+    if (mobileSwipeStartX.current === null) return;
+    const deltaX = e.changedTouches[0].clientX - mobileSwipeStartX.current;
+    const deltaY = e.changedTouches[0].clientY - mobileSwipeStartY.current;
+    mobileSwipeStartX.current = null;
+    mobileSwipeStartY.current = null;
+    if (Math.abs(deltaX) < 50 || Math.abs(deltaX) < Math.abs(deltaY)) return;
+    setMobileHomeTab(cur => {
+      const idx = mobileHomeTabs.indexOf(cur);
+      if (deltaX < 0 && idx < mobileHomeTabs.length - 1) return mobileHomeTabs[idx + 1];
+      if (deltaX > 0 && idx > 0) return mobileHomeTabs[idx - 1];
+      return cur;
+    });
+  };
   const [homePublicBoards, setHomePublicBoards] = useState([]);
   const [deadlineRefreshKey, setDeadlineRefreshKey] = useState(0);
   // Home section drag order (IDs) — persisted in localStorage
@@ -649,6 +670,34 @@ export default function App() {
     fetch(`${API}/public/boards`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.ok ? r.json() : []).then(setHomePublicBoards).catch(() => {});
   }, [showHome, token]);
+  // ── Bouton retour Android / geste retour mobile ──────────────────────────
+  useEffect(() => {
+    // Injecter une entrée factice dans l'historique pour intercepter le retour
+    window.history.pushState({ kbg: true }, '');
+
+    const handlePopState = () => {
+      // Ré-injecter immédiatement pour rester sur la même "page"
+      window.history.pushState({ kbg: true }, '');
+
+      // Fermer la couche la plus haute, par ordre de priorité
+      if (showDrawer)      { setShowDrawer(false);     return; }
+      if (editingGame)     { setEditingGame(null);     return; }
+      if (showSearch)      { setShowSearch(false); setSearchTargetCol(null); return; }
+      if (showNewBoard)    { setShowNewBoard(false);   return; }
+      if (showBoardSearch) { setShowBoardSearch(false); return; }
+      if (showAdmin)       { setShowAdmin(false);      return; }
+      if (showProfile)     { setShowProfile(false);    return; }
+      if (showAppInfo)     { setShowAppInfo(false);    return; }
+      if (selectedGame)    { setSelectedGame(null); setSelectedGameDefaultTab('infos'); return; }
+      if (gameInfo)        { setGameInfo(null);        return; }
+      if (publicBoardMode) { setPublicBoardMode(null); setShowHome(true); setColumns([]); setGames([]); return; }
+      if (activeBoardId)   { setActiveBoardId(null); setShowHome(true); setColumns([]); setGames([]); setGameInfo(null); return; }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [showDrawer, editingGame, showSearch, showNewBoard, showBoardSearch, showAdmin, showProfile, showAppInfo, selectedGame, gameInfo, publicBoardMode, activeBoardId]);
+
   // Sync columns whenever activeBoardId OR boards changes (avoids race where boards loads after activeBoardId effect)
   useEffect(() => {
     if (!activeBoardId) return;
@@ -1200,7 +1249,11 @@ export default function App() {
           }}>{label}</button>
         ))}
       </div>
-      {/* Contenu */}
+      {/* Contenu — swipe gauche/droite pour changer d'onglet */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+        onTouchStart={handleMobileTouchStart}
+        onTouchEnd={handleMobileTouchEnd}
+      >
       {mobileHomeTab === 'deadlines' && (
         <div style={{ flex: 1, overflowY: 'auto', padding: '20px 14px' }}>
           <DeadlinePanel token={token} onOpenTask={handleDeadlineOpen} refreshKey={deadlineRefreshKey} hiddenDeadlineIds={hiddenDeadlineIds} showHiddenDeadlines={showHiddenDeadlines} onHideDeadline={hideDeadline} onUnhideDeadline={unhideDeadline} onToggleShowHidden={() => setShowHiddenDeadlines(v => !v)} />
@@ -1212,6 +1265,7 @@ export default function App() {
           <UpcomingPanel token={token} />
         </div>
       )}
+      </div>
     </div>
   );
 

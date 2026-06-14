@@ -1,13 +1,36 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import GameCard from './GameCard.jsx';
 
 export default function MobileBoard({ columns, byColumn, onCardClick, onArchiveGame, onUnarchiveGame, onDeleteGame, onEditGame, isTaskBoard, onToggleDone, onToggleUrgent, onUpdateAssignees, onClickNotes, genreColors = {}, hiddenCardIds = new Set(), showHiddenCards = false, onHideCard, onUnhideCard }) {
   const [activeColId, setActiveColId] = useState(columns[0]?.id || null);
+  const swipeStartX = useRef(null);
+  const swipeStartY = useRef(null);
 
   // Si la colonne active a disparu (ex: supprimée), prendre la première
   const currentColId = columns.find(c => c.id === activeColId)?.id || columns[0]?.id || null;
+  const currentColIndex = columns.findIndex(c => c.id === currentColId);
   const allGames = byColumn[currentColId] || [];
   const games = allGames.filter(g => showHiddenCards ? true : !hiddenCardIds.has(String(g.appid)));
+
+  const handleTouchStart = (e) => {
+    swipeStartX.current = e.touches[0].clientX;
+    swipeStartY.current = e.touches[0].clientY;
+  };
+
+  const handleTouchEnd = (e) => {
+    if (swipeStartX.current === null) return;
+    const deltaX = e.changedTouches[0].clientX - swipeStartX.current;
+    const deltaY = e.changedTouches[0].clientY - swipeStartY.current;
+    swipeStartX.current = null;
+    swipeStartY.current = null;
+    // Only trigger if horizontal gesture (more X than Y) and above threshold
+    if (Math.abs(deltaX) < 50 || Math.abs(deltaX) < Math.abs(deltaY)) return;
+    if (deltaX < 0 && currentColIndex < columns.length - 1) {
+      setActiveColId(columns[currentColIndex + 1].id);
+    } else if (deltaX > 0 && currentColIndex > 0) {
+      setActiveColId(columns[currentColIndex - 1].id);
+    }
+  };
 
   if (columns.length === 0) {
     return (
@@ -63,10 +86,13 @@ export default function MobileBoard({ columns, byColumn, onCardClick, onArchiveG
       </div>
 
       {/* Liste de jeux */}
-      <div style={{
-        flex: 1, overflowY: 'auto', padding: '10px 12px',
-        display: 'flex', flexDirection: 'column', gap: 8,
-      }}>
+      <div
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        style={{
+          flex: 1, overflowY: 'auto', padding: '10px 12px',
+          display: 'flex', flexDirection: 'column', gap: 8,
+        }}>
         {games.length === 0 && (
           <div style={{
             textAlign: 'center', color: 'var(--text-muted)', fontSize: 13,
