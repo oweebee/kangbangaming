@@ -933,15 +933,15 @@ export default function App() {
   };
 
   const archiveGame = async (appid) => {
-    const boardApi = getBoardApi();
-    await fetch(`${boardApi}/games/${appid}`, { method: 'PATCH', headers: authHeaders(token), body: JSON.stringify({ archived: true }) });
     setGames(prev => prev.map(g => g.appid === appid ? { ...g, archived: true } : g));
+    const boardApi = getBoardApi();
+    fetch(`${boardApi}/games/${appid}`, { method: 'PATCH', headers: authHeaders(token), body: JSON.stringify({ archived: true }) });
   };
 
   const unarchiveGame = async (appid) => {
-    const boardApi = getBoardApi();
-    await fetch(`${boardApi}/games/${appid}`, { method: 'PATCH', headers: authHeaders(token), body: JSON.stringify({ archived: false }) });
     setGames(prev => prev.map(g => g.appid === appid ? { ...g, archived: false } : g));
+    const boardApi = getBoardApi();
+    fetch(`${boardApi}/games/${appid}`, { method: 'PATCH', headers: authHeaders(token), body: JSON.stringify({ archived: false }) });
   };
 
   const reorderGamesInColumn = useCallback(async (colId, orderedAppids) => {
