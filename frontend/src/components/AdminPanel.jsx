@@ -40,6 +40,7 @@ export default function AdminPanel({ token, currentUser, onClose }) {
   const [settings, setSettings] = useState(null);
   const [settingsSaving, setSettingsSaving] = useState(false);
   const [discordUrl, setDiscordUrl] = useState('');
+  const [discordIconUrl, setDiscordIconUrl] = useState('');
   const [discordSaving, setDiscordSaving] = useState(false);
   const [discordMsg, setDiscordMsg] = useState('');
 
@@ -85,6 +86,7 @@ export default function AdminPanel({ token, currentUser, onClose }) {
       .then(r => r.json()).then(d => {
         setSettings(d);
         setDiscordUrl(d.discordUrl || '');
+        setDiscordIconUrl(d.discordIconUrl || '');
       }).catch(() => {});
   }, [tab]);
 
@@ -129,7 +131,7 @@ export default function AdminPanel({ token, currentUser, onClose }) {
   async function saveDiscord() {
     setDiscordSaving(true); setDiscordMsg('');
     try {
-      const res = await fetch(`${API}/admin/settings`, { method: 'PATCH', headers: h, body: JSON.stringify({ discordUrl: discordUrl.trim() }) });
+      const res = await fetch(`${API}/admin/settings`, { method: 'PATCH', headers: h, body: JSON.stringify({ discordUrl: discordUrl.trim(), discordIconUrl: discordIconUrl.trim() }) });
       if (res.ok) { setSettings(await res.json()); setDiscordMsg(t('admin.discord_saved')); setTimeout(() => setDiscordMsg(''), 2500); }
     } finally { setDiscordSaving(false); }
   }
@@ -380,15 +382,25 @@ export default function AdminPanel({ token, currentUser, onClose }) {
               <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>{t('admin.discord_title')}</div>
                 <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {/* Lien serveur */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                     <label style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>{t('admin.discord_url')}</label>
+                    <input value={discordUrl} onChange={e => setDiscordUrl(e.target.value)} placeholder="https://discord.gg/xxxxxx"
+                      style={{ padding: '7px 10px', background: 'var(--surface1)', border: '1px solid var(--border)', borderRadius: 7, color: 'var(--text)', fontSize: 13, outline: 'none' }} />
+                    <div style={{ fontSize: 10, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+                      Lien d'invitation pour le bouton Discord. Mettre un lien <strong style={{ color: 'var(--text)' }}>discord.gg/xxx</strong> permet de récupérer l'icône automatiquement.
+                    </div>
+                  </div>
+                  {/* Icône — auto-remplie ou saisie manuelle */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <label style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>URL de l'icône <span style={{ opacity: 0.55, fontWeight: 400 }}>(auto ou manuelle)</span></label>
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                      <input value={discordUrl} onChange={e => setDiscordUrl(e.target.value)} placeholder="https://discord.gg/xxxxxx"
-                        style={{ flex: 1, padding: '7px 10px', background: 'var(--surface1)', border: '1px solid var(--border)', borderRadius: 7, color: 'var(--text)', fontSize: 13, outline: 'none' }} />
-                      {settings?.discordIconUrl && <img src={settings.discordIconUrl} alt="" style={{ width: 32, height: 32, borderRadius: '50%', border: '2px solid var(--border)', flexShrink: 0 }} onError={e => e.target.style.display = 'none'} />}
+                      <input value={discordIconUrl} onChange={e => setDiscordIconUrl(e.target.value)} placeholder="https://cdn.discordapp.com/icons/…/….webp"
+                        style={{ flex: 1, padding: '7px 10px', background: 'var(--surface1)', border: '1px solid var(--border)', borderRadius: 7, color: 'var(--text)', fontSize: 12, outline: 'none' }} />
+                      {discordIconUrl && <img src={discordIconUrl} alt="" style={{ width: 32, height: 32, borderRadius: '50%', border: '2px solid var(--border)', flexShrink: 0, objectFit: 'cover' }} onError={e => e.target.style.display = 'none'} />}
                     </div>
                     <div style={{ fontSize: 10, color: 'var(--text-muted)', lineHeight: 1.5 }}>
-                      L'icône du serveur est récupérée automatiquement depuis le lien d'invitation.
+                      Remplie auto si lien d'invitation fourni. Sinon, colle l'URL directe de l'icône Discord (clic droit → Copier l'adresse).
                     </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

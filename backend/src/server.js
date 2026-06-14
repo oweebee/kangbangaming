@@ -856,11 +856,13 @@ app.patch('/api/admin/settings', requireAdmin, async (req, res) => {
     updated.discordUrl = url;
 
     // Résolution automatique de l'icône depuis l'API publique Discord
+    // Fonctionne uniquement avec un lien d'invitation (discord.gg/xxx ou discord.com/invite/xxx)
+    // Les liens de channel (/channels/...) ne permettent pas de récupérer l'icône sans bot token.
     if (url) {
       try {
-        const match = url.match(/discord(?:\.gg|\.com\/invite)\/([a-zA-Z0-9-]+)/);
-        if (match) {
-          const code = match[1];
+        const inviteMatch = url.match(/discord(?:\.gg|(?:app)?\.com\/invite)\/([a-zA-Z0-9-]+)/);
+        if (inviteMatch) {
+          const code = inviteMatch[1];
           const r = await fetch(`https://discord.com/api/v10/invites/${code}`);
           if (r.ok) {
             const data = await r.json();
@@ -869,11 +871,17 @@ app.patch('/api/admin/settings', requireAdmin, async (req, res) => {
             }
           }
         }
+        // Si lien de channel ou autre format : icône non modifiée (conserve la valeur existante ou celle du champ discordIconUrl)
       } catch {
-        // échec silencieux — pas d'icône
+        // échec silencieux
       }
     } else {
       updated.discordIconUrl = '';
+    }
+
+    // Champ icône manuel : écrase l'auto-résolution si fourni explicitement
+    if ('discordIconUrl' in req.body) {
+      updated.discordIconUrl = String(req.body.discordIconUrl || '').trim();
     }
   }
 
