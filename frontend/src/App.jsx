@@ -724,7 +724,7 @@ export default function App() {
       el.removeEventListener('touchmove',  onMove);
       el.removeEventListener('touchend',   onEnd);
     };
-  }, []); // refs handle dynamic values — no re-attach needed
+  }, [isMobile]); // re-attach when mobile layout mounts (ref is null until then)
 
   // ── Bouton retour Android / geste retour mobile ──────────────────────────
   useEffect(() => {
