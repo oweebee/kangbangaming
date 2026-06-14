@@ -96,6 +96,7 @@ export default function ProfilePage({ token, currentUser, onClose, onSaveSteam }
   }
 
   const hasSteam = !!savedSteamId;
+  const isSteamAuth = profile?.steamAuth === true;
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,.7)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
@@ -117,6 +118,14 @@ export default function ProfilePage({ token, currentUser, onClose, onSaveSteam }
           </div>
           {(steamPreview?.personaName || profile?.steamPersonaName) && (
             <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>@{profile?.username || currentUser.username}</div>
+          )}
+          {profile?.steamAuth && (
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 8, background: 'rgba(28,58,89,0.7)', border: '1px solid rgba(71,167,245,0.35)', borderRadius: 20, padding: '3px 10px' }}>
+              <svg viewBox="0 0 496 512" xmlns="http://www.w3.org/2000/svg" style={{ width: 10, height: 10, fill: '#47a7f5' }}>
+                <path d="M496 256c0 137-111.2 248-248.4 248-113.8 0-209.7-76.3-239-180.4l95.2 39.3c6.4 32.1 34.9 56.4 68.9 56.4 38.2 0 69.1-31.1 68.9-69.3l84.5-60.2c52.1 1.3 95.8-40.9 95.8-93.5 0-51.6-42-93.5-93.7-93.5s-93.7 42-93.7 93.5v1.2L176.6 279c-15.5-.9-30.7 3.4-43.5 12.1L0 236.1C10.2 108.4 117.1 8 247.6 8 384.8 8 496 119 496 256z"/>
+              </svg>
+              <span style={{ fontSize: 10, color: '#47a7f5', fontWeight: 700, letterSpacing: '0.04em' }}>Connexion Steam</span>
+            </div>
           )}
         </div>
 
@@ -152,15 +161,17 @@ export default function ProfilePage({ token, currentUser, onClose, onSaveSteam }
                       <a href={`https://steamcommunity.com/profiles/${savedSteamId}`} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: 'var(--accent)', textDecoration: 'none' }}>Profil ↗</a>
                       <a href={`https://steamcommunity.com/profiles/${savedSteamId}/games`} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: 'var(--accent)', textDecoration: 'none' }}>Biblio ↗</a>
                     </div>
-                    <button onClick={() => setEditingSteam(true)}
-                      style={{ background: 'var(--surface3)', border: '1px solid var(--border)', borderRadius: 7, padding: '6px 12px', color: 'var(--text-muted)', fontSize: 11, cursor: 'pointer', fontWeight: 600, flexShrink: 0 }}>
-                      ✏ Modifier
-                    </button>
+                    {!isSteamAuth && (
+                      <button onClick={() => setEditingSteam(true)}
+                        style={{ background: 'var(--surface3)', border: '1px solid var(--border)', borderRadius: 7, padding: '6px 12px', color: 'var(--text-muted)', fontSize: 11, cursor: 'pointer', fontWeight: 600, flexShrink: 0 }}>
+                        ✏ Modifier
+                      </button>
+                    )}
                   </div>
                 )}
 
-                {/* Formulaire lier/modifier */}
-                {(!hasSteam || editingSteam) && (
+                {/* Formulaire lier/modifier — caché pour les comptes Steam OpenID */}
+                {!isSteamAuth && (!hasSteam || editingSteam) && (
                   <form onSubmit={handleSaveSteam} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                     <div style={{ background: 'rgba(180,130,0,0.1)', border: '1px solid rgba(200,150,0,0.35)', borderRadius: 9, padding: '10px 12px', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
                       <span style={{ fontSize: 14, flexShrink: 0 }}>⚠️</span>
@@ -225,8 +236,8 @@ export default function ProfilePage({ token, currentUser, onClose, onSaveSteam }
             </>
           )}
 
-          {/* ── Changer mot de passe ── */}
-          <div style={{ marginTop: 20, borderTop: '1px solid var(--border)', paddingTop: 16 }}>
+          {/* ── Changer mot de passe — caché pour les comptes Steam OpenID ── */}
+          {profile && !isSteamAuth && <div style={{ marginTop: 20, borderTop: '1px solid var(--border)', paddingTop: 16 }}>
             <button onClick={() => { setShowPwd(v => !v); setPwdError(''); setPwdSuccess(''); }}
               style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 14px', color: 'var(--text-muted)', fontSize: 12, fontWeight: 600, cursor: 'pointer', width: '100%', textAlign: 'left' }}>
               🔑 {showPwd ? 'Annuler' : 'Changer le mot de passe'}
@@ -252,7 +263,7 @@ export default function ProfilePage({ token, currentUser, onClose, onSaveSteam }
                 </button>
               </form>
             )}
-          </div>
+          </div>}
         </div>
       </div>
     </div>

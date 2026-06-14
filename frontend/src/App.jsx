@@ -281,6 +281,7 @@ export default function App() {
   const [authPage, setAuthPage] = useState('login');
   const [currentUser, setCurrentUser] = useState(null);
   const [token, setToken] = useState(null);
+  const [steamLoginError, setSteamLoginError] = useState('');
 
   // Modals
   const [showAdmin, setShowAdmin] = useState(false);
@@ -408,6 +409,41 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    // Retour depuis Steam OpenID — token dans l'URL
+    const params = new URLSearchParams(window.location.search);
+    const steamToken = params.get('steam_token');
+    const steamError = params.get('steam_error');
+    if (steamToken) {
+      try {
+        const payload = JSON.parse(atob(steamToken.split('.')[1]));
+        const steamUser = { id: payload.id, username: payload.username, role: payload.role };
+        localStorage.setItem('token', steamToken);
+        localStorage.setItem('user', JSON.stringify(steamUser));
+        setCurrentUser(steamUser);
+        setToken(steamToken);
+        window.history.replaceState({}, '', window.location.pathname);
+        // Récupérer steamAvatar + steamPersonaName depuis /api/auth/me
+        fetch('/api/auth/me', { headers: { Authorization: `Bearer ${steamToken}` } })
+          .then(r => r.ok ? r.json() : null)
+          .then(fresh => {
+            if (fresh) {
+              const full = { ...steamUser, steamAvatar: fresh.steamAvatar || null, steamPersonaName: fresh.steamPersonaName || null };
+              setCurrentUser(full);
+              localStorage.setItem('user', JSON.stringify(full));
+            }
+          }).catch(() => {});
+        return;
+      } catch { /* ignore */ }
+    }
+    if (steamError) {
+      setSteamLoginError(
+        steamError === 'suspended' ? 'Ton compte a été suspendu.' :
+        steamError === 'invalid'   ? 'Authentification Steam invalide. Réessaie.' :
+        'Erreur lors de la connexion Steam. Réessaie.'
+      );
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+
     const saved = getSavedAuth();
     if (!saved) return;
     setCurrentUser(saved.user);
@@ -910,7 +946,7 @@ export default function App() {
   // Auth screens
   if (!currentUser) {
     if (authPage === 'register') return <RegisterPage onLogin={handleLogin} onGoLogin={() => setAuthPage('login')} />;
-    return <LoginPage onLogin={handleLogin} onGoRegister={() => setAuthPage('register')} />;
+    return <LoginPage onLogin={handleLogin} onGoRegister={() => setAuthPage('register')} steamError={steamLoginError} />;
   }
 
   const filtered = games.filter(g => g.name?.toLowerCase().includes(search.toLowerCase()));

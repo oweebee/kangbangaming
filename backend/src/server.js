@@ -69,7 +69,7 @@ function getUserSteamCreds(userId) {
   };
 }
 function userPublicInfo(u) {
-  return { id: u.id, username: u.username, role: u.role, status: u.status || 'active', createdAt: u.createdAt };
+  return { id: u.id, username: u.username, role: u.role, status: u.status || 'active', createdAt: u.createdAt, steamAuth: u.steamAuth || false, steamAvatar: u.steamAvatar || null, steamPersonaName: u.steamPersonaName || null };
 }
 
 // ── Startup ───────────────────────────────────────────────────────────────────
@@ -116,6 +116,94 @@ function requireAdmin(req, res, next) {
   });
 }
 
+// ── Steam OpenID login ────────────────────────────────────────────────────────
+
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+const BACKEND_URL  = process.env.BACKEND_URL  || `http://localhost:${process.env.PORT || 3001}`;
+
+// 1. Redirige vers Steam pour authentification
+app.get('/api/auth/steam', (req, res) => {
+  const params = new URLSearchParams({
+    'openid.ns':         'http://specs.openid.net/auth/2.0',
+    'openid.mode':       'checkid_setup',
+    'openid.return_to':  `${BACKEND_URL}/api/auth/steam/callback`,
+    'openid.realm':      FRONTEND_URL,
+    'openid.identity':   'http://specs.openid.net/auth/2.0/identifier_select',
+    'openid.claimed_id': 'http://specs.openid.net/auth/2.0/identifier_select',
+  });
+  res.redirect(`https://steamcommunity.com/openid/login?${params}`);
+});
+
+// 2. Steam renvoie ici après authentification
+app.get('/api/auth/steam/callback', async (req, res) => {
+  try {
+    // Vérification auprès de Steam
+    const verifyParams = new URLSearchParams({ ...req.query, 'openid.mode': 'check_authentication' });
+    const verifyRes = await fetch('https://steamcommunity.com/openid/login', {
+      method: 'POST',
+      body: verifyParams.toString(),
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    });
+    const text = await verifyRes.text();
+    if (!text.includes('is_valid:true')) return res.redirect(`${FRONTEND_URL}?steam_error=invalid`);
+
+    // Extraire steamId depuis openid.claimed_id (format: .../openid/id/76561198XXXXXXXXX)
+    const steamId = req.query['openid.claimed_id']?.match(/(\d{17})$/)?.[1];
+    if (!steamId) return res.redirect(`${FRONTEND_URL}?steam_error=no_steamid`);
+
+    // Récupérer infos Steam
+    let steamAvatar = null, steamPersonaName = null;
+    if (GLOBAL_STEAM_API_KEY) {
+      try {
+        const data = await steamFetch(`https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=${GLOBAL_STEAM_API_KEY}&steamids=${steamId}`);
+        const player = data.response?.players?.[0];
+        if (player) { steamAvatar = player.avatarmedium || player.avatar || null; steamPersonaName = player.personaname || null; }
+      } catch { /* pas critique */ }
+    }
+
+    const users = readUsers();
+    let user = users.find(u => u.steamId === steamId);
+
+    if (user) {
+      // User existant — mettre à jour avatar/persona si changé
+      const idx = users.indexOf(user);
+      users[idx] = { ...user, steamAvatar, steamPersonaName };
+      writeUsers(users);
+      user = users[idx];
+    } else {
+      // Nouveau user — créer un compte automatiquement
+      // Username basé sur le persona Steam, unique
+      let base = (steamPersonaName || `steam_${steamId.slice(-6)}`).replace(/[^a-zA-Z0-9_]/g, '_').slice(0, 20);
+      if (base.length < 3) base = `user_${steamId.slice(-6)}`;
+      let username = base;
+      let n = 1;
+      while (users.find(u => u.username === username)) { username = `${base}${n++}`; }
+
+      user = {
+        id: `user_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        username,
+        passwordHash: null, // compte Steam-only, pas de mot de passe
+        role: 'user',
+        status: 'active', // approuvé automatiquement via Steam
+        steamId,
+        steamAvatar,
+        steamPersonaName,
+        steamAuth: true,
+        createdAt: new Date().toISOString(),
+      };
+      writeUsers([...users, user]);
+    }
+
+    if ((user.status || 'active') === 'suspended') return res.redirect(`${FRONTEND_URL}?steam_error=suspended`);
+
+    const token = jwt.sign({ id: user.id, username: user.username, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
+    res.redirect(`${FRONTEND_URL}?steam_token=${token}`);
+  } catch (e) {
+    console.error('[steam/callback]', e);
+    res.redirect(`${FRONTEND_URL}?steam_error=server`);
+  }
+});
+
 // ── Auth routes ───────────────────────────────────────────────────────────────
 
 app.post('/api/auth/login', async (req, res) => {
@@ -124,6 +212,7 @@ app.post('/api/auth/login', async (req, res) => {
   const users = readUsers();
   const user = users.find(u => u.username === username);
   if (!user) return res.status(401).json({ error: 'Invalid credentials' });
+  if (!user.passwordHash) return res.status(401).json({ error: 'steam_only', message: 'Ce compte utilise la connexion Steam. Utilise le bouton "Se connecter avec Steam".' });
   if (!await bcrypt.compare(password, user.passwordHash)) return res.status(401).json({ error: 'Invalid credentials' });
   if ((user.status || 'active') === 'pending') return res.status(403).json({ error: 'pending', message: 'Ton compte est en attente de validation par un admin.' });
   if ((user.status || 'active') === 'suspended') return res.status(403).json({ error: 'suspended', message: 'Ton compte a été suspendu.' });
@@ -159,7 +248,7 @@ app.post('/api/auth/register', async (req, res) => {
 app.get('/api/auth/me', requireAuth, (req, res) => {
   const user = readUsers().find(u => u.id === req.user.id);
   if (!user) return res.status(404).json({ error: 'User not found' });
-  res.json({ id: user.id, username: user.username, role: user.role, steamAvatar: user.steamAvatar || null, steamPersonaName: user.steamPersonaName || null });
+  res.json({ id: user.id, username: user.username, role: user.role, steamAvatar: user.steamAvatar || null, steamPersonaName: user.steamPersonaName || null, steamAuth: user.steamAuth || false });
 });
 
 // ── Users list (for assignees feature) ───────────────────────────────────────
@@ -338,6 +427,7 @@ app.get('/api/user/profile', requireAuth, (req, res) => {
       steamId: user.steamId || null,
       steamAvatar: user.steamAvatar || null,
       steamPersonaName: user.steamPersonaName || null,
+      steamAuth: user.steamAuth || false,
       stats: { boardCount, publicBoardCount, totalGames, customCards, totalColumns },
     });
   } catch (err) {
@@ -385,6 +475,7 @@ app.patch('/api/user/password', requireAuth, async (req, res) => {
   const users = readUsers();
   const idx = users.findIndex(u => u.id === req.user.id);
   if (idx === -1) return res.status(404).json({ error: 'User not found' });
+  if (!users[idx].passwordHash) return res.status(400).json({ error: 'Compte Steam-only — pas de mot de passe à changer.' });
   const ok = await bcrypt.compare(currentPassword, users[idx].passwordHash);
   if (!ok) return res.status(403).json({ error: 'Mot de passe actuel incorrect' });
   users[idx].passwordHash = await bcrypt.hash(newPassword, 10);
