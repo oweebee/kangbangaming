@@ -320,6 +320,7 @@ app.get('/api/deadlines', requireAuth, (req, res) => {
       const urgentOnly = !hasDates && !!game.urgent && !game.done && !game.archived;
       if (!hasDates && !urgentOnly) continue;
       if (game.archived) continue;
+      if (game.done) continue; // une tâche terminée ne doit jamais apparaître dans les échéances
       results.push({
         boardId, boardName, boardIcon, boardHeaderImg,
         isOwn, ownerUsername: isOwn ? null : (userMap.get(ownerId) || 'unknown'),

@@ -970,6 +970,10 @@ export default function App() {
       body: JSON.stringify(fields),
     });
     setGames(prev => prev.map(g => g.appid === appid ? { ...g, ...fields } : g));
+    // Rafraîchir le panel Échéances si un champ qui l'affecte a changé
+    if ('done' in fields || 'urgent' in fields || 'dueDate' in fields || 'startDate' in fields || 'endDate' in fields) {
+      setDeadlineRefreshKey(k => k + 1);
+    }
   };
   // Open card directly on the Notes tab (from badge click)
   const handleCardNotesClick = (game) => {
