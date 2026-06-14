@@ -84,13 +84,11 @@ export default function NotesSection({ notes: externalNotes = [], onSave, onSoft
       try {
         await onSoftDeleteNote(id);
         onSave?.(updated);
-        alert('✓ Endpoint dédié OK — noteId: ' + id);
       } catch (e) {
         setNotes(notes);
-        alert('✗ Endpoint dédié ERREUR: ' + e.message + ' — noteId: ' + id);
+        console.error('[NotesSection] soft-delete note error:', e);
       }
     } else {
-      alert('⚠ onSoftDeleteNote absent, fallback push — noteId: ' + id);
       push(updated);
     }
   };
@@ -215,7 +213,7 @@ export default function NotesSection({ notes: externalNotes = [], onSave, onSoft
                         </svg>
                       </button>
                       <button
-                        onClick={e => { e.stopPropagation(); if (window.confirm('DBG: ' + t('notes.trash_confirm'))) deleteNote(note.id); }}
+                        onClick={e => { e.stopPropagation(); if (window.confirm(t('notes.trash_confirm'))) deleteNote(note.id); }}
                         style={{ background: 'none', border: 'none', color: '#c05050', cursor: 'pointer', opacity: 0.6, padding: '2px 4px', lineHeight: 1, display: 'flex', alignItems: 'center', flexShrink: 0 }}
                         title={t('card.delete')}
                       >

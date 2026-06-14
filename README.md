@@ -16,7 +16,7 @@ Organise ta backlog, suis tes heures de jeu, partage tes boards avec ta communau
 - **Tâches personnalisées** — cartes non-Steam avec types, assignation, notes, échéances
 - **Panneau Échéances** — vue synthétique des dates limites, alertes urgentes
 - **Multi-langue** — interface en français, anglais, espagnol, allemand, russe et chinois (détection auto)
-- **Corbeille des notes** — les notes supprimées sont conservées 30 jours avant suppression définitive ; restauration en un clic depuis l'onglet "Corbeille" du profil. Les admins ont une vue globale et peuvent purger toute la corbeille.
+- **Corbeille** — les cartes archivées supprimées et les notes effacées sont conservées 30 jours avant suppression définitive ; restauration en un clic depuis l'onglet "Corbeille" du profil. Les admins ont une vue globale de toutes les suppressions et peuvent purger.
 - **Admin** — gestion des utilisateurs, création de comptes, config Discord, approbation
 - **Mobile** — interface adaptée, onglets swipables, vue compacte, slider home
 - **APK Android** — application WebView sideloadable, URL configurable au premier lancement

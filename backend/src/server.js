@@ -598,16 +598,31 @@ function scanUserTrash(userId, userBoards, saveIfChanged = true) {
   const trash = [];
   let changed = false;
   for (const [boardId, board] of Object.entries(userBoards)) {
-    for (const [gameId, game] of Object.entries(board.games || {})) {
+    const gameEntries = Object.entries(board.games || {});
+    for (const [gameId, game] of gameEntries) {
+      // ── Cartes soft-deletées ──
+      if (game.deletedAt) {
+        const age = now - new Date(game.deletedAt).getTime();
+        if (age > TRASH_TTL_MS) { delete board.games[gameId]; changed = true; continue; }
+        const daysLeft = Math.max(1, Math.ceil((TRASH_TTL_MS - age) / 86400000));
+        trash.push({
+          type: 'game', userId, boardId, boardName: board.name || boardId,
+          gameId, gameName: game.name || gameId,
+          gameIcon: game.header_img || game.icon_img || null,
+          deletedAt: game.deletedAt, daysLeft,
+        });
+        continue; // carte supprimée → ne pas scanner ses notes
+      }
+      // ── Notes soft-deletées dans la carte ──
       if (!game.notes) continue;
       const kept = [];
       for (const note of game.notes) {
         if (!note.deletedAt) { kept.push(note); continue; }
         const age = now - new Date(note.deletedAt).getTime();
-        if (age > TRASH_TTL_MS) { changed = true; continue; } // expiré → suppression définitive
+        if (age > TRASH_TTL_MS) { changed = true; continue; }
         kept.push(note);
         const daysLeft = Math.max(1, Math.ceil((TRASH_TTL_MS - age) / 86400000));
-        trash.push({ userId, boardId, boardName: board.name || boardId, gameId, gameName: game.name || gameId, gameIcon: game.icon_img || null, ...note, daysLeft });
+        trash.push({ type: 'note', userId, boardId, boardName: board.name || boardId, gameId, gameName: game.name || gameId, gameIcon: game.icon_img || null, ...note, daysLeft });
       }
       if (kept.length !== game.notes.length) { game.notes = kept; changed = true; }
     }
@@ -670,12 +685,40 @@ app.delete('/api/trash/notes/item', requireAuth, (req, res) => {
   res.json({ ok: true });
 });
 
-// DELETE /api/trash/notes — vider sa propre corbeille
+// POST /api/trash/games/restore — restaurer une carte depuis la corbeille
+app.post('/api/trash/games/restore', requireAuth, (req, res) => {
+  const { boardId, gameId } = req.body;
+  if (!boardId || !gameId) return res.status(400).json({ error: 'Missing fields' });
+  const userBoards = getUserBoards(req.user.id);
+  const game = (userBoards[boardId]?.games || {})[gameId];
+  if (!game || !game.deletedAt) return res.status(404).json({ error: 'Game not found in trash' });
+  delete game.deletedAt;
+  delete game.archived; // restaurée → plus archivée
+  setUserBoards(req.user.id, userBoards);
+  res.json({ ok: true });
+});
+
+// DELETE /api/trash/games/item — suppression définitive d'une carte
+app.delete('/api/trash/games/item', requireAuth, (req, res) => {
+  const { boardId, gameId } = req.body;
+  if (!boardId || !gameId) return res.status(400).json({ error: 'Missing fields' });
+  const userBoards = getUserBoards(req.user.id);
+  const board = userBoards[boardId];
+  if (!board || !(board.games || {})[gameId]?.deletedAt) return res.status(404).json({ error: 'Game not found in trash' });
+  delete board.games[gameId];
+  setUserBoards(req.user.id, userBoards);
+  res.json({ ok: true });
+});
+
+// DELETE /api/trash/notes — vider toute la corbeille (cartes + notes)
 app.delete('/api/trash/notes', requireAuth, (req, res) => {
   const userBoards = getUserBoards(req.user.id);
-  for (const board of Object.values(userBoards))
-    for (const game of Object.values(board.games || {}))
+  for (const board of Object.values(userBoards)) {
+    for (const [gameId, game] of Object.entries(board.games || {})) {
+      if (game.deletedAt) { delete board.games[gameId]; continue; }
       if (game.notes) game.notes = game.notes.filter(n => !n.deletedAt);
+    }
+  }
   setUserBoards(req.user.id, userBoards);
   res.json({ ok: true });
 });
@@ -722,13 +765,46 @@ app.delete('/api/admin/trash/item', requireAdmin, (req, res) => {
   res.json({ ok: true });
 });
 
+// POST /api/admin/trash/games/restore — restaurer une carte (admin, n'importe quel user)
+app.post('/api/admin/trash/games/restore', requireAdmin, (req, res) => {
+  const { userId, boardId, gameId } = req.body;
+  if (!userId || !boardId || !gameId) return res.status(400).json({ error: 'Missing fields' });
+  const userBoards = getUserBoards(userId);
+  const game = (userBoards[boardId]?.games || {})[gameId];
+  if (!game) return res.status(404).json({ error: 'Game not found' });
+  delete game.deletedAt;
+  delete game.archived;
+  setUserBoards(userId, userBoards);
+  res.json({ ok: true });
+});
+
+// DELETE /api/admin/trash/games/item — suppression définitive d'une carte (admin)
+app.delete('/api/admin/trash/games/item', requireAdmin, (req, res) => {
+  const { userId, boardId, gameId } = req.body;
+  if (!userId || !boardId || !gameId) return res.status(400).json({ error: 'Missing fields' });
+  const userBoards = getUserBoards(userId);
+  const board = userBoards[boardId];
+  if (!board) return res.status(404).json({ error: 'Board not found' });
+  delete board.games[gameId];
+  setUserBoards(userId, userBoards);
+  res.json({ ok: true });
+});
+
 // DELETE /api/admin/trash — purger TOUTE la corbeille (tous les users)
 app.delete('/api/admin/trash', requireAdmin, (req, res) => {
   const allBoards = readBoards();
-  for (const userBoards of Object.values(allBoards))
-    for (const board of Object.values(userBoards))
-      for (const game of Object.values(board.games || {}))
+  for (const userBoards of Object.values(allBoards)) {
+    for (const board of Object.values(userBoards)) {
+      // Supprimer les cartes en corbeille
+      for (const gameId of Object.keys(board.games || {})) {
+        if (board.games[gameId].deletedAt) delete board.games[gameId];
+      }
+      // Supprimer les notes en corbeille
+      for (const game of Object.values(board.games || {})) {
         if (game.notes) game.notes = game.notes.filter(n => !n.deletedAt);
+      }
+    }
+  }
   writeBoards(allBoards);
   res.json({ ok: true });
 });
@@ -1555,7 +1631,7 @@ app.delete('/api/public/boards/:boardId/columns/:colId', requireAuth, (req, res)
 app.get('/api/public/boards/:boardId/games', requireAuth, (req, res) => {
   const f = findPublicBoard(req.params.boardId);
   if (!f) return res.status(404).json({ error: 'Not found' });
-  res.json(Object.values(f.board.games || {}));
+  res.json(Object.values(f.board.games || {}).filter(g => !g.deletedAt));
 });
 
 app.post('/api/public/boards/:boardId/games', requireAuth, (req, res) => {
@@ -1766,7 +1842,8 @@ app.delete('/api/boards/:boardId/columns/:colId', requireAuth, (req, res) => {
 app.get('/api/boards/:boardId/games', requireAuth, (req, res) => {
   const board = getUserBoards(req.user.id)[req.params.boardId];
   if (!board) return res.status(404).json({ error: 'Board not found' });
-  res.json(Object.values(board.games || {}));
+  // Exclure les cartes soft-deletées (dans la corbeille)
+  res.json(Object.values(board.games || {}).filter(g => !g.deletedAt));
 });
 
 app.post('/api/boards/:boardId/games', requireAuth, (req, res) => {
@@ -1832,7 +1909,16 @@ app.delete('/api/boards/:boardId/games/:appid', requireAuth, (req, res) => {
   const userBoards = getUserBoards(req.user.id);
   const board = userBoards[req.params.boardId];
   if (!board) return res.status(404).json({ error: 'Board not found' });
-  if (!(board.games || {})[req.params.appid]) return res.status(404).json({ error: 'Game not found' });
+  const game = (board.games || {})[req.params.appid];
+  if (!game) return res.status(404).json({ error: 'Game not found' });
+  if (game.archived) {
+    // Carte archivée → soft-delete (corbeille 30 j)
+    game.deletedAt = new Date().toISOString();
+    setUserBoards(req.user.id, userBoards);
+    console.log(`[soft-delete game] user=${req.user.id} board=${req.params.boardId} game=${req.params.appid}`);
+    return res.json({ ok: true, softDeleted: true, deletedAt: game.deletedAt });
+  }
+  // Non-archivée → suppression définitive
   delete board.games[req.params.appid];
   setUserBoards(req.user.id, userBoards);
   res.json({ ok: true });

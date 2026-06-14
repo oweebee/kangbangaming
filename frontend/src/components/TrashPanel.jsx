@@ -10,15 +10,27 @@ function formatDate(isoStr) {
   } catch { return ''; }
 }
 
+// SVG corbeille propre (outline, style cohérent avec le reste de l'appli)
+function TrashIcon({ size = 11 }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="3 6 5 6 21 6"/>
+      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+      <path d="M10 11v6"/>
+      <path d="M14 11v6"/>
+      <path d="M9 6V4h6v2"/>
+    </svg>
+  );
+}
+
 // Composant réutilisable pour user (isAdmin=false) et admin (isAdmin=true).
-// isAdmin=true : affiche le champ username + utilise les endpoints /api/admin/trash
 export default function TrashPanel({ token, isAdmin = false }) {
   const { t } = useLang();
   const [items, setItems]     = useState([]);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(null);
   const [purging, setPurging] = useState(false);
-  const [acting, setActing]   = useState(new Set()); // noteIds en cours d'action
+  const [acting, setActing]   = useState(new Set());
 
   const baseUrl = isAdmin ? `${API}/admin/trash` : `${API}/trash/notes`;
 
@@ -29,29 +41,45 @@ export default function TrashPanel({ token, isAdmin = false }) {
       const res = await fetch(baseUrl, { headers: { Authorization: `Bearer ${token}` } });
       if (res.ok) {
         const data = await res.json();
-        console.log('[TrashPanel] GET', baseUrl, '→', data.length, 'items', data);
         setItems(data);
       } else {
         setFetchError(`Erreur ${res.status}`);
-        console.error('[TrashPanel] fetch error', res.status);
       }
-    } catch (e) {
+    } catch {
       setFetchError('Erreur réseau');
-      console.error('[TrashPanel] network error', e);
     }
     setLoading(false);
   }
 
   useEffect(() => { load(); }, [token, isAdmin]);
 
-  async function act(noteId, fn) {
-    setActing(prev => new Set([...prev, noteId]));
+  async function act(key, fn) {
+    setActing(prev => new Set([...prev, key]));
     await fn();
-    setActing(prev => { const s = new Set(prev); s.delete(noteId); return s; });
+    setActing(prev => { const s = new Set(prev); s.delete(key); return s; });
     load();
   }
 
-  async function restore(item) {
+  // ── Actions jeu (carte kanban) ─────────────────────────────────────
+  async function restoreGame(item) {
+    const url  = isAdmin ? `${API}/admin/trash/games/restore` : `${API}/trash/games/restore`;
+    const body = isAdmin
+      ? { userId: item.userId, boardId: item.boardId, gameId: item.gameId }
+      : { boardId: item.boardId, gameId: item.gameId };
+    act(item.gameId, () => fetch(url, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body) }));
+  }
+
+  async function permDeleteGame(item) {
+    if (!window.confirm(t('trash.confirm_perm_delete'))) return;
+    const url  = isAdmin ? `${API}/admin/trash/games/item` : `${API}/trash/games/item`;
+    const body = isAdmin
+      ? { userId: item.userId, boardId: item.boardId, gameId: item.gameId }
+      : { boardId: item.boardId, gameId: item.gameId };
+    act(item.gameId, () => fetch(url, { method: 'DELETE', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body) }));
+  }
+
+  // ── Actions note texte ─────────────────────────────────────────────
+  async function restoreNote(item) {
     const url  = isAdmin ? `${API}/admin/trash/restore` : `${API}/trash/notes/restore`;
     const body = isAdmin
       ? { userId: item.userId, boardId: item.boardId, gameId: item.gameId, noteId: item.id }
@@ -59,7 +87,7 @@ export default function TrashPanel({ token, isAdmin = false }) {
     act(item.id, () => fetch(url, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body) }));
   }
 
-  async function permDelete(item) {
+  async function permDeleteNote(item) {
     if (!window.confirm(t('trash.confirm_perm_delete'))) return;
     const url  = isAdmin ? `${API}/admin/trash/item` : `${API}/trash/notes/item`;
     const body = isAdmin
@@ -76,6 +104,7 @@ export default function TrashPanel({ token, isAdmin = false }) {
     setItems([]);
   }
 
+  // ── États vide / chargement / erreur ──────────────────────────────
   if (loading) return (
     <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)', fontSize: 13 }}>
       {t('common.loading')}
@@ -113,95 +142,116 @@ export default function TrashPanel({ token, isAdmin = false }) {
         <div style={{ fontSize: 12, color: 'var(--text-muted)', flex: 1 }}>
           {t('trash.count', { count: items.length })}
         </div>
-        <button
-          onClick={load}
-          title="Rafraîchir"
-          style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 7, padding: '4px 9px', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 13, lineHeight: 1 }}
-        >
+        <button onClick={load} title="Rafraîchir"
+          style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 7, padding: '4px 9px', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 13, lineHeight: 1 }}>
           ⟳
         </button>
-        <button
-          onClick={purgeAll}
-          disabled={purging}
-          style={{
-            background: 'rgba(192,80,80,0.1)', border: '1px solid rgba(192,80,80,0.4)',
-            borderRadius: 7, padding: '5px 12px', cursor: purging ? 'not-allowed' : 'pointer',
-            color: '#d07070', fontSize: 11, fontWeight: 600,
-            opacity: purging ? 0.6 : 1,
-          }}
-        >
+        <button onClick={purgeAll} disabled={purging}
+          style={{ background: 'rgba(192,80,80,0.1)', border: '1px solid rgba(192,80,80,0.4)', borderRadius: 7, padding: '5px 12px', cursor: purging ? 'not-allowed' : 'pointer', color: '#d07070', fontSize: 11, fontWeight: 600, opacity: purging ? 0.6 : 1 }}>
           {purging ? '…' : t('trash.purge_btn')}
         </button>
       </div>
 
-      {/* Liste des notes supprimées */}
+      {/* Liste */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {items.map(item => {
-          const busy = acting.has(item.id);
+          const isGame = item.type === 'game';
+          const key    = isGame ? `game_${item.boardId}_${item.gameId}` : `note_${item.id}_${item.userId || ''}`;
+          const actKey = isGame ? item.gameId : item.id;
+          const busy   = acting.has(actKey);
           const urgent = item.daysLeft <= 3;
+
           return (
-            <div key={item.id + (item.userId || '')} style={{
+            <div key={key} style={{
               background: 'var(--surface2)', border: '1px solid var(--border)',
-              borderRadius: 10, padding: '11px 13px',
-              borderLeft: `3px solid ${urgent ? '#d07070' : 'rgba(192,80,80,0.45)'}`,
+              borderRadius: 10, overflow: 'hidden',
+              borderLeft: `3px solid ${urgent ? '#d07070' : isGame ? 'rgba(100,140,220,0.6)' : 'rgba(192,80,80,0.45)'}`,
               opacity: busy ? 0.55 : 1, transition: 'opacity .15s',
             }}>
-              {/* Contexte : user (admin) + board + jeu */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 7, minWidth: 0 }}>
-                {item.gameIcon && (
-                  <img src={item.gameIcon} alt="" style={{ width: 20, height: 20, borderRadius: 4, objectFit: 'cover', flexShrink: 0 }} />
-                )}
-                <span style={{ fontSize: 11, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>
-                  {isAdmin && item.username && (
-                    <><span style={{ color: 'var(--accent)', fontWeight: 700 }}>@{item.username}</span> · </>
+              {isGame ? (
+                /* ══ Carte jeu (kanban) ══════════════════════════════ */
+                <div>
+                  {/* Bannière */}
+                  {item.gameIcon && (
+                    <div style={{ position: 'relative', height: 56, overflow: 'hidden' }}>
+                      <img src={item.gameIcon} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.5 }} />
+                      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 30%, var(--surface2))' }} />
+                      <span style={{ position: 'absolute', top: 6, left: 9, fontSize: 9, fontWeight: 800, color: '#fff', textShadow: '0 1px 3px #000', letterSpacing: '0.1em', background: 'rgba(0,0,0,0.45)', borderRadius: 3, padding: '1px 5px' }}>
+                        CORBEILLE
+                      </span>
+                    </div>
                   )}
-                  {item.boardName} · {item.gameName}
-                </span>
-                {/* Jours restants */}
-                <span style={{
-                  flexShrink: 0, fontSize: 10, fontWeight: urgent ? 700 : 400,
-                  color: urgent ? '#d07070' : 'var(--text-muted)',
-                }}>
-                  {t('trash.days_left', { days: item.daysLeft })}
-                </span>
-              </div>
-
-              {/* Texte de la note */}
-              <div style={{ fontSize: 12, color: 'var(--text)', lineHeight: 1.55, marginBottom: 8, wordBreak: 'break-word' }}>
-                {item.text.length > 220 ? item.text.slice(0, 220) + '…' : item.text}
-              </div>
-
-              {/* Footer : date + actions */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                <span style={{ fontSize: 10, color: 'var(--text-muted)', flex: 1 }}>
-                  {t('trash.deleted_on')} {formatDate(item.deletedAt)}
-                  {item.createdAt && (
-                    <span style={{ marginLeft: 6, opacity: 0.6 }}>· {t('trash.created_on')} {formatDate(item.createdAt)}</span>
-                  )}
-                </span>
-                <button
-                  onClick={() => restore(item)}
-                  disabled={busy}
-                  style={{
-                    background: 'rgba(61,184,106,0.1)', border: '1px solid rgba(61,184,106,0.4)',
-                    borderRadius: 6, padding: '4px 10px', cursor: busy ? 'not-allowed' : 'pointer',
-                    color: '#3db86a', fontSize: 11, fontWeight: 600, flexShrink: 0,
-                  }}
-                >
-                  {t('trash.restore')}
-                </button>
-                <button
-                  onClick={() => permDelete(item)}
-                  disabled={busy}
-                  style={{
-                    background: 'rgba(192,80,80,0.08)', border: '1px solid rgba(192,80,80,0.3)',
-                    borderRadius: 6, padding: '4px 10px', cursor: busy ? 'not-allowed' : 'pointer',
-                    color: '#d07070', fontSize: 11, fontWeight: 600, flexShrink: 0,
-                  }}
-                >
-                  {t('trash.perm_delete')}
-                </button>
-              </div>
+                  <div style={{ padding: '9px 13px 11px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 7 }}>
+                      {!item.gameIcon && (
+                        <div style={{ width: 28, height: 28, borderRadius: 6, background: 'rgba(100,140,220,0.15)', border: '1px solid rgba(100,140,220,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: 'rgba(100,140,220,0.7)' }}>
+                          <TrashIcon size={13} />
+                        </div>
+                      )}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {item.gameName}
+                        </div>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
+                          {isAdmin && item.username && <span style={{ color: 'var(--accent)', fontWeight: 700 }}>@{item.username} · </span>}
+                          {item.boardName}
+                        </div>
+                      </div>
+                      <span style={{ flexShrink: 0, fontSize: 10, fontWeight: urgent ? 700 : 400, color: urgent ? '#d07070' : 'var(--text-muted)' }}>
+                        {t('trash.days_left', { days: item.daysLeft })}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 8 }}>
+                      {t('trash.deleted_on')} {formatDate(item.deletedAt)}
+                    </div>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button onClick={() => restoreGame(item)} disabled={busy}
+                        style={{ flex: 1, background: 'rgba(61,184,106,0.1)', border: '1px solid rgba(61,184,106,0.4)', borderRadius: 6, padding: '5px 0', cursor: busy ? 'not-allowed' : 'pointer', color: '#3db86a', fontSize: 11, fontWeight: 600 }}>
+                        {t('trash.restore')}
+                      </button>
+                      <button onClick={() => permDeleteGame(item)} disabled={busy}
+                        style={{ background: 'rgba(192,80,80,0.08)', border: '1px solid rgba(192,80,80,0.3)', borderRadius: 6, padding: '5px 10px', cursor: busy ? 'not-allowed' : 'pointer', color: '#d07070', fontSize: 11, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <TrashIcon size={10} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* ══ Note texte ══════════════════════════════════════ */
+                <div style={{ padding: '11px 13px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 7, minWidth: 0 }}>
+                    {item.gameIcon && (
+                      <img src={item.gameIcon} alt="" style={{ width: 20, height: 20, borderRadius: 4, objectFit: 'cover', flexShrink: 0 }} />
+                    )}
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>
+                      {isAdmin && item.username && <><span style={{ color: 'var(--accent)', fontWeight: 700 }}>@{item.username}</span> · </>}
+                      {item.boardName} · {item.gameName}
+                    </span>
+                    <span style={{ flexShrink: 0, fontSize: 10, fontWeight: urgent ? 700 : 400, color: urgent ? '#d07070' : 'var(--text-muted)' }}>
+                      {t('trash.days_left', { days: item.daysLeft })}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--text)', lineHeight: 1.55, marginBottom: 8, wordBreak: 'break-word' }}>
+                    {item.text?.length > 220 ? item.text.slice(0, 220) + '…' : item.text}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 10, color: 'var(--text-muted)', flex: 1 }}>
+                      {t('trash.deleted_on')} {formatDate(item.deletedAt)}
+                      {item.createdAt && (
+                        <span style={{ marginLeft: 6, opacity: 0.6 }}>· {t('trash.created_on')} {formatDate(item.createdAt)}</span>
+                      )}
+                    </span>
+                    <button onClick={() => restoreNote(item)} disabled={busy}
+                      style={{ background: 'rgba(61,184,106,0.1)', border: '1px solid rgba(61,184,106,0.4)', borderRadius: 6, padding: '4px 10px', cursor: busy ? 'not-allowed' : 'pointer', color: '#3db86a', fontSize: 11, fontWeight: 600, flexShrink: 0 }}>
+                      {t('trash.restore')}
+                    </button>
+                    <button onClick={() => permDeleteNote(item)} disabled={busy}
+                      style={{ background: 'rgba(192,80,80,0.08)', border: '1px solid rgba(192,80,80,0.3)', borderRadius: 6, padding: '4px 8px', cursor: busy ? 'not-allowed' : 'pointer', color: '#d07070', fontSize: 11, fontWeight: 600, flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+                      <TrashIcon size={10} />
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           );
         })}
