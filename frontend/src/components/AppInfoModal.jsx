@@ -16,7 +16,7 @@ function SteamNote() {
       </svg>
       <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.6 }}>
         Pour une expérience complète (succès, wishlist, bannière "En jeu"), ton profil Steam doit être <span style={{ color: '#66c0f4', fontWeight: 700 }}>public</span>.{' '}
-        <a href="https://steamcommunity.com/my/edit/settings" target="_blank" rel="noreferrer" style={{ color: '#66c0f4' }}>Modifier →</a>
+        <a href="https://help.steampowered.com/fr/faqs/view/588C-C67D-0251-C276" target="_blank" rel="noreferrer" style={{ color: '#66c0f4' }}>Comment rendre son profil public →</a>
       </div>
     </div>
   );
@@ -164,8 +164,18 @@ function TabKanban() {
         Tu <strong style={{ color: 'var(--text)' }}>glisses-déposes</strong> les cartes d'une colonne à l'autre au fil de ta progression. Les colonnes sont entièrement personnalisables.
       </p>
       <p style={{ margin: 0, fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.7 }}>
-        Dans KangBanGaming, chaque carte est un <strong style={{ color: 'var(--text)' }}>jeu Steam</strong> (ou une tâche perso). Un board = un projet ou une catégorie — par genre, plateforme, saison, etc.
+        Dans KangBanGaming, il existe deux types de boards :
       </p>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ flex: 1, background: 'var(--surface2)', border: '1px solid var(--border)', borderLeft: '3px solid #66c0f4', borderRadius: 8, padding: '9px 12px' }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#66c0f4', marginBottom: 3 }}>🎮 Board Steam</div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5 }}>Chaque carte = un jeu Steam. Tu organises ta bibliothèque par genre, plateforme, saison de jeu, etc. Infos Steam en temps réel : avis, succès, wishlist, bannière "En jeu".</div>
+        </div>
+        <div style={{ flex: 1, background: 'var(--surface2)', border: '1px solid var(--border)', borderLeft: '3px solid #f5a500', borderRadius: 8, padding: '9px 12px' }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#f5a500', marginBottom: 3 }}>🕹️ Board perso</div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5 }}>Chaque carte = une tâche libre. Titre, description, assignation. Pratique pour organiser un projet gaming, un tournoi, un event communautaire…</div>
+        </div>
+      </div>
 
       <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 9, padding: '12px 14px' }}>
         <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>Icônes & indicateurs</div>

@@ -96,7 +96,8 @@ export default function LoginPage({ onLogin, steamError = '' }) {
             <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
           </svg>
           <div style={{ fontSize: 10, color: 'var(--text-muted)', lineHeight: 1.6 }}>
-            Pour une expérience complète (succès, wishlist, bannière "En jeu"), ton profil Steam doit être <span style={{ color: '#66c0f4', fontWeight: 700 }}>public</span>.
+            Pour une expérience complète (succès, wishlist, bannière "En jeu"), ton profil Steam doit être <span style={{ color: '#66c0f4', fontWeight: 700 }}>public</span>.{' '}
+            <a href="https://help.steampowered.com/fr/faqs/view/588C-C67D-0251-C276" target="_blank" rel="noreferrer" style={{ color: '#66c0f4', textDecoration: 'underline' }}>Comment faire ?</a>
           </div>
         </div>
 
