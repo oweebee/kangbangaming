@@ -7,14 +7,18 @@ Organise ta backlog, suis tes heures de jeu, partage tes boards avec ta communau
 
 ## Fonctionnalités
 
-- **Kanban board** — colonnes personnalisables, drag & drop, mode compact
-- **Intégration Steam** — bannières, stats joueurs en temps réel, actualités, Metacritic, prix
+- **Kanban board** — colonnes personnalisables, drag & drop, vue compacte (desktop et mobile)
+- **Intégration Steam** — bannières, stats joueurs en temps réel, succès, actualités, Metacritic, prix
 - **Connexion Steam** — authentification via Steam OpenID, compte créé automatiquement
-- **Bannière "En jeu"** — affiche les membres de ta communauté actuellement en train de jouer le jeu du board actif
+- **Bannière "En jeu"** — affiche les membres de ta communauté actuellement en train de jouer
 - **Panneau infos jeu** — glisse depuis la sidebar, verrouillable, déplaçable gauche/droite
 - **Boards publics** — partage un lien en lecture seule sans compte
-- **Admin** — panneau d'administration, gestion des utilisateurs, création de comptes
-- **Mobile** — interface adaptée, colonnes en tabs
+- **Tâches personnalisées** — cartes non-Steam avec types, assignation, notes, échéances
+- **Panneau Échéances** — vue synthétique des dates limites, alertes urgentes
+- **Multi-langue** — interface en français et anglais (détection auto)
+- **Admin** — gestion des utilisateurs, création de comptes, config Discord, approbation
+- **Mobile** — interface adaptée, onglets swipables, vue compacte, slider home
+- **APK Android** — application WebView sideloadable, URL configurable au premier lancement
 
 ---
 
@@ -28,6 +32,7 @@ Organise ta backlog, suis tes heures de jeu, partage tes boards avec ta communau
 | Auth | Steam OpenID 2.0 + JWT (jsonwebtoken) + bcrypt |
 | Serveur web | Nginx (frontend) |
 | Déploiement | Docker, Coolify |
+| Mobile | Android WebView (APK sideload, voir `android-app/`) |
 
 ---
 
@@ -130,6 +135,45 @@ L'admin peut créer des comptes manuellement depuis **Panel Admin → + Créer**
 
 ---
 
+## Configuration Discord
+
+L'icône et le lien Discord du serveur de la communauté se configurent dans le **Panel Admin → Paramètres** :
+
+- **URL du serveur Discord** — lien d'invitation (ex: `https://discord.gg/xxxxx`). Si laissé vide, l'icône Discord n'apparaît pas dans l'interface.
+- **URL de l'icône** — URL de l'icône du serveur Discord (format `.webp` ou `.png`).
+
+Ces paramètres sont stockés en base de données et prennent effet immédiatement sans redéploiement.
+
+---
+
+## Application Android (APK)
+
+Le dossier `android-app/` contient un projet Android Studio complet : une WebView plein écran qui charge ton instance KangBanGaming.
+
+### Fonctionnement
+
+- **Premier lancement** : un écran de configuration demande l'URL du serveur (ex: `https://gaming.mondomaine.com`)
+- **Lancement suivant** : la WebView s'ouvre directement sur l'URL sauvegardée
+- **Changer de serveur** : appui long sur l'écran → dialog de modification d'URL
+
+### Build avec Android Studio
+
+1. Ouvre le dossier `android-app/` dans **Android Studio**
+2. Attends la synchronisation Gradle
+3. **Build → Build Bundle(s) / APK(s) → Build APK(s)**
+4. L'APK se trouve dans `app/build/outputs/apk/debug/app-debug.apk`
+
+### Sideload sur Android
+
+```
+Paramètres → Sécurité → Sources inconnues → Autoriser
+```
+Puis transfère le fichier `.apk` sur l'appareil et ouvre-le pour installer.
+
+> L'APK n'est pas destiné au Play Store. Package : `com.oweebee.kangbangaming`, minSdk 26 (Android 8.0+).
+
+---
+
 ## Open Graph (aperçus de lien)
 
 Quand tu partages l'URL sur Discord, Twitter/X, iMessage, etc., une image de preview s'affiche.
@@ -147,29 +191,46 @@ Quand tu partages l'URL sur Discord, Twitter/X, iMessage, etc., une image de pre
 ## Structure du projet
 
 ```
+├── android-app/                   # Projet Android Studio (APK WebView)
+│   ├── app/src/main/
+│   │   ├── java/com/oweebee/kangbangaming/MainActivity.java
+│   │   └── res/                   # Icônes, thème, strings
+│   └── build.gradle / settings.gradle
+│
 ├── backend/
 │   ├── src/
-│   │   └── server.js          # API Express (auth, boards, Steam, OpenID)
-│   ├── data/                  # Données JSON (gitignorées, à monter en volume)
+│   │   └── server.js              # API Express (auth, boards, Steam, OpenID)
+│   ├── data/                      # Données JSON (gitignorées, à monter en volume)
 │   ├── Dockerfile
 │   └── package.json
 │
 ├── frontend/
 │   ├── src/
-│   │   ├── App.jsx            # Composant principal
-│   │   ├── components/        # Tous les composants React
-│   │   └── index.css          # Styles globaux (CSS variables)
+│   │   ├── App.jsx                # Composant principal + état global
+│   │   ├── i18n.js                # Traductions FR/EN
+│   │   ├── utils.js               # Helpers partagés
+│   │   └── components/
+│   │       ├── GameCard.jsx
+│   │       ├── GameModal.jsx
+│   │       ├── TaskModal.jsx
+│   │       ├── MobileBoard.jsx
+│   │       ├── MobileHomeSlider.jsx   # Slider onglets home mobile
+│   │       ├── SwipeTabs.jsx          # Onglets swipables (modal)
+│   │       ├── KanbanBoard.jsx
+│   │       ├── DeadlinePanel.jsx
+│   │       ├── AdminPanel.jsx
+│   │       └── ...
 │   ├── public/
-│   │   ├── preview.png        # Image Open Graph (à générer, non committée)
+│   │   ├── preview.png            # Image Open Graph (à générer, non committée)
 │   │   ├── preview-generator.html
-│   │   └── task-types/        # Icônes de types de tâches
+│   │   └── task-types/            # Icônes de types de tâches
 │   ├── Dockerfile
 │   ├── nginx.conf
 │   └── package.json
 │
-├── .env.example               # Variables backend de référence
+├── .env.example                   # Variables backend de référence
 ├── .gitignore
-├── docker-compose.yml         # Déploiement Docker / Coolify
+├── docker-compose.yml             # Déploiement Docker / Coolify
 └── README.md
 ```
 
