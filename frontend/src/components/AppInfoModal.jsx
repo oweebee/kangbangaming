@@ -96,7 +96,7 @@ export default function AppInfoModal({ onClose }) {
                 </div>
               ))}
               <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4, lineHeight: 1.5 }}>
-                Les cartes Steam héritent automatiquement de la couleur du genre principal du jeu (voir ci-dessous). Les cartes personnalisées utilisent la couleur choisie.
+                Les cartes héritent automatiquement de la couleur du genre principal du jeu (voir ci-dessous).
               </div>
             </div>
           </Section>
