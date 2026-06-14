@@ -33,6 +33,10 @@ export default function AdminPanel({ token, currentUser, onClose }) {
   const [createErr, setCreateErr] = useState('');
   const [creating, setCreating] = useState(false);
 
+  // Settings tab
+  const [settings, setSettings] = useState(null);
+  const [settingsSaving, setSettingsSaving] = useState(false);
+
   // Boards tab
   const [boards, setBoards] = useState([]);
   const [boardsLoading, setBoardsLoading] = useState(false);
@@ -63,6 +67,20 @@ export default function AdminPanel({ token, currentUser, onClose }) {
   }
 
   useEffect(() => { if (tab === 'boards') fetchBoards(); }, [tab]);
+
+  useEffect(() => {
+    if (tab !== 'settings' || settings !== null) return;
+    fetch(`${API}/admin/settings`, { headers: h })
+      .then(r => r.json()).then(setSettings).catch(() => {});
+  }, [tab]);
+
+  async function toggleSetting(key, value) {
+    setSettingsSaving(true);
+    try {
+      const res = await fetch(`${API}/admin/settings`, { method: 'PATCH', headers: h, body: JSON.stringify({ [key]: value }) });
+      if (res.ok) setSettings(await res.json());
+    } finally { setSettingsSaving(false); }
+  }
 
   async function handleDeleteBoard(ownerId, boardId, boardName) {
     if (!confirm(`Supprimer le board "${boardName}" ?`)) return;
@@ -248,6 +266,7 @@ export default function AdminPanel({ token, currentUser, onClose }) {
           <button style={tabStyle('suspended')} onClick={() => setTab('suspended')}>Suspendus ({suspended.length})</button>
           <button style={tabStyle('boards')} onClick={() => setTab('boards')}>Boards</button>
           <button style={tabStyle('create')} onClick={() => { setTab('create'); setCreateMsg(''); setCreateErr(''); }}>+ Créer</button>
+          <button style={tabStyle('settings')} onClick={() => setTab('settings')}>⚙ Paramètres</button>
         </div>
 
         {/* Body */}
@@ -269,6 +288,37 @@ export default function AdminPanel({ token, currentUser, onClose }) {
             suspended.length === 0
               ? <p style={{ color: 'var(--text-muted)', fontSize: 13, textAlign: 'center', marginTop: 32 }}>Aucun utilisateur suspendu</p>
               : suspended.map(u => renderUser(u, false))
+          )}
+
+          {tab === 'settings' && (
+            <div style={{ maxWidth: 420, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <p style={{ color: 'var(--text-muted)', fontSize: 12, margin: '0 0 16px' }}>Paramètres globaux de l'application.</p>
+
+              {/* Toggle : validation à l'inscription */}
+              <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)', marginBottom: 3 }}>Validation à la première connexion</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+                    Si activé, les nouveaux utilisateurs Steam sont mis en attente et doivent être approuvés depuis l'onglet "En attente" avant d'accéder à l'app.
+                  </div>
+                </div>
+                <button
+                  disabled={settings === null || settingsSaving}
+                  onClick={() => toggleSetting('requireApproval', !settings?.requireApproval)}
+                  style={{
+                    flexShrink: 0, width: 44, height: 24, borderRadius: 12, border: 'none', cursor: settings === null ? 'default' : 'pointer',
+                    background: settings?.requireApproval ? 'var(--accent)' : 'var(--surface3)',
+                    position: 'relative', transition: 'background .2s', opacity: settingsSaving ? 0.6 : 1,
+                  }}
+                >
+                  <span style={{
+                    position: 'absolute', top: 3, left: settings?.requireApproval ? 23 : 3,
+                    width: 18, height: 18, borderRadius: '50%', background: '#fff',
+                    transition: 'left .2s', display: 'block',
+                  }} />
+                </button>
+              </div>
+            </div>
           )}
 
           {tab === 'create' && (

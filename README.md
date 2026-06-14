@@ -9,10 +9,11 @@ Organise ta backlog, suis tes heures de jeu, partage tes boards avec ta communau
 
 - **Kanban board** — colonnes personnalisables, drag & drop, mode compact
 - **Intégration Steam** — bannières, stats joueurs en temps réel, actualités, Metacritic, prix
+- **Connexion Steam** — authentification via Steam OpenID, compte créé automatiquement
+- **Bannière "En jeu"** — affiche les membres de ta communauté actuellement en train de jouer le jeu du board actif
 - **Panneau infos jeu** — glisse depuis la sidebar, verrouillable, déplaçable gauche/droite
 - **Boards publics** — partage un lien en lecture seule sans compte
-- **Gestion de compte** — inscription, profil, liaison compte Steam
-- **Admin** — panneau d'administration, gestion des utilisateurs
+- **Admin** — panneau d'administration, gestion des utilisateurs, création de comptes
 - **Mobile** — interface adaptée, colonnes en tabs
 
 ---
@@ -24,7 +25,7 @@ Organise ta backlog, suis tes heures de jeu, partage tes boards avec ta communau
 | Frontend | React 18, Vite 5 |
 | Backend | Node.js 20, Express 4 |
 | Données | Fichiers JSON persistés sur volume (`/app/data`) |
-| Auth | JWT (jsonwebtoken) + bcrypt |
+| Auth | Steam OpenID 2.0 + JWT (jsonwebtoken) + bcrypt |
 | Serveur web | Nginx (frontend) |
 | Déploiement | Docker, Coolify |
 
@@ -44,15 +45,15 @@ Organise ta backlog, suis tes heures de jeu, partage tes boards avec ta communau
 # Backend
 cd backend
 npm install
-cp ../.env.example ../.env   # remplis les valeurs
-npm run dev                  # démarre sur le port 3001
+npm run dev   # démarre sur le port 3001
 
 # Frontend (autre terminal)
 cd frontend
 npm install
-cp .env.example .env         # remplis VITE_APP_URL
-npm run dev                  # démarre sur http://localhost:5173
+npm run dev   # démarre sur http://localhost:5173
 ```
+
+En local, les variables d'env peuvent être définies dans un fichier `.env` à la racine (voir `.env.example`).
 
 ---
 
@@ -60,66 +61,86 @@ npm run dev                  # démarre sur http://localhost:5173
 
 ### Backend
 
-Fichier de référence : `.env.example` (racine du projet)
+| Variable         | Obligatoire | Défaut | Description |
+|------------------|:-----------:|--------|-------------|
+| `STEAM_API_KEY`  | ✅ | — | Clé API Steam — [obtenir ici](https://steamcommunity.com/dev/apikey). Nécessaire pour les stats et l'avatar Steam. |
+| `JWT_SECRET`     | ✅ | `change-me-in-production` | Clé secrète de signature des tokens JWT. Générer avec : `openssl rand -hex 48` |
+| `ADMIN_PASSWORD` | ✅ | `admin123` | Mot de passe du compte `admin` créé au premier démarrage. À changer impérativement en prod. |
+| `FRONTEND_URL`   | ⚠️ | auto | URL publique du frontend. **Indispensable pour l'auth Steam.** Sur Coolify, inférée automatiquement depuis `SERVICE_URL_FRONTEND`. À définir manuellement ailleurs. |
+| `BACKEND_URL`    | ⚠️ | auto | URL publique du backend (même domaine si Nginx proxy). Sur Coolify, inférée automatiquement. |
+| `PORT`           | ❌ | `3001` | Port d'écoute du backend. |
 
-| Variable         | Obligatoire | Description |
-|------------------|:-----------:|-------------|
-| `STEAM_API_KEY`  | ✅ | Clé API Steam — [obtenir ici](https://steamcommunity.com/dev/apikey) |
-| `JWT_SECRET`     | ✅ | Clé secrète de signature des tokens JWT. Générer avec : `openssl rand -hex 48` |
-| `ADMIN_PASSWORD` | ✅ | Mot de passe du compte `admin` créé au premier démarrage |
-| `PORT`           | ❌ | Port d'écoute du backend (défaut : `3001`) |
+> ⚠️ `FRONTEND_URL` et `BACKEND_URL` sont **critiques pour la connexion Steam** — sans elles, le callback OpenID pointe sur `localhost` et l'auth échoue en production.
 
-> ⚠️ Ces variables ne doivent **jamais** être committées. Le fichier `.env` est dans `.gitignore`.
+> 🔒 `JWT_SECRET` et `STEAM_API_KEY` ne doivent **jamais** être committés. Le fichier `.env` est dans `.gitignore`.
 
 ### Frontend
 
-Fichier de référence : `frontend/.env.example`
-
 | Variable        | Obligatoire | Description |
 |-----------------|:-----------:|-------------|
-| `VITE_APP_URL`  | ✅ | URL publique complète de l'app (ex: `https://kangbangaming.mondomaine.com`). Utilisée pour les balises Open Graph — aperçus Discord, Twitter/X, iMessage. |
-
-> Vite injecte automatiquement cette variable lors du `npm run build`. Elle n'est **pas** sensible mais ne doit pas non plus être hardcodée dans le code source.
+| `VITE_APP_URL`  | ❌ | URL publique complète de l'app. Utilisée pour les balises Open Graph (aperçus Discord, Twitter/X, iMessage). |
 
 ---
 
 ## Déploiement sur Coolify
 
-Coolify déploie chaque service (frontend / backend) séparément depuis le repo GitHub.
-
 ### Étapes
 
-1. Dans Coolify, crée deux services depuis le même repo GitHub
-2. Définis le **root directory** : `./backend` pour l'un, `./frontend` pour l'autre
-3. Renseigne les variables d'environnement dans l'onglet **Environment Variables** de chaque service (voir tableaux ci-dessus)
-4. Lance le déploiement
+1. Crée un service Docker Compose dans Coolify depuis le repo GitHub
+2. Coolify injecte automatiquement `SERVICE_URL_FRONTEND` — **aucune config d'URL nécessaire**
+3. Renseigne les variables obligatoires dans l'onglet **Environment Variables** :
 
-Les variables persistent entre les redéploiements — tu n'as à les saisir qu'une seule fois.
+| Variable | Valeur |
+|---|---|
+| `STEAM_API_KEY` | Ta clé API Steam |
+| `JWT_SECRET` | Chaîne aléatoire longue (`openssl rand -hex 48`) |
+| `ADMIN_PASSWORD` | Mot de passe de l'admin |
+
+C'est tout. `FRONTEND_URL` et `BACKEND_URL` sont résolues automatiquement via `SERVICE_URL_FRONTEND`.
 
 ### Persistance des données
 
-Le backend stocke ses données dans `/app/data` (fichiers `users.json` et `boards.json`).  
-Configure un **volume persistant** dans Coolify pour ce chemin, sinon les données sont perdues à chaque redéploiement.
+Le backend stocke ses données dans `/app/data` (`users.json`, `boards.json`).  
+Configure un **volume persistant** dans Coolify → Persistent Storage :
 
 ```
-/app/data  →  volume persistant Coolify
+Source (hôte) : /opt/kanbangaming/data
+Destination (container) : /app/data
 ```
+
+Sans ce volume, les données sont perdues à chaque redéploiement.
+
+---
+
+## Authentification
+
+### Connexion Steam (recommandée)
+
+Les utilisateurs se connectent via le bouton **"Se connecter avec Steam"** — aucun compte préalable requis, le profil est créé automatiquement à la première connexion.
+
+### Accès admin
+
+Un lien discret **"⚙ Administration"** en bas de la page de login révèle le formulaire classique username/password, réservé au compte admin.
+
+Le compte `admin` est créé automatiquement au premier démarrage avec le mot de passe défini dans `ADMIN_PASSWORD`.
+
+### Création de comptes depuis le panel admin
+
+L'admin peut créer des comptes manuellement depuis **Panel Admin → + Créer**. Les comptes créés sont immédiatement actifs et peuvent inclure un Steam ID optionnel.
 
 ---
 
 ## Open Graph (aperçus de lien)
 
-Quand tu partages l'URL de l'app sur Discord, Twitter/X, iMessage, etc., une image de preview s'affiche automatiquement.
-
-### Générer l'image de preview
+Quand tu partages l'URL sur Discord, Twitter/X, iMessage, etc., une image de preview s'affiche.
 
 1. Ouvre `frontend/public/preview-generator.html` dans Chrome
-2. **F12** → icône téléphone/tablette → saisis `1200` × `630` comme dimensions
+2. **F12** → icône téléphone/tablette → dimensions `1200 × 630`
 3. Menu DevTools **⋮** → **Capture screenshot**
-4. Sauvegarde le fichier sous le nom `preview.png` dans `frontend/public/`
-5. Déploie — l'image sera accessible à `https://TONURL/preview.png`
+4. Sauvegarde sous `frontend/public/preview.png`
+5. Déploie — accessible à `https://TONURL/preview.png`
 
-> Pour tester le rendu : colle ton URL sur [opengraph.xyz](https://www.opengraph.xyz)
+> Pour tester : [opengraph.xyz](https://www.opengraph.xyz)
 
 ---
 
@@ -128,7 +149,7 @@ Quand tu partages l'URL de l'app sur Discord, Twitter/X, iMessage, etc., une ima
 ```
 ├── backend/
 │   ├── src/
-│   │   └── server.js          # API Express (auth, boards, Steam, news)
+│   │   └── server.js          # API Express (auth, boards, Steam, OpenID)
 │   ├── data/                  # Données JSON (gitignorées, à monter en volume)
 │   ├── Dockerfile
 │   └── package.json
@@ -140,16 +161,15 @@ Quand tu partages l'URL de l'app sur Discord, Twitter/X, iMessage, etc., une ima
 │   │   └── index.css          # Styles globaux (CSS variables)
 │   ├── public/
 │   │   ├── preview.png        # Image Open Graph (à générer, non committée)
-│   │   ├── preview-generator.html  # Générateur de l'image OG
+│   │   ├── preview-generator.html
 │   │   └── task-types/        # Icônes de types de tâches
-│   ├── .env.example
 │   ├── Dockerfile
 │   ├── nginx.conf
 │   └── package.json
 │
-├── .env.example               # Variables backend attendues
+├── .env.example               # Variables backend de référence
 ├── .gitignore
-├── docker-compose.yml         # Pour déploiement local avec Docker
+├── docker-compose.yml         # Déploiement Docker / Coolify
 └── README.md
 ```
 
@@ -157,7 +177,8 @@ Quand tu partages l'URL de l'app sur Discord, Twitter/X, iMessage, etc., une ima
 
 ## Sécurité
 
-- La clé `STEAM_API_KEY` n'est **jamais** exposée au frontend — tous les appels Steam passent par le backend
+- `STEAM_API_KEY` n'est **jamais** exposée au frontend — tous les appels Steam passent par le backend
 - Les mots de passe sont hashés avec `bcrypt`
+- Les comptes Steam-only n'ont pas de `passwordHash` — les endpoints protègent contre toute tentative de connexion par mot de passe
 - Les routes protégées requièrent un token JWT valide en header `Authorization: Bearer <token>`
-- Le fichier `.env` est dans `.gitignore` — ne jamais le committer
+- Le fichier `.env` est dans `.gitignore`

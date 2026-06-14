@@ -436,7 +436,8 @@ export default function App() {
     }
     if (steamError) {
       setSteamLoginError(
-        steamError === 'suspended' ? 'Ton compte a été suspendu.' :
+        steamError === 'suspended' ? 'Ton compte a été suspendu. Contacte un administrateur.' :
+        steamError === 'pending'   ? 'Ton compte est en attente de validation par un administrateur.' :
         steamError === 'invalid'   ? 'Authentification Steam invalide. Réessaie.' :
         'Erreur lors de la connexion Steam. Réessaie.'
       );

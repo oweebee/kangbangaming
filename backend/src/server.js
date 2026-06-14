@@ -19,8 +19,9 @@ const JWT_SECRET = process.env.JWT_SECRET || 'change-me-in-production';
 const LIBRARY_TTL = 5 * 60 * 1000;
 
 const DATA_DIR = path.join(__dirname, '../data');
-const USERS_FILE = path.join(DATA_DIR, 'users.json');
-const BOARDS_FILE = path.join(DATA_DIR, 'boards.json');
+const USERS_FILE    = path.join(DATA_DIR, 'users.json');
+const BOARDS_FILE   = path.join(DATA_DIR, 'boards.json');
+const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
 
 // ── Data helpers ─────────────────────────────────────────────────────────────
 
@@ -30,8 +31,24 @@ function ensureDataDir() {
 
 // In-memory cache — avoids JSON disk reads on every request.
 // Invalidated (updated) on each write. Node.js is single-threaded so no race.
-let _usersCache = null;
-let _boardsCache = null;
+let _usersCache    = null;
+let _boardsCache   = null;
+let _settingsCache = null;
+
+const DEFAULT_SETTINGS = { requireApproval: false };
+
+function readSettings() {
+  ensureDataDir();
+  if (_settingsCache !== null) return _settingsCache;
+  if (!fs.existsSync(SETTINGS_FILE)) { fs.writeFileSync(SETTINGS_FILE, JSON.stringify(DEFAULT_SETTINGS, null, 2)); _settingsCache = { ...DEFAULT_SETTINGS }; return _settingsCache; }
+  try { _settingsCache = { ...DEFAULT_SETTINGS, ...JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8')) }; } catch { _settingsCache = { ...DEFAULT_SETTINGS }; }
+  return _settingsCache;
+}
+function writeSettings(s) {
+  ensureDataDir();
+  _settingsCache = s;
+  fs.writeFileSync(SETTINGS_FILE, JSON.stringify(s, null, 2));
+}
 
 function readUsers() {
   ensureDataDir();
@@ -181,12 +198,13 @@ app.get('/api/auth/steam/callback', async (req, res) => {
       let n = 1;
       while (users.find(u => u.username === username)) { username = `${base}${n++}`; }
 
+      const settings = readSettings();
       user = {
         id: `user_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
         username,
-        passwordHash: null, // compte Steam-only, pas de mot de passe
+        passwordHash: null,
         role: 'user',
-        status: 'active', // approuvé automatiquement via Steam
+        status: settings.requireApproval ? 'pending' : 'active',
         steamId,
         steamAvatar,
         steamPersonaName,
@@ -197,6 +215,7 @@ app.get('/api/auth/steam/callback', async (req, res) => {
     }
 
     if ((user.status || 'active') === 'suspended') return res.redirect(`${FRONTEND_URL}?steam_error=suspended`);
+    if ((user.status || 'active') === 'pending')   return res.redirect(`${FRONTEND_URL}?steam_error=pending`);
 
     const token = jwt.sign({ id: user.id, username: user.username, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
     res.redirect(`${FRONTEND_URL}?steam_token=${token}`);
@@ -566,6 +585,23 @@ app.delete('/api/admin/boards/:userId/:boardId', requireAdmin, (req, res) => {
   delete all[userId][boardId];
   writeBoards(all);
   res.json({ ok: true });
+});
+
+// ── Admin settings ────────────────────────────────────────────────────────────
+
+app.get('/api/admin/settings', requireAdmin, (req, res) => {
+  res.json(readSettings());
+});
+
+app.patch('/api/admin/settings', requireAdmin, (req, res) => {
+  const current = readSettings();
+  const allowed = ['requireApproval'];
+  const updated = { ...current };
+  for (const key of allowed) {
+    if (key in req.body) updated[key] = Boolean(req.body[key]);
+  }
+  writeSettings(updated);
+  res.json(updated);
 });
 
 // ── Steam wishlist ────────────────────────────────────────────────────────────
