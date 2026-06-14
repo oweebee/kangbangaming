@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLang, LANG_META, SUPPORTED_LANGS } from '../i18n.js';
 import TrashPanel from './TrashPanel.jsx';
 
@@ -7,6 +7,22 @@ const API = '/api';
 export default function ProfilePage({ token, currentUser, onClose, onSaveSteam }) {
   const { t, lang, setLang } = useLang();
   const [activeTab, setActiveTab] = useState('profile'); // 'profile' | 'trash'
+  const TABS = ['profile', 'trash'];
+  const swipeOrigin = useRef({ x: 0, y: 0 });
+
+  const onSwipeStart = (e) => {
+    swipeOrigin.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  };
+  const onSwipeEnd = (e) => {
+    const dx = e.changedTouches[0].clientX - swipeOrigin.current.x;
+    const dy = e.changedTouches[0].clientY - swipeOrigin.current.y;
+    // Ignorer si geste trop petit ou plutôt vertical (scroll)
+    if (Math.abs(dx) < 48 || Math.abs(dy) > Math.abs(dx) * 1.1) return;
+    const idx = TABS.indexOf(activeTab);
+    if (dx < 0 && idx < TABS.length - 1) setActiveTab(TABS[idx + 1]); // glisse gauche → suivant
+    if (dx > 0 && idx > 0)               setActiveTab(TABS[idx - 1]); // glisse droite → précédent
+  };
+
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -124,8 +140,12 @@ export default function ProfilePage({ token, currentUser, onClose, onSaveSteam }
           ))}
         </div>
 
-        {/* Body */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
+        {/* Body — swipe horizontal pour changer d'onglet */}
+        <div
+          style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}
+          onTouchStart={onSwipeStart}
+          onTouchEnd={onSwipeEnd}
+        >
           {/* ── Onglet Corbeille ── */}
           {activeTab === 'trash' && <TrashPanel token={token} />}
 

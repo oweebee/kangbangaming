@@ -1779,6 +1779,13 @@ export default function App() {
               <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{publicBoardMode.name}</span>
               <span style={{ fontSize: 10, fontWeight: 700, color: '#3db86a', border: '2px solid #3db86a', borderRadius: 4, padding: '1px 5px', flexShrink: 0 }}>{t('common.public')}</span>
               <button onClick={toggleCompact} title={t('nav.compact')} style={{ background: compactView ? 'rgba(192,87,10,0.15)' : 'rgba(255,255,255,.06)', border: compactView ? '1px solid var(--accent)' : '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', color: compactView ? 'var(--accent)' : 'var(--text-muted)', fontSize: 11, cursor: 'pointer', flexShrink: 0 }}>⊟</button>
+              {archiveCount > 0 && (
+                <button
+                  onClick={() => setShowArchived(v => !v)}
+                  title={showArchived ? t('nav.hide_archives') : t('nav.show_archives')}
+                  style={{ background: showArchived ? 'rgba(120,80,160,0.25)' : 'rgba(255,255,255,.06)', border: showArchived ? '1px solid rgba(160,100,220,0.6)' : '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', color: showArchived ? '#c090f0' : 'var(--text-muted)', fontSize: 11, cursor: 'pointer', flexShrink: 0, fontWeight: showArchived ? 700 : 400 }}
+                >📦 {archiveCount}</button>
+              )}
               <button onClick={() => setShowSearch(true)} style={{ background: 'var(--accent)', border: 'none', borderRadius: 7, padding: '7px 10px', color: '#fff', fontWeight: 700, fontSize: 12, flexShrink: 0 }}>+ {isTaskBoard ? t('nav.add_task_short').slice(2) : t('nav.add_game_short').slice(2)}</button>
               <button onClick={refreshPublicBoard} title={t('nav.refresh')} style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', color: 'var(--text-muted)', fontSize: 14, cursor: 'pointer', flexShrink: 0, lineHeight: 1 }}>↻</button>
               <button onClick={closePublicBoard} style={{ background: 'rgba(255,255,255,.08)', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 10px', color: 'var(--text-muted)', fontSize: 11, cursor: 'pointer', flexShrink: 0 }}>✕</button>
@@ -1797,6 +1804,13 @@ export default function App() {
                 </span>
               )}
               {activeBoardId && <button onClick={toggleCompact} title={t('nav.compact')} style={{ background: compactView ? 'rgba(192,87,10,0.15)' : 'rgba(255,255,255,.06)', border: compactView ? '1px solid var(--accent)' : '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', color: compactView ? 'var(--accent)' : 'var(--text-muted)', fontSize: 11, cursor: 'pointer', flexShrink: 0 }}>⊟</button>}
+              {activeBoardId && archiveCount > 0 && (
+                <button
+                  onClick={() => setShowArchived(v => !v)}
+                  title={showArchived ? t('nav.hide_archives') : t('nav.show_archives')}
+                  style={{ background: showArchived ? 'rgba(120,80,160,0.25)' : 'rgba(255,255,255,.06)', border: showArchived ? '1px solid rgba(160,100,220,0.6)' : '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', color: showArchived ? '#c090f0' : 'var(--text-muted)', fontSize: 11, cursor: 'pointer', flexShrink: 0, fontWeight: showArchived ? 700 : 400 }}
+                >📦 {archiveCount}</button>
+              )}
               {activeBoardId && <button onClick={() => setShowSearch(true)} style={{ background: 'var(--accent)', border: 'none', borderRadius: 7, padding: '7px 14px', color: '#fff', fontWeight: 700, fontSize: 12, flexShrink: 0 }}>{isTaskBoard ? t('nav.add_task') : t('nav.add_game')}</button>}
             </>
           )}

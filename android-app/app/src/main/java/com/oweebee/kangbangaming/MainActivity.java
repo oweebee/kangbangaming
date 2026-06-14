@@ -32,11 +32,55 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        // Configurer la fenêtre AVANT toute vue — évite la barre noire sur Pixel 9 et autres
+        // appareils avec encoche / caméra perforée.
+        initWindow();
+
         String savedUrl = prefs().getString(PREF_URL, null);
         if (savedUrl == null || savedUrl.isEmpty()) {
             showSetup();
         } else {
             loadWebView(savedUrl);
+        }
+    }
+
+    // ── Initialisation fenêtre (avant setContentView) ────────────────────────
+    // DOIT être appelée en premier dans onCreate pour prendre effet immédiatement.
+
+    private void initWindow() {
+        // Fond sombre dès le départ : évite le flash blanc ET masque tout espace résiduel
+        // entre la fenêtre et le contenu lors du chargement.
+        getWindow().setBackgroundDrawable(
+            new android.graphics.drawable.ColorDrawable(Color.parseColor("#1a1a1a"))
+        );
+
+        // Mode display cutout : permet au contenu de s'étendre DANS l'encoche ou la caméra
+        // perforée (Pixel 9 : punch-hole en haut au centre). Sans ça, Android réserve une
+        // zone noire de ~40-48 dp en haut même quand la barre de statut est masquée.
+        //   SHORT_EDGES (API 28) : contenu passe sous l'encoche sur les bords courts uniquement
+        //   ALWAYS      (API 30) : contenu passe sous l'encoche sur tous les bords — le plus permissif
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            WindowManager.LayoutParams attrs = getWindow().getAttributes();
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                // LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS = 3
+                attrs.layoutInDisplayCutoutMode =
+                    WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
+            } else {
+                // LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES = 1
+                attrs.layoutInDisplayCutoutMode =
+                    WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
+            }
+            getWindow().setAttributes(attrs);
+        }
+
+        // Pré-cacher la barre de statut dès onCreate pour les versions antérieures à Android R.
+        // Pour Android R+, setDecorFitsSystemWindows est déjà posé ici ; ctrl.hide() sera
+        // appelé dans applyFullscreen() une fois qu'une vue est attachée.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            getWindow().setDecorFitsSystemWindows(false);
+        } else {
+            getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN |
+                                 WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
         }
     }
 
@@ -160,6 +204,9 @@ public class MainActivity extends Activity {
         }
 
         webView = new WebView(this);
+
+        // Fond sombre pour éviter le flash blanc lors du chargement de la page
+        webView.setBackgroundColor(Color.parseColor("#1a1a1a"));
 
         WebSettings s = webView.getSettings();
         s.setJavaScriptEnabled(true);
@@ -297,18 +344,18 @@ public class MainActivity extends Activity {
 
     private void applyFullscreen() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            getWindow().setDecorFitsSystemWindows(false);
+            // setDecorFitsSystemWindows(false) déjà posé dans initWindow() ;
+            // ici on se contente de masquer les barres (nécessite une vue attachée).
             WindowInsetsController ctrl = getWindow().getInsetsController();
             if (ctrl != null) {
                 ctrl.hide(WindowInsets.Type.statusBars() | WindowInsets.Type.navigationBars());
-                ctrl.setSystemBarsBehavior(WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+                ctrl.setSystemBarsBehavior(
+                    WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
             }
         } else {
+            // API < 30 : s'assurer que les flags sont bien posés (initWindow() les pose déjà,
+            // mais on les ré-applique ici après chaque setContentView pour garantir l'effet).
             getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN);
-            getWindow().setFlags(
-                WindowManager.LayoutParams.FLAG_FULLSCREEN,
-                WindowManager.LayoutParams.FLAG_FULLSCREEN
-            );
             getWindow().getDecorView().setSystemUiVisibility(
                 View.SYSTEM_UI_FLAG_FULLSCREEN |
                 View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
