@@ -270,10 +270,12 @@ export default function AdminPanel({ token, currentUser, onClose }) {
                     {t('admin.reactivate')}
                   </button>
                 ))}
-                <button onClick={() => { setEditingId(editingId === u.id ? null : u.id); setEditPwd(''); }}
-                  style={{ background: 'var(--surface3)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 10px', color: 'var(--text)', fontSize: 11, cursor: 'pointer' }}>
-                  🔑 MDP
-                </button>
+                {!u.steamAuth && (
+                  <button onClick={() => { setEditingId(editingId === u.id ? null : u.id); setEditPwd(''); }}
+                    style={{ background: 'var(--surface3)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 10px', color: 'var(--text)', fontSize: 11, cursor: 'pointer' }}>
+                    🔑 MDP
+                  </button>
+                )}
                 <button onClick={() => handleDelete(u.id)}
                   style={{ background: 'rgba(220,50,50,.12)', border: '1px solid rgba(220,50,50,.25)', borderRadius: 6, padding: '5px 10px', color: '#f88', fontSize: 11, cursor: 'pointer' }}>
                   {t('admin.delete_user')}

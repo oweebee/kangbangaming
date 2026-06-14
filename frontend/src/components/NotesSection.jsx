@@ -78,20 +78,21 @@ export default function NotesSection({ notes: externalNotes = [], onSave, onSoft
 
   // Soft-delete : appelle l'endpoint dédié si disponible, sinon fallback via push
   const deleteNote = async (id) => {
+    const updated = notes.map(n => n.id === id ? { ...n, deletedAt: new Date().toISOString() } : n);
+    setNotes(updated);
     if (onSoftDeleteNote) {
-      // Optimistic update immédiat
-      const updated = notes.map(n => n.id === id ? { ...n, deletedAt: new Date().toISOString() } : n);
-      setNotes(updated);
       try {
         await onSoftDeleteNote(id);
         onSave?.(updated);
+        console.log('[deleteNote] ✓ endpoint dédié OK, noteId=', id);
       } catch (e) {
         console.error('[deleteNote] soft-delete failed', e);
         setNotes(notes); // revert
-        alert('Erreur : impossible de déplacer la note vers la corbeille.');
+        alert('Erreur : impossible de déplacer la note vers la corbeille. (' + e.message + ')');
       }
     } else {
-      push(notes.map(n => n.id === id ? { ...n, deletedAt: new Date().toISOString() } : n));
+      console.warn('[deleteNote] onSoftDeleteNote absent, fallback push, noteId=', id);
+      push(updated);
     }
   };
 
