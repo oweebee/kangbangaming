@@ -9,6 +9,7 @@ import LoginPage from './components/LoginPage.jsx';
 // RegisterPage removed — Steam-only login
 import AdminPanel from './components/AdminPanel.jsx';
 import ProfilePage from './components/ProfilePage.jsx';
+import AppInfoModal from './components/AppInfoModal.jsx';
 import GameStatsWidget from './components/GameStatsWidget.jsx';
 import GlobalSearch from './components/GlobalSearch.jsx';
 import SteamEncart from './components/SteamEncart.jsx';
@@ -285,6 +286,7 @@ export default function App() {
   // Modals
   const [showAdmin, setShowAdmin] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [showAppInfo, setShowAppInfo] = useState(false);
 
   // Favorites (public boards pinned to sidebar)
   const [favBoards, setFavBoards] = useState([]);
@@ -1687,6 +1689,11 @@ export default function App() {
         {currentUser.role === 'admin' && (
           <button onClick={() => setShowAdmin(true)} title="Panneau admin" style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 5, padding: '4px 7px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>⚙️</button>
         )}
+        <button onClick={() => setShowAppInfo(true)} title="Infos & aide" style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 5, padding: '4px 7px', color: 'var(--text-muted)', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+        </button>
         <button onClick={handleLogout} title="Déconnexion" style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 5, padding: '4px 7px', color: 'var(--text-muted)', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center' }}>
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M18.36 6.64a9 9 0 1 1-12.73 0"/>
@@ -1786,6 +1793,7 @@ export default function App() {
         {showAdmin && <AdminPanel token={token} currentUser={currentUser} onClose={() => setShowAdmin(false)} />}
 
 
+        {showAppInfo && <AppInfoModal onClose={() => setShowAppInfo(false)} />}
         {showProfile && <ProfilePage token={token} currentUser={currentUser} onClose={() => setShowProfile(false)} onSaveSteam={handleSteamSave} />}
         {(publicBoardMode?.gameIcon || activeBoard?.gameIcon) && <NowPlayingBanner gameIconUrl={publicBoardMode?.gameIcon || activeBoard?.gameIcon} token={token} />}
       </div>
