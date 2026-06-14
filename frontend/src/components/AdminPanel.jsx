@@ -36,6 +36,10 @@ export default function AdminPanel({ token, currentUser, onClose }) {
   // Settings tab
   const [settings, setSettings] = useState(null);
   const [settingsSaving, setSettingsSaving] = useState(false);
+  const [discordUrl, setDiscordUrl] = useState('');
+  const [discordIconUrl, setDiscordIconUrl] = useState('');
+  const [discordSaving, setDiscordSaving] = useState(false);
+  const [discordMsg, setDiscordMsg] = useState('');
 
   // Export / Restore
   const [restoreMsg, setRestoreMsg] = useState('');
@@ -76,7 +80,11 @@ export default function AdminPanel({ token, currentUser, onClose }) {
   useEffect(() => {
     if (tab !== 'settings' || settings !== null) return;
     fetch(`${API}/admin/settings`, { headers: h })
-      .then(r => r.json()).then(setSettings).catch(() => {});
+      .then(r => r.json()).then(d => {
+        setSettings(d);
+        setDiscordUrl(d.discordUrl || '');
+        setDiscordIconUrl(d.discordIconUrl || '');
+      }).catch(() => {});
   }, [tab]);
 
   function handleExport() {
@@ -115,6 +123,14 @@ export default function AdminPanel({ token, currentUser, onClose }) {
       finally { setRestoring(false); e.target.value = ''; }
     };
     reader.readAsText(file);
+  }
+
+  async function saveDiscord() {
+    setDiscordSaving(true); setDiscordMsg('');
+    try {
+      const res = await fetch(`${API}/admin/settings`, { method: 'PATCH', headers: h, body: JSON.stringify({ discordUrl: discordUrl.trim(), discordIconUrl: discordIconUrl.trim() }) });
+      if (res.ok) { setSettings(await res.json()); setDiscordMsg('✓ Sauvegardé'); setTimeout(() => setDiscordMsg(''), 2500); }
+    } finally { setDiscordSaving(false); }
   }
 
   async function toggleSetting(key, value) {
@@ -355,6 +371,36 @@ export default function AdminPanel({ token, currentUser, onClose }) {
                     transition: 'left .2s', display: 'block',
                   }} />
                 </button>
+              </div>
+
+              {/* Discord */}
+              <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Serveur Discord</div>
+                <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <label style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>Lien d'invitation</label>
+                    <input value={discordUrl} onChange={e => setDiscordUrl(e.target.value)} placeholder="https://discord.gg/xxxxxx"
+                      style={{ padding: '7px 10px', background: 'var(--surface1)', border: '1px solid var(--border)', borderRadius: 7, color: 'var(--text)', fontSize: 13, outline: 'none' }} />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <label style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>URL icône du serveur</label>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <input value={discordIconUrl} onChange={e => setDiscordIconUrl(e.target.value)} placeholder="https://cdn.discordapp.com/icons/…"
+                        style={{ flex: 1, padding: '7px 10px', background: 'var(--surface1)', border: '1px solid var(--border)', borderRadius: 7, color: 'var(--text)', fontSize: 13, outline: 'none' }} />
+                      {discordIconUrl && <img src={discordIconUrl} alt="" style={{ width: 32, height: 32, borderRadius: '50%', border: '2px solid var(--border)', flexShrink: 0 }} onError={e => e.target.style.display = 'none'} />}
+                    </div>
+                    <div style={{ fontSize: 10, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+                      Trouve l'URL dans les paramètres Discord : Serveur → Modifier → icône → clic droit → Copier l'adresse de l'image.
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <button onClick={saveDiscord} disabled={discordSaving}
+                      style={{ padding: '7px 18px', background: 'var(--accent)', border: 'none', borderRadius: 7, color: '#fff', fontSize: 13, fontWeight: 700, cursor: discordSaving ? 'not-allowed' : 'pointer', opacity: discordSaving ? 0.7 : 1 }}>
+                      {discordSaving ? '…' : 'Enregistrer'}
+                    </button>
+                    {discordMsg && <span style={{ fontSize: 12, color: '#4cd882' }}>{discordMsg}</span>}
+                  </div>
+                </div>
               </div>
 
               {/* Export / Restore */}

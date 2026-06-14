@@ -35,7 +35,7 @@ let _usersCache    = null;
 let _boardsCache   = null;
 let _settingsCache = null;
 
-const DEFAULT_SETTINGS = { requireApproval: false };
+const DEFAULT_SETTINGS = { requireApproval: false, discordUrl: '', discordIconUrl: '' };
 
 function readSettings() {
   ensureDataDir();
@@ -626,13 +626,18 @@ app.get('/api/admin/settings', requireAdmin, (req, res) => {
 
 app.patch('/api/admin/settings', requireAdmin, (req, res) => {
   const current = readSettings();
-  const allowed = ['requireApproval'];
   const updated = { ...current };
-  for (const key of allowed) {
-    if (key in req.body) updated[key] = Boolean(req.body[key]);
-  }
+  if ('requireApproval' in req.body) updated.requireApproval = Boolean(req.body.requireApproval);
+  if ('discordUrl'     in req.body) updated.discordUrl      = String(req.body.discordUrl || '');
+  if ('discordIconUrl' in req.body) updated.discordIconUrl  = String(req.body.discordIconUrl || '');
   writeSettings(updated);
   res.json(updated);
+});
+
+// Config publique (pas d'auth — utilisée au démarrage du frontend)
+app.get('/api/config', (req, res) => {
+  const s = readSettings();
+  res.json({ discordUrl: s.discordUrl || '', discordIconUrl: s.discordIconUrl || '' });
 });
 
 // Pré-enregistrement d'un compte Steam par l'admin

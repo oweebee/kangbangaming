@@ -230,7 +230,7 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
           <div style={{ fontSize: 11, color: 'var(--text-muted)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {isCustom
               ? <span style={{ color: tt ? tt.textColor : 'var(--accent)', opacity: 0.8 }}>
-                  {tt ? tt.label : (isTaskBoard ? 'Tâche' : 'Carte perso')}
+                  {tt ? tt.label : null}
                 </span>
               : formatPlaytime(game.playtime_minutes)
             }

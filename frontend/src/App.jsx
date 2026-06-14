@@ -17,16 +17,18 @@ import GameInfoPanel, { GAME_INFO_PANEL_WIDTH } from './components/GameInfoPanel
 import DeadlinePanel from './components/DeadlinePanel.jsx';
 import UpcomingPanel from './components/UpcomingPanel.jsx';
 
-const DISCORD_ICON_URL = 'https://cdn.discordapp.com/icons/983316258302877747/ebcf20448ef8818f93e8f31afad9f8d9.webp?size=64';
+const DISCORD_FALLBACK_ICON = 'https://cdn.discordapp.com/icons/983316258302877747/ebcf20448ef8818f93e8f31afad9f8d9.webp?size=64';
+const DISCORD_FALLBACK_URL  = 'https://discord.gg/9mXpM9wv';
 
-function DiscordServerIcon({ size = 22, borderColor = 'var(--surface1)' }) {
+function DiscordServerIcon({ size = 22, borderColor = 'var(--surface1)', iconUrl = '' }) {
   const [err, setErr] = useState(false);
-  if (err) return (
+  const src = iconUrl || DISCORD_FALLBACK_ICON;
+  if (err || !src) return (
     <div style={{ width: size, height: size, borderRadius: '50%', background: '#5865f2', marginLeft: -(size * 0.2), position: 'relative', zIndex: 2, border: `1.5px solid ${borderColor}`, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
       <svg viewBox="0 0 127.14 96.36" xmlns="http://www.w3.org/2000/svg" style={{ width: '70%', height: '70%', fill: '#fff' }}><path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22h0C129.24,52.84,122.09,29.11,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,46,53.89,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,46,96.12,53,91.08,65.69,84.69,65.69Z"/></svg>
     </div>
   );
-  return <img src={DISCORD_ICON_URL} alt="" onError={() => setErr(true)} style={{ width: size, height: size, borderRadius: '50%', marginLeft: -(size * 0.2), position: 'relative', zIndex: 2, border: `1.5px solid ${borderColor}`, flexShrink: 0 }} />;
+  return <img src={src} alt="" onError={() => setErr(true)} style={{ width: size, height: size, borderRadius: '50%', marginLeft: -(size * 0.2), position: 'relative', zIndex: 2, border: `1.5px solid ${borderColor}`, flexShrink: 0 }} />;
 }
 
 const EMOJI_CATS = [
@@ -282,6 +284,12 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [token, setToken] = useState(null);
   const [steamLoginError, setSteamLoginError] = useState('');
+
+  // Config publique (Discord, etc.)
+  const [discordConfig, setDiscordConfig] = useState({ discordUrl: '', discordIconUrl: '' });
+  useEffect(() => {
+    fetch('/api/config').then(r => r.ok ? r.json() : null).then(d => { if (d) setDiscordConfig(d); }).catch(() => {});
+  }, []);
 
   // Modals
   const [showAdmin, setShowAdmin] = useState(false);
@@ -947,7 +955,7 @@ export default function App() {
 
   // Auth screens
   if (!currentUser) {
-    return <LoginPage onLogin={handleLogin} steamError={steamLoginError} />;
+    return <LoginPage onLogin={handleLogin} steamError={steamLoginError} discordConfig={discordConfig} />;
   }
 
   const filtered = games.filter(g => g.name?.toLowerCase().includes(search.toLowerCase()));
@@ -1389,7 +1397,7 @@ export default function App() {
           <svg viewBox="0 0 496 512" xmlns="http://www.w3.org/2000/svg" style={{ width: 35, height: 35, fill: 'var(--accent)', position: 'relative', zIndex: 1 }}>
             <path d="M496 256c0 137-111.2 248-248.4 248-113.8 0-209.7-76.3-239-180.4l95.2 39.3c6.4 32.1 34.9 56.4 68.9 56.4 38.2 0 69.1-31.1 68.9-69.3l84.5-60.2c52.1 1.3 95.8-40.9 95.8-93.5 0-51.6-42-93.5-93.7-93.5s-93.7 42-93.7 93.5v1.2L176.6 279c-15.5-.9-30.7 3.4-43.5 12.1L0 236.1C10.2 108.4 117.1 8 247.6 8 384.8 8 496 119 496 256zM155.7 384.3l-30.5-12.6a52.79 52.79 0 0 0 27.2 25.8c26.9 11.2 57.8-1.6 69-28.4 5.4-13 5.5-27.3.1-40.3-5.4-13-15.5-23.2-28.5-28.6-12.7-5.3-26.4-5.5-38.8-1.4l31.5 13c19.8 8.2 29.2 30.9 20.9 50.7-8.3 19.9-31 29.2-50.9 21zm173.8-129.9c-34.4 0-62.4-28-62.4-62.3s28-62.3 62.4-62.3 62.4 28 62.4 62.3-27.9 62.3-62.4 62.3zm.1-15.6c25.9 0 46.9-21 46.9-46.8 0-25.9-21-46.8-46.9-46.8s-46.9 21-46.9 46.8c.1 25.8 21.1 46.8 46.9 46.8z"/>
           </svg>
-          <DiscordServerIcon size={35} borderColor="#111" />
+          <DiscordServerIcon size={35} borderColor="#111" iconUrl={discordConfig.discordIconUrl} />
         </div>
         <span onClick={() => { setShowHome(true); setActiveBoardId(null); setPublicBoardMode(null); }} style={{ fontWeight: 800, fontSize: 16, letterSpacing: '0.04em', color: 'var(--text)', flex: 1, cursor: 'pointer' }}>KangBanGaming</span>
         {isMobile && <button onClick={() => setShowDrawer(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 18, cursor: 'pointer', lineHeight: 1 }}>✕</button>}
@@ -1783,7 +1791,7 @@ export default function App() {
             )}
           </div>
         )}
-        <footer style={{ position: 'fixed', bottom: 0, right: 0, padding: '4px 10px', display: 'flex', alignItems: 'center', gap: 8, fontSize: 9, color: 'var(--text-muted)' }}><span>by Oweebee</span><a href="https://discord.gg/9mXpM9wv" target="_blank" rel="noreferrer" style={{ color: '#7289da', textDecoration: 'none', fontSize: 9 }}>Discord</a><a href="https://github.com/oweebee/kangbangaming" target="_blank" rel="noreferrer" style={{ color: 'var(--text-muted)', textDecoration: 'none', fontSize: 9 }}>GitHub</a></footer>
+        <footer style={{ position: 'fixed', bottom: 0, right: 0, padding: '4px 10px', display: 'flex', alignItems: 'center', gap: 8, fontSize: 9, color: 'var(--text-muted)' }}><span>by Oweebee</span><a href={discordConfig.discordUrl || DISCORD_FALLBACK_URL} target="_blank" rel="noreferrer" style={{ color: '#7289da', textDecoration: 'none', fontSize: 9 }}>Discord</a><a href="https://github.com/oweebee/kangbangaming" target="_blank" rel="noreferrer" style={{ color: 'var(--text-muted)', textDecoration: 'none', fontSize: 9 }}>GitHub</a></footer>
         {showSearch && <SearchModal api={API} token={token} boardGames={games} onAdd={g => addGame(g, searchTargetCol)} onRemove={removeGame} onClose={() => { setShowSearch(false); setSearchTargetCol(null); }} customOnly={isTaskBoard} isTaskBoard={isTaskBoard} appUsers={appUsers} currentUser={currentUser} />}
         {editingGame && <SearchModal api={API} token={token} boardGames={games} onAdd={addGame} onRemove={removeGame} onClose={() => setEditingGame(null)} customOnly={isTaskBoard} isTaskBoard={isTaskBoard} appUsers={appUsers} currentUser={currentUser} initialGame={editingGame} onSave={async g => { await updateGame(g); setEditingGame(null); }} />}
         {displayedGame && displayedGame.type === 'custom'
@@ -1964,7 +1972,7 @@ export default function App() {
       </div>
       <footer style={{ position: 'fixed', bottom: 0, right: 0, padding: '5px 12px', display: 'flex', alignItems: 'center', gap: 8, fontSize: 10, color: 'var(--text-muted)' }}>
         <span>by Oweebee</span>
-        <a href="https://discord.gg/9mXpM9wv" target="_blank" rel="noreferrer" style={{ color: '#7289da', textDecoration: 'none' }}>Discord</a>
+        <a href={discordConfig.discordUrl || DISCORD_FALLBACK_URL} target="_blank" rel="noreferrer" style={{ color: '#7289da', textDecoration: 'none' }}>Discord</a>
         <a href="https://github.com/oweebee/kangbangaming" target="_blank" rel="noreferrer" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>GitHub</a>
       </footer>
       {showSearch && <SearchModal api={API} token={token} boardGames={games} onAdd={g => addGame(g, searchTargetCol)} onRemove={removeGame} onClose={() => { setShowSearch(false); setSearchTargetCol(null); }} customOnly={isTaskBoard} isTaskBoard={isTaskBoard} appUsers={appUsers} currentUser={currentUser} />}
