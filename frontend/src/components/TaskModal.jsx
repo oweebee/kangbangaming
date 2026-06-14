@@ -5,6 +5,7 @@ import NotesSection from './NotesSection.jsx';
 import ProgressSlider, { progressColor } from './ProgressSlider.jsx';
 import { StatusToggles, DatePicker, AssigneeEditor } from './CardControls.jsx';
 import ModalBackdrop from './ModalBackdrop.jsx';
+import SwipeTabs from './SwipeTabs.jsx';
 import { useLang } from '../i18n.js';
 
 // ── Date helpers ──────────────────────────────────────────────────────────────
@@ -294,27 +295,25 @@ export default function TaskModal({ game, onClose, onEdit, appUsers = [], onPatc
           </div>
         </div>
 
-        {/* ── Tabs bar ── */}
-        <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', flexShrink: 0, background: 'var(--surface)' }}>
-          {[
-            { id: 'infos', label: t('task.tab_infos') },
-            { id: 'notes', label: `${t('task.tab_notes').replace('...', '')}${notesCount > 0 ? ` (${notesCount})` : ''}` },
-          ].map(tab => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
-              background: 'none', border: 'none',
-              borderBottom: activeTab === tab.id ? '2px solid var(--accent)' : '2px solid transparent',
-              padding: '10px 18px', color: activeTab === tab.id ? 'var(--text)' : 'var(--text-muted)',
-              fontWeight: activeTab === tab.id ? 700 : 400, fontSize: 13,
-              cursor: 'pointer', marginBottom: -1, transition: 'color .15s',
-            }}>{tab.label}</button>
-          ))}
-        </div>
+        <SwipeTabs
+          tabs={[
+            { id: 'infos',  label: t('task.tab_infos') },
+            { id: 'notes',  label: `${t('task.tab_notes').replace('...', '')}${notesCount > 0 ? ` (${notesCount})` : ''}` },
+          ]}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          tabBarStyle={{ padding: '0 4px', background: 'var(--surface)' }}
+          tabBtnStyle={(active) => ({
+            background: 'none', border: 'none',
+            borderBottom: active ? '2px solid var(--accent)' : '2px solid transparent',
+            padding: '10px 18px', color: active ? 'var(--text)' : 'var(--text-muted)',
+            fontWeight: active ? 700 : 400, fontSize: 13,
+            cursor: 'pointer', marginBottom: -1, transition: 'color .15s',
+          })}
+        >
 
-        {/* ── Body ── */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '14px 16px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-
-          {/* ══ ONGLET INFOS ══ */}
-          {activeTab === 'infos' && (<>
+          {/* ══ PANNEAU INFOS ══ */}
+          <div style={{ overflowY: 'auto', padding: '14px 16px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
 
             {/* ── Terminée + Urgent ── */}
             <StatusToggles
@@ -395,11 +394,10 @@ export default function TaskModal({ game, onClose, onEdit, appUsers = [], onPatc
                 </div>
               </div>
             )}
+          </div>
 
-          </>)}
-
-          {/* ══ ONGLET NOTES ══ */}
-          {activeTab === 'notes' && (
+          {/* ══ PANNEAU NOTES ══ */}
+          <div style={{ overflowY: 'auto', padding: '14px 16px 20px' }}>
             <NotesSection
               notes={game.notes || []}
               onSave={handleSaveNotes}
@@ -408,8 +406,9 @@ export default function TaskModal({ game, onClose, onEdit, appUsers = [], onPatc
               currentUser={currentUser}
               appUsers={appUsers}
             />
-          )}
-        </div>
+          </div>
+
+        </SwipeTabs>
       </div>
     </ModalBackdrop>
   );

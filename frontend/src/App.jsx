@@ -17,6 +17,7 @@ import SteamEncart from './components/SteamEncart.jsx';
 import GameInfoPanel, { GAME_INFO_PANEL_WIDTH } from './components/GameInfoPanel.jsx';
 import DeadlinePanel from './components/DeadlinePanel.jsx';
 import UpcomingPanel from './components/UpcomingPanel.jsx';
+import MobileHomeSlider from './components/MobileHomeSlider.jsx';
 
 const DISCORD_FALLBACK_ICON = 'https://cdn.discordapp.com/icons/983316258302877747/ebcf20448ef8818f93e8f31afad9f8d9.webp?size=64';
 const DISCORD_FALLBACK_URL  = 'https://discord.gg/9mXpM9wv';
@@ -311,10 +312,6 @@ export default function App() {
   const [showHome, setShowHome] = useState(true);
   const [mobileHomeTab, setMobileHomeTab] = useState('boards'); // 'deadlines' | 'boards' | 'upcoming'
   const mobileHomeTabs = ['deadlines', 'boards', 'upcoming'];
-  const mobileHomeContainerRef = useRef(null);
-  const mobileHomeTrackRef    = useRef(null);
-  const mobileHomeDragRef     = useRef({ active: false, startX: 0, startY: 0, startTime: 0, isHorizontal: null, w: 0 });
-  const mobileHomeActiveIdxRef = useRef(1); // 'boards' is default
   const [homePublicBoards, setHomePublicBoards] = useState([]);
   const [deadlineRefreshKey, setDeadlineRefreshKey] = useState(0);
   // Home section drag order (IDs) — persisted in localStorage
@@ -654,78 +651,6 @@ export default function App() {
     fetch(`${API}/public/boards`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.ok ? r.json() : []).then(setHomePublicBoards).catch(() => {});
   }, [showHome, token]);
-  // ── Mobile home tabs : sync activeIndex ref ──────────────────────────────
-  useEffect(() => {
-    mobileHomeActiveIdxRef.current = mobileHomeTabs.indexOf(mobileHomeTab);
-  }, [mobileHomeTab]);
-
-  // ── Mobile home tabs : snap track when tab changes (tab click or back button) ─
-  useEffect(() => {
-    const idx = mobileHomeTabs.indexOf(mobileHomeTab);
-    const el  = mobileHomeContainerRef.current;
-    const trk = mobileHomeTrackRef.current;
-    if (!el || !trk) return;
-    trk.style.transition = 'transform 0.32s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
-    trk.style.transform  = `translateX(${-idx * el.offsetWidth}px)`;
-  }, [mobileHomeTab]);
-
-  // ── Mobile home tabs : native touch slider ────────────────────────────────
-  useEffect(() => {
-    const el = mobileHomeContainerRef.current;
-    if (!el) return;
-    const N = 3;
-    const onStart = (e) => {
-      const d = mobileHomeDragRef.current;
-      d.active = true; d.isHorizontal = null;
-      d.startX = e.touches[0].clientX; d.startY = e.touches[0].clientY;
-      d.startTime = Date.now(); d.w = el.offsetWidth;
-      const trk = mobileHomeTrackRef.current;
-      if (trk) trk.style.transition = 'none';
-    };
-    const onMove = (e) => {
-      const d = mobileHomeDragRef.current;
-      if (!d.active) return;
-      const dx = e.touches[0].clientX - d.startX;
-      const dy = e.touches[0].clientY - d.startY;
-      if (d.isHorizontal === null && (Math.abs(dx) > 5 || Math.abs(dy) > 5))
-        d.isHorizontal = Math.abs(dx) > Math.abs(dy);
-      if (!d.isHorizontal) return;
-      e.preventDefault();
-      const base = -mobileHomeActiveIdxRef.current * d.w;
-      let x = base + dx;
-      if (x > 0)              x = dx * 0.15;
-      if (x < -(N-1) * d.w)  x = -(N-1) * d.w + (x + (N-1) * d.w) * 0.15;
-      const trk = mobileHomeTrackRef.current;
-      if (trk) trk.style.transform = `translateX(${x}px)`;
-    };
-    const onEnd = (e) => {
-      const d = mobileHomeDragRef.current;
-      if (!d.active) return;
-      d.active = false;
-      if (!d.isHorizontal) return;
-      const dx  = e.changedTouches[0].clientX - d.startX;
-      const dt  = Date.now() - d.startTime;
-      const isFlick = dt < 300 && Math.abs(dx) > 25;
-      let idx = mobileHomeActiveIdxRef.current;
-      if ((dx < -d.w * 0.3 || (isFlick && dx < 0)) && idx < N - 1) idx++;
-      else if ((dx > d.w * 0.3 || (isFlick && dx > 0)) && idx > 0) idx--;
-      const trk = mobileHomeTrackRef.current;
-      if (trk) {
-        trk.style.transition = 'transform 0.32s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
-        trk.style.transform  = `translateX(${-idx * d.w}px)`;
-      }
-      if (idx !== mobileHomeActiveIdxRef.current) setMobileHomeTab(mobileHomeTabs[idx]);
-    };
-    el.addEventListener('touchstart', onStart, { passive: true });
-    el.addEventListener('touchmove',  onMove,  { passive: false });
-    el.addEventListener('touchend',   onEnd,   { passive: true });
-    return () => {
-      el.removeEventListener('touchstart', onStart);
-      el.removeEventListener('touchmove',  onMove);
-      el.removeEventListener('touchend',   onEnd);
-    };
-  }, [isMobile]); // re-attach when mobile layout mounts (ref is null until then)
-
   // ── Bouton retour Android / geste retour mobile ──────────────────────────
   useEffect(() => {
     // Injecter une entrée factice dans l'historique pour intercepter le retour
@@ -1287,48 +1212,28 @@ export default function App() {
   );
 
   const mobileHomeView = (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      {/* Barre d'onglets */}
-      <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', flexShrink: 0, background: 'var(--surface)' }}>
-        {[
-          { id: 'deadlines', label: t('home.deadlines_tab') },
-          { id: 'boards',    label: t('home.boards_tab')    },
-          { id: 'upcoming',  label: t('home.upcoming_tab')  },
-        ].map(({ id, label }) => (
-          <button key={id} onClick={() => setMobileHomeTab(id)} style={{
-            flex: 1, background: 'none', border: 'none',
-            borderBottom: mobileHomeTab === id ? '2px solid var(--accent)' : '2px solid transparent',
-            padding: '10px 4px', marginBottom: -1,
-            color: mobileHomeTab === id ? 'var(--text)' : 'var(--text-muted)',
-            fontSize: 11, fontWeight: mobileHomeTab === id ? 700 : 400,
-            cursor: 'pointer',
-          }}>{label}</button>
-        ))}
+    <MobileHomeSlider
+      tab={mobileHomeTab}
+      onTabChange={setMobileHomeTab}
+      tabLabels={[
+        { id: 'deadlines', label: t('home.deadlines_tab') },
+        { id: 'boards',    label: t('home.boards_tab')    },
+        { id: 'upcoming',  label: t('home.upcoming_tab')  },
+      ]}
+    >
+      {/* Panneau 0 : Échéances */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '20px 14px' }}>
+        <DeadlinePanel token={token} onOpenTask={handleDeadlineOpen} refreshKey={deadlineRefreshKey} hiddenDeadlineIds={hiddenDeadlineIds} showHiddenDeadlines={showHiddenDeadlines} onHideDeadline={hideDeadline} onUnhideDeadline={unhideDeadline} onToggleShowHidden={() => setShowHiddenDeadlines(v => !v)} />
       </div>
-      {/* Sliding track — 3 panneaux côte à côte */}
-      <div ref={mobileHomeContainerRef} style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
-        <div ref={mobileHomeTrackRef} style={{
-          display: 'flex', width: '300%', height: '100%',
-          willChange: 'transform',
-          transform: `translateX(-${mobileHomeTabs.indexOf(mobileHomeTab) * 100 / 3}%)`,
-        }}>
-          {/* Panneau 0 : Échéances */}
-          <div style={{ width: '33.333%', height: '100%', flexShrink: 0, boxSizing: 'border-box', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ flex: 1, overflowY: 'auto', padding: '20px 14px' }}>
-              <DeadlinePanel token={token} onOpenTask={handleDeadlineOpen} refreshKey={deadlineRefreshKey} hiddenDeadlineIds={hiddenDeadlineIds} showHiddenDeadlines={showHiddenDeadlines} onHideDeadline={hideDeadline} onUnhideDeadline={unhideDeadline} onToggleShowHidden={() => setShowHiddenDeadlines(v => !v)} />
-            </div>
-          </div>
-          {/* Panneau 1 : Boards */}
-          <div style={{ width: '33.333%', height: '100%', flexShrink: 0, boxSizing: 'border-box', display: 'flex', flexDirection: 'column' }}>
-            {boardsContent}
-          </div>
-          {/* Panneau 2 : Upcoming */}
-          <div style={{ width: '33.333%', height: '100%', flexShrink: 0, overflow: 'hidden', boxSizing: 'border-box' }}>
-            <UpcomingPanel token={token} />
-          </div>
-        </div>
+      {/* Panneau 1 : Boards */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        {boardsContent}
       </div>
-    </div>
+      {/* Panneau 2 : Upcoming */}
+      <div style={{ flex: 1, overflow: 'hidden' }}>
+        <UpcomingPanel token={token} />
+      </div>
+    </MobileHomeSlider>
   );
 
   const homeView = (
@@ -1879,6 +1784,7 @@ export default function App() {
                   {activeBoard.public ? t('common.public') : t('common.private')}
                 </span>
               )}
+              {activeBoardId && <button onClick={toggleCompact} title={t('nav.compact')} style={{ background: compactView ? 'rgba(192,87,10,0.15)' : 'rgba(255,255,255,.06)', border: compactView ? '1px solid var(--accent)' : '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', color: compactView ? 'var(--accent)' : 'var(--text-muted)', fontSize: 11, cursor: 'pointer', flexShrink: 0 }}>⊟</button>}
               {activeBoardId && <button onClick={() => setShowSearch(true)} style={{ background: 'var(--accent)', border: 'none', borderRadius: 7, padding: '7px 14px', color: '#fff', fontWeight: 700, fontSize: 12, flexShrink: 0 }}>{isTaskBoard ? t('nav.add_task') : t('nav.add_game')}</button>}
             </>
           )}
@@ -1889,14 +1795,14 @@ export default function App() {
           loading ? (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Chargement...</div>
           ) : (
-            <MobileBoard columns={columns} byColumn={byColumn} onCardClick={g => { setSelectedGameDefaultTab('infos'); setSelectedGame(g); }} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} isTaskBoard={isTaskBoard} onToggleDone={(appid, done) => patchGame(appid, { done })} onToggleUrgent={(appid, urgent) => patchGame(appid, { urgent })} onUpdateAssignees={(appid, assignees) => patchGame(appid, { assignees })} onClickNotes={handleCardNotesClick} genreColors={boardGenreColors} hiddenCardIds={new Set()} showHiddenCards={false} onHideCard={undefined} onUnhideCard={undefined} />
+            <MobileBoard columns={columns} byColumn={byColumn} onCardClick={g => { setSelectedGameDefaultTab('infos'); setSelectedGame(g); }} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} isTaskBoard={isTaskBoard} onToggleDone={(appid, done) => patchGame(appid, { done })} onToggleUrgent={(appid, urgent) => patchGame(appid, { urgent })} onUpdateAssignees={(appid, assignees) => patchGame(appid, { assignees })} onClickNotes={handleCardNotesClick} genreColors={boardGenreColors} hiddenCardIds={new Set()} showHiddenCards={false} onHideCard={undefined} onUnhideCard={undefined} compact={compactView} />
           )
         ) : !activeBoardId ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Crée un board pour commencer</div>
         ) : loading ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Chargement...</div>
         ) : (
-          <MobileBoard columns={columns} byColumn={byColumn} onCardClick={g => { setSelectedGameDefaultTab('infos'); setSelectedGame(g); }} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} isTaskBoard={isTaskBoard} onToggleDone={(appid, done) => patchGame(appid, { done })} onToggleUrgent={(appid, urgent) => patchGame(appid, { urgent })} onUpdateAssignees={(appid, assignees) => patchGame(appid, { assignees })} onClickNotes={handleCardNotesClick} genreColors={boardGenreColors} hiddenCardIds={new Set()} showHiddenCards={false} onHideCard={undefined} onUnhideCard={undefined} />
+          <MobileBoard columns={columns} byColumn={byColumn} onCardClick={g => { setSelectedGameDefaultTab('infos'); setSelectedGame(g); }} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} isTaskBoard={isTaskBoard} onToggleDone={(appid, done) => patchGame(appid, { done })} onToggleUrgent={(appid, urgent) => patchGame(appid, { urgent })} onUpdateAssignees={(appid, assignees) => patchGame(appid, { assignees })} onClickNotes={handleCardNotesClick} genreColors={boardGenreColors} hiddenCardIds={new Set()} showHiddenCards={false} onHideCard={undefined} onUnhideCard={undefined} compact={compactView} />
         )}
         {(activeBoardId || publicBoardMode) && (
           <div style={{ background: 'var(--surface)', borderTop: '1px solid var(--border)', padding: '8px 12px', display: 'flex', gap: 8, flexShrink: 0 }}>

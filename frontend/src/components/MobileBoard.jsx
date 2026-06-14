@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import GameCard from './GameCard.jsx';
 
-export default function MobileBoard({ columns, byColumn, onCardClick, onArchiveGame, onUnarchiveGame, onDeleteGame, onEditGame, isTaskBoard, onToggleDone, onToggleUrgent, onUpdateAssignees, onClickNotes, genreColors = {}, hiddenCardIds = new Set(), showHiddenCards = false, onHideCard, onUnhideCard }) {
+export default function MobileBoard({ columns, byColumn, onCardClick, onArchiveGame, onUnarchiveGame, onDeleteGame, onEditGame, isTaskBoard, onToggleDone, onToggleUrgent, onUpdateAssignees, onClickNotes, genreColors = {}, hiddenCardIds = new Set(), showHiddenCards = false, onHideCard, onUnhideCard, compact = false }) {
   const [activeColId, setActiveColId] = useState(columns[0]?.id || null);
   const containerRef   = useRef(null);
   const trackRef       = useRef(null);
@@ -202,6 +202,7 @@ export default function MobileBoard({ columns, byColumn, onCardClick, onArchiveG
                     isHidden={hiddenCardIds.has(String(game.appid))}
                     onHide={onHideCard ? () => onHideCard(game.appid) : undefined}
                     onUnhide={onUnhideCard ? () => onUnhideCard(game.appid) : undefined}
+                    compact={compact}
                   />
                 ))}
               </div>
