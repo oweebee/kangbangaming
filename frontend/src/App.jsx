@@ -311,26 +311,10 @@ export default function App() {
   const [showHome, setShowHome] = useState(true);
   const [mobileHomeTab, setMobileHomeTab] = useState('boards'); // 'deadlines' | 'boards' | 'upcoming'
   const mobileHomeTabs = ['deadlines', 'boards', 'upcoming'];
-  const mobileSwipeStartX = useRef(null);
-  const mobileSwipeStartY = useRef(null);
-  const handleMobileTouchStart = (e) => {
-    mobileSwipeStartX.current = e.touches[0].clientX;
-    mobileSwipeStartY.current = e.touches[0].clientY;
-  };
-  const handleMobileTouchEnd = (e) => {
-    if (mobileSwipeStartX.current === null) return;
-    const deltaX = e.changedTouches[0].clientX - mobileSwipeStartX.current;
-    const deltaY = e.changedTouches[0].clientY - mobileSwipeStartY.current;
-    mobileSwipeStartX.current = null;
-    mobileSwipeStartY.current = null;
-    if (Math.abs(deltaX) < 50 || Math.abs(deltaX) < Math.abs(deltaY)) return;
-    setMobileHomeTab(cur => {
-      const idx = mobileHomeTabs.indexOf(cur);
-      if (deltaX < 0 && idx < mobileHomeTabs.length - 1) return mobileHomeTabs[idx + 1];
-      if (deltaX > 0 && idx > 0) return mobileHomeTabs[idx - 1];
-      return cur;
-    });
-  };
+  const mobileHomeContainerRef = useRef(null);
+  const mobileHomeTrackRef    = useRef(null);
+  const mobileHomeDragRef     = useRef({ active: false, startX: 0, startY: 0, startTime: 0, isHorizontal: null, w: 0 });
+  const mobileHomeActiveIdxRef = useRef(1); // 'boards' is default
   const [homePublicBoards, setHomePublicBoards] = useState([]);
   const [deadlineRefreshKey, setDeadlineRefreshKey] = useState(0);
   // Home section drag order (IDs) — persisted in localStorage
@@ -670,6 +654,78 @@ export default function App() {
     fetch(`${API}/public/boards`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.ok ? r.json() : []).then(setHomePublicBoards).catch(() => {});
   }, [showHome, token]);
+  // ── Mobile home tabs : sync activeIndex ref ──────────────────────────────
+  useEffect(() => {
+    mobileHomeActiveIdxRef.current = mobileHomeTabs.indexOf(mobileHomeTab);
+  }, [mobileHomeTab]);
+
+  // ── Mobile home tabs : snap track when tab changes (tab click or back button) ─
+  useEffect(() => {
+    const idx = mobileHomeTabs.indexOf(mobileHomeTab);
+    const el  = mobileHomeContainerRef.current;
+    const trk = mobileHomeTrackRef.current;
+    if (!el || !trk) return;
+    trk.style.transition = 'transform 0.32s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+    trk.style.transform  = `translateX(${-idx * el.offsetWidth}px)`;
+  }, [mobileHomeTab]);
+
+  // ── Mobile home tabs : native touch slider ────────────────────────────────
+  useEffect(() => {
+    const el = mobileHomeContainerRef.current;
+    if (!el) return;
+    const N = 3;
+    const onStart = (e) => {
+      const d = mobileHomeDragRef.current;
+      d.active = true; d.isHorizontal = null;
+      d.startX = e.touches[0].clientX; d.startY = e.touches[0].clientY;
+      d.startTime = Date.now(); d.w = el.offsetWidth;
+      const trk = mobileHomeTrackRef.current;
+      if (trk) trk.style.transition = 'none';
+    };
+    const onMove = (e) => {
+      const d = mobileHomeDragRef.current;
+      if (!d.active) return;
+      const dx = e.touches[0].clientX - d.startX;
+      const dy = e.touches[0].clientY - d.startY;
+      if (d.isHorizontal === null && (Math.abs(dx) > 5 || Math.abs(dy) > 5))
+        d.isHorizontal = Math.abs(dx) > Math.abs(dy);
+      if (!d.isHorizontal) return;
+      e.preventDefault();
+      const base = -mobileHomeActiveIdxRef.current * d.w;
+      let x = base + dx;
+      if (x > 0)              x = dx * 0.15;
+      if (x < -(N-1) * d.w)  x = -(N-1) * d.w + (x + (N-1) * d.w) * 0.15;
+      const trk = mobileHomeTrackRef.current;
+      if (trk) trk.style.transform = `translateX(${x}px)`;
+    };
+    const onEnd = (e) => {
+      const d = mobileHomeDragRef.current;
+      if (!d.active) return;
+      d.active = false;
+      if (!d.isHorizontal) return;
+      const dx  = e.changedTouches[0].clientX - d.startX;
+      const dt  = Date.now() - d.startTime;
+      const isFlick = dt < 300 && Math.abs(dx) > 25;
+      let idx = mobileHomeActiveIdxRef.current;
+      if ((dx < -d.w * 0.3 || (isFlick && dx < 0)) && idx < N - 1) idx++;
+      else if ((dx > d.w * 0.3 || (isFlick && dx > 0)) && idx > 0) idx--;
+      const trk = mobileHomeTrackRef.current;
+      if (trk) {
+        trk.style.transition = 'transform 0.32s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+        trk.style.transform  = `translateX(${-idx * d.w}px)`;
+      }
+      if (idx !== mobileHomeActiveIdxRef.current) setMobileHomeTab(mobileHomeTabs[idx]);
+    };
+    el.addEventListener('touchstart', onStart, { passive: true });
+    el.addEventListener('touchmove',  onMove,  { passive: false });
+    el.addEventListener('touchend',   onEnd,   { passive: true });
+    return () => {
+      el.removeEventListener('touchstart', onStart);
+      el.removeEventListener('touchmove',  onMove);
+      el.removeEventListener('touchend',   onEnd);
+    };
+  }, []); // refs handle dynamic values — no re-attach needed
+
   // ── Bouton retour Android / geste retour mobile ──────────────────────────
   useEffect(() => {
     // Injecter une entrée factice dans l'historique pour intercepter le retour
@@ -1249,22 +1305,28 @@ export default function App() {
           }}>{label}</button>
         ))}
       </div>
-      {/* Contenu — swipe gauche/droite pour changer d'onglet */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
-        onTouchStart={handleMobileTouchStart}
-        onTouchEnd={handleMobileTouchEnd}
-      >
-      {mobileHomeTab === 'deadlines' && (
-        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 14px' }}>
-          <DeadlinePanel token={token} onOpenTask={handleDeadlineOpen} refreshKey={deadlineRefreshKey} hiddenDeadlineIds={hiddenDeadlineIds} showHiddenDeadlines={showHiddenDeadlines} onHideDeadline={hideDeadline} onUnhideDeadline={unhideDeadline} onToggleShowHidden={() => setShowHiddenDeadlines(v => !v)} />
+      {/* Sliding track — 3 panneaux côte à côte */}
+      <div ref={mobileHomeContainerRef} style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
+        <div ref={mobileHomeTrackRef} style={{
+          display: 'flex', width: '300%', height: '100%',
+          willChange: 'transform',
+          transform: `translateX(-${mobileHomeTabs.indexOf(mobileHomeTab) * 100 / 3}%)`,
+        }}>
+          {/* Panneau 0 : Échéances */}
+          <div style={{ width: '33.333%', height: '100%', flexShrink: 0, boxSizing: 'border-box', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '20px 14px' }}>
+              <DeadlinePanel token={token} onOpenTask={handleDeadlineOpen} refreshKey={deadlineRefreshKey} hiddenDeadlineIds={hiddenDeadlineIds} showHiddenDeadlines={showHiddenDeadlines} onHideDeadline={hideDeadline} onUnhideDeadline={unhideDeadline} onToggleShowHidden={() => setShowHiddenDeadlines(v => !v)} />
+            </div>
+          </div>
+          {/* Panneau 1 : Boards */}
+          <div style={{ width: '33.333%', height: '100%', flexShrink: 0, boxSizing: 'border-box', display: 'flex', flexDirection: 'column' }}>
+            {boardsContent}
+          </div>
+          {/* Panneau 2 : Upcoming */}
+          <div style={{ width: '33.333%', height: '100%', flexShrink: 0, overflow: 'hidden', boxSizing: 'border-box' }}>
+            <UpcomingPanel token={token} />
+          </div>
         </div>
-      )}
-      {mobileHomeTab === 'boards' && boardsContent}
-      {mobileHomeTab === 'upcoming' && (
-        <div style={{ flex: 1, overflow: 'hidden' }}>
-          <UpcomingPanel token={token} />
-        </div>
-      )}
       </div>
     </div>
   );
