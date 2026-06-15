@@ -350,6 +350,7 @@ export default function App() {
   const [personalFavIds, setPersonalFavIds] = useState([]);
   // Collaborative public board currently open (null = own boards mode)
   const [publicBoardMode, setPublicBoardMode] = useState(null); // { id, name, ownerUsername }
+  const isOwnPublicBoard = !!(publicBoardMode && currentUser && publicBoardMode.ownerUsername === currentUser.username);
 
   // Home view
   const [showHome, setShowHome] = useState(true);
@@ -1285,7 +1286,7 @@ export default function App() {
         </div>
         {homePublicBoards.length === 0
           ? <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>{t('board.no_public')}</div>
-          : <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
+          : <div style={{ display: 'grid', gridTemplateColumns: compactView ? '1fr' : 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
               {applySectionOrder(homePublicBoards, homePublicOrder).filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).map(b => (
                 <div
                   key={b.id}
@@ -1338,7 +1339,7 @@ export default function App() {
                 <svg viewBox="0 0 24 24" width="13" height="13" fill="#f5c518" stroke="#f5c518" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
                 <span style={{ fontSize: 11, fontWeight: 700, color: '#f5c518', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{t('board.pinned_section')}</span>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: compactView ? '1fr' : 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
                 {applySectionOrder(favBoards2, homeFavOrder).filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).map(b => (
                   <div
                     key={b.id}
@@ -1387,7 +1388,7 @@ export default function App() {
               ? <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>{t('board.create_start')}</div>
               : otherBoards.length === 0
                 ? <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>{t('board.all_pinned')}</div>
-                : <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
+                : <div style={{ display: 'grid', gridTemplateColumns: compactView ? '1fr' : 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
                     {applySectionOrder(otherBoards, homeOtherOrder).filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).map(b => (
                       <div
                         key={b.id}
@@ -2116,6 +2117,17 @@ export default function App() {
                   <circle cx="10" cy="7" r="4"/><path d="M4 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M15 3.13a4 4 0 0 1 0 7.75"/><path d="M20 21v-2a4 4 0 0 0-3-3.85"/>
                 </svg> Public
               </span>
+              {isOwnPublicBoard && (
+                <button onClick={async () => {
+                  try {
+                    const res = await fetch(`${API}/boards/${publicBoardMode.id}/columns`, { method: 'POST', headers: authHeaders(token), body: JSON.stringify({ label: t('col.new_label') }) });
+                    if (!res.ok) { const e = await res.json().catch(() => ({})); alert(t('err.col_create') + (e.error || res.status)); return; }
+                    const col = await res.json();
+                    setColumns(prev => [...prev, col]);
+                    setBoards(prev => prev.map(b => b.id === publicBoardMode.id ? { ...b, columns: [...(b.columns || []), col] } : b));
+                  } catch (err) { alert(t('err.col_network') + err.message); }
+                }} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>{t('board.add_col')}</button>
+              )}
               <button onClick={toggleCompact} style={{ background: compactView ? 'rgba(192,87,10,0.15)' : 'var(--surface2)', border: compactView ? '1px solid var(--accent)' : '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: compactView ? 'var(--accent)' : 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0, fontWeight: compactView ? 700 : 400 }}>{t('nav.compact')}</button>
               <button onClick={refreshPublicBoard} style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 11px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ fontSize: 15, lineHeight: 1 }}>↻</span> {t('nav.refresh').replace('↻ ', '')}</button>
               {/* ── Steam game info — encart centre du header (public board) ── */}
