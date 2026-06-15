@@ -329,7 +329,7 @@ export default function MobileBoard({
                 ref={el => { tabButtonRefs.current[col.id] = el; }}
                 onClick={() => goToCol(col.id)}
                 style={{
-                  flexShrink: 0,
+                  flexShrink: 0, maxWidth: 140, minWidth: 0,
                   background: active ? 'var(--accent)' : 'var(--surface2)',
                   border: active ? '1px solid var(--accent)' : '1px solid var(--border)',
                   borderRadius: 20, padding: '6px 14px',
@@ -339,8 +339,8 @@ export default function MobileBoard({
                   transition: 'background .15s, border-color .15s, color .15s',
                 }}
               >
-                {col.emoji && <span style={{ fontSize: 14 }}>{col.emoji}</span>}
-                {col.label}
+                {col.emoji && <span style={{ fontSize: 14, flexShrink: 0 }}>{col.emoji}</span>}
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{col.label}</span>
                 <span style={{ background: active ? 'rgba(255,255,255,.25)' : 'var(--surface3)', borderRadius: 99, padding: '1px 6px', fontSize: 10 }}>{count}</span>
               </button>
             );
