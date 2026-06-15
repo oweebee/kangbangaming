@@ -380,7 +380,15 @@ export default function DeadlinePanel({ token, onOpenTask, refreshKey = 0, hidde
   }
 
   const total = categorized.overdue.length + categorized.active.length + categorized.tomorrow.length + categorized.upcoming.length;
-  const hiddenCount = hiddenDeadlineIds.size;
+  // Compte uniquement les items cachés qui sont actuellement dans le scope des échéances
+  const taskKeyFn = t => t._isWishlist ? `wishlist__${t._steamAppid}` : `${t.boardId}__${t.gameId}`;
+  const allCategorizedKeys = new Set([
+    ...categorized.overdue,
+    ...categorized.active,
+    ...categorized.tomorrow,
+    ...categorized.upcoming,
+  ].map(taskKeyFn));
+  const hiddenCount = [...hiddenDeadlineIds].filter(k => allCategorizedKeys.has(k)).length;
 
   return (
     <>

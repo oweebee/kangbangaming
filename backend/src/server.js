@@ -986,21 +986,20 @@ function parseSteamDate(ts, str) {
   return null;
 }
 
-// Fetch release dates + noms pour un batch d'appids (appdetails multi-id)
-async function fetchBatchDates(appids) {
-  const results = {}; // appid → { date, name }
+// Fetch release date + nom pour UN appid (appdetails est peu fiable en multi-id)
+async function fetchOneAppDate(appid) {
   try {
-    const url = `https://store.steampowered.com/api/appdetails?appids=${appids.join(',')}&filters=release_date,basic&l=english`;
+    const url = `https://store.steampowered.com/api/appdetails?appids=${appid}&filters=release_date,basic&l=english`;
     const resp = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' } });
-    if (!resp.ok) return results;
+    if (!resp.ok) return null;
     const data = await resp.json();
-    for (const [aid, info] of Object.entries(data || {})) {
-      const date = info?.success ? parseSteamDate(0, info?.data?.release_date?.date) : null;
-      const name = info?.data?.name || null;
-      results[aid] = { date, name };
-    }
-  } catch {}
-  return results;
+    const info = data?.[String(appid)];
+    if (!info?.success) return null;
+    return {
+      date: parseSteamDate(0, info?.data?.release_date?.date),
+      name: info?.data?.name || null,
+    };
+  } catch { return null; }
 }
 
 app.get('/api/steam/wishlist/deadline', requireAuth, async (req, res) => {
@@ -1054,20 +1053,24 @@ app.get('/api/steam/wishlist/deadline', requireAuth, async (req, res) => {
         console.log(`[wishlist/deadline] API officielle – ${appids.length} appids pour user ${req.user.id}`);
 
         if (appids.length > 0) {
-          // Résoudre les dates depuis le cache ou appdetails (batch 20)
+          // Résoudre les dates depuis le cache ou appdetails (3 appids en parallèle)
           const uncached = appids.filter(id => {
             const c = appReleaseDateCache.get(id);
             return !c || (now - c.fetchedAt) > APP_DATE_TTL;
           });
+          console.log(`[wishlist/deadline] ${appids.length} appids, ${uncached.length} sans cache – fetch appdetails`);
 
-          // Fetch par batch de 20
-          for (let i = 0; i < uncached.length; i += 20) {
-            const batch = uncached.slice(i, i + 20);
-            const dates = await fetchBatchDates(batch);
-            for (const [aid, info] of Object.entries(dates)) {
-              appReleaseDateCache.set(Number(aid), { date: info.date, name: info.name, fetchedAt: now });
-            }
-            if (i + 20 < uncached.length) await new Promise(r => setTimeout(r, 300)); // throttle
+          for (let i = 0; i < uncached.length; i += 3) {
+            const batch = uncached.slice(i, i + 3);
+            await Promise.all(batch.map(async appid => {
+              const info = await fetchOneAppDate(appid);
+              appReleaseDateCache.set(appid, {
+                date: info?.date || null,
+                name: info?.name || null,
+                fetchedAt: now,
+              });
+            }));
+            if (i + 3 < uncached.length) await new Promise(r => setTimeout(r, 300));
           }
 
           items = appids.map(appid => {
@@ -1079,6 +1082,7 @@ app.get('/api/steam/wishlist/deadline', requireAuth, async (req, res) => {
               release_date: c?.date || null,
             };
           }).filter(i => i.release_date !== null);
+          console.log(`[wishlist/deadline] fallback → ${items.length} items avec date de sortie`);
         }
       }
     } catch (e) {
