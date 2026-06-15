@@ -21,6 +21,7 @@ function ColumnPicker({ columns, currentColId, onSelect, onClose }) {
       {/* Backdrop */}
       <div
         onClick={onClose}
+        onTouchEnd={e => { e.preventDefault(); onClose(); }}
         style={{
           position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 900,
         }}
@@ -371,17 +372,18 @@ export default function MobileBoard({
                       {/* Bouton "Déplacer vers" — visible quand > 1 colonne */}
                       {columns.length > 1 && moveGame && !isBeingDragged && (
                         <button
-                          onTouchEnd={e => { e.stopPropagation(); setMovePicker({ game, colId: col.id }); }}
+                          onTouchEnd={e => { e.stopPropagation(); e.preventDefault(); setMovePicker({ game, colId: col.id }); }}
                           onClick={e => { e.stopPropagation(); setMovePicker({ game, colId: col.id }); }}
                           style={{
                             marginTop: 4,
                             width: '100%',
                             background: 'transparent',
-                            border: '1px solid var(--border)',
+                            border: '1.5px solid rgba(192,87,10,0.35)',
                             borderRadius: 7,
-                            padding: '5px 8px',
-                            color: 'var(--text-muted)',
-                            fontSize: 11,
+                            padding: '9px 8px',
+                            color: 'var(--accent)',
+                            fontSize: 12,
+                            fontWeight: 600,
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',

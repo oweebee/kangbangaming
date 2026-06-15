@@ -334,6 +334,8 @@ export default function App() {
   });
   const [homeDragId, setHomeDragId] = useState(null);
   const [homeDragOver, setHomeDragOver] = useState(null);
+  const homeTouchTimerRef = useRef(null);
+  const homeTouchDragRef  = useRef({ active: false, id: null, section: null, overId: null });
   // Resizable splitter between DeadlinePanel and boards columns
   const [homeSplitPct, setHomeSplitPct] = useState(() => {
     try { return parseFloat(localStorage.getItem('homeSplitPct') || '35'); } catch { return 35; }
@@ -1185,6 +1187,28 @@ export default function App() {
     setHomeDragOver(null);
   }
 
+  function finishHomeTouchDrop() {
+    const { id, section, overId } = homeTouchDragRef.current;
+    homeTouchDragRef.current = { active: false, id: null, section: null, overId: null };
+    setHomeDragId(null); setHomeDragOver(null);
+    if (!id || !overId || id === overId) return;
+    const isPublic = section === 'public', isFav = section === 'fav';
+    const setOrder  = isPublic ? setHomePublicOrder  : isFav ? setHomeFavOrder  : setHomeOtherOrder;
+    const key       = isPublic ? 'homePublicOrder'   : isFav ? 'homeFavOrder'   : 'homeOtherOrder';
+    const curOrder  = isPublic ? homePublicOrder      : isFav ? homeFavOrder      : homeOtherOrder;
+    const sectionItems = isPublic ? homePublicBoards
+      : isFav ? sortedBoards.filter(b => personalFavIds.includes(b.id))
+      : sortedBoards.filter(b => !personalFavIds.includes(b.id));
+    setOrder(() => {
+      const base = applySectionOrder(sectionItems, curOrder).map(b => b.id);
+      const from = base.indexOf(id), to = base.indexOf(overId);
+      if (from === -1 || to === -1) return curOrder;
+      const next = [...base]; next.splice(from, 1); next.splice(to, 0, id);
+      try { localStorage.setItem(key, JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }
+
   // ── Couleur de type pour les boards ──────────────────────────────────────────
   // Board perso → cuivre #c87830 (absent des genres Steam)
   // Steam → couleur genre si connue, sinon bleu Steam #66c0f4
@@ -1215,7 +1239,36 @@ export default function App() {
           ? <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>{t('board.no_public')}</div>
           : <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
               {applySectionOrder(homePublicBoards, homePublicOrder).filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).map(b => (
-                <HomeBoardCard key={b.id} board={b} isPublic isFav={favBoards.some(f => f.id === b.id)} onToggleFav={cur => toggleFavorite(b.id, b, cur)} onClick={() => openPublicBoard(b)} typeColor={getBoardTypeColor(b)} isHidden={hiddenBoardIds.has(b.id)} onHide={() => hideBoard(b.id)} onUnhide={() => unhideBoard(b.id)} />
+                <div
+                  key={b.id}
+                  data-hbd-id={b.id}
+                  onTouchStart={() => {
+                    clearTimeout(homeTouchTimerRef.current);
+                    homeTouchDragRef.current = { active: false, id: b.id, section: 'public', overId: null };
+                    homeTouchTimerRef.current = setTimeout(() => {
+                      homeTouchDragRef.current.active = true;
+                      setHomeDragId(b.id);
+                      if (navigator.vibrate) navigator.vibrate(40);
+                    }, 400);
+                  }}
+                  onTouchMove={e => {
+                    if (!homeTouchDragRef.current.active) { clearTimeout(homeTouchTimerRef.current); return; }
+                    const touch = e.touches[0];
+                    const el = document.elementFromPoint(touch.clientX, touch.clientY)?.closest('[data-hbd-id]');
+                    const overId = el?.getAttribute('data-hbd-id') ?? null;
+                    homeTouchDragRef.current.overId = overId;
+                    setHomeDragOver(overId ? `public_${overId}` : null);
+                  }}
+                  onTouchEnd={e => {
+                    clearTimeout(homeTouchTimerRef.current);
+                    if (!homeTouchDragRef.current.active) { homeTouchDragRef.current.active = false; return; }
+                    e.preventDefault();
+                    finishHomeTouchDrop();
+                  }}
+                  style={{ opacity: homeDragId === b.id ? 0.4 : 1, outline: homeDragOver === `public_${b.id}` && homeDragId !== b.id ? '2px dashed var(--accent)' : 'none', borderRadius: 12, transition: 'opacity .15s' }}
+                >
+                  <HomeBoardCard board={b} isPublic isFav={favBoards.some(f => f.id === b.id)} onToggleFav={cur => toggleFavorite(b.id, b, cur)} onClick={() => openPublicBoard(b)} typeColor={getBoardTypeColor(b)} isHidden={hiddenBoardIds.has(b.id)} onHide={() => hideBoard(b.id)} onUnhide={() => unhideBoard(b.id)} />
+                </div>
               ))}
             </div>
         }
@@ -1235,7 +1288,36 @@ export default function App() {
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
                 {applySectionOrder(favBoards2, homeFavOrder).filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).map(b => (
-                  <HomeBoardCard key={b.id} board={b} isFav onToggleFav={cur => togglePersonalFavorite(b.id, cur)} onClick={() => openBoard(b)} typeColor={getBoardTypeColor(b)} isHidden={hiddenBoardIds.has(b.id)} onHide={() => hideBoard(b.id)} onUnhide={() => unhideBoard(b.id)} />
+                  <div
+                    key={b.id}
+                    data-hbd-id={b.id}
+                    onTouchStart={() => {
+                      clearTimeout(homeTouchTimerRef.current);
+                      homeTouchDragRef.current = { active: false, id: b.id, section: 'fav', overId: null };
+                      homeTouchTimerRef.current = setTimeout(() => {
+                        homeTouchDragRef.current.active = true;
+                        setHomeDragId(b.id);
+                        if (navigator.vibrate) navigator.vibrate(40);
+                      }, 400);
+                    }}
+                    onTouchMove={e => {
+                      if (!homeTouchDragRef.current.active) { clearTimeout(homeTouchTimerRef.current); return; }
+                      const touch = e.touches[0];
+                      const el = document.elementFromPoint(touch.clientX, touch.clientY)?.closest('[data-hbd-id]');
+                      const overId = el?.getAttribute('data-hbd-id') ?? null;
+                      homeTouchDragRef.current.overId = overId;
+                      setHomeDragOver(overId ? `fav_${overId}` : null);
+                    }}
+                    onTouchEnd={e => {
+                      clearTimeout(homeTouchTimerRef.current);
+                      if (!homeTouchDragRef.current.active) { homeTouchDragRef.current.active = false; return; }
+                      e.preventDefault();
+                      finishHomeTouchDrop();
+                    }}
+                    style={{ opacity: homeDragId === b.id ? 0.4 : 1, outline: homeDragOver === `fav_${b.id}` && homeDragId !== b.id ? '2px dashed #f5c518' : 'none', borderRadius: 12, transition: 'opacity .15s' }}
+                  >
+                    <HomeBoardCard board={b} isFav onToggleFav={cur => togglePersonalFavorite(b.id, cur)} onClick={() => openBoard(b)} typeColor={getBoardTypeColor(b)} isHidden={hiddenBoardIds.has(b.id)} onHide={() => hideBoard(b.id)} onUnhide={() => unhideBoard(b.id)} />
+                  </div>
                 ))}
               </div>
             </div>
@@ -1251,7 +1333,36 @@ export default function App() {
                 ? <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>{t('board.all_pinned')}</div>
                 : <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
                     {applySectionOrder(otherBoards, homeOtherOrder).filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).map(b => (
-                      <HomeBoardCard key={b.id} board={b} isFav={false} onToggleFav={cur => togglePersonalFavorite(b.id, cur)} onClick={() => openBoard(b)} typeColor={getBoardTypeColor(b)} isHidden={hiddenBoardIds.has(b.id)} onHide={() => hideBoard(b.id)} onUnhide={() => unhideBoard(b.id)} />
+                      <div
+                        key={b.id}
+                        data-hbd-id={b.id}
+                        onTouchStart={() => {
+                          clearTimeout(homeTouchTimerRef.current);
+                          homeTouchDragRef.current = { active: false, id: b.id, section: 'other', overId: null };
+                          homeTouchTimerRef.current = setTimeout(() => {
+                            homeTouchDragRef.current.active = true;
+                            setHomeDragId(b.id);
+                            if (navigator.vibrate) navigator.vibrate(40);
+                          }, 400);
+                        }}
+                        onTouchMove={e => {
+                          if (!homeTouchDragRef.current.active) { clearTimeout(homeTouchTimerRef.current); return; }
+                          const touch = e.touches[0];
+                          const el = document.elementFromPoint(touch.clientX, touch.clientY)?.closest('[data-hbd-id]');
+                          const overId = el?.getAttribute('data-hbd-id') ?? null;
+                          homeTouchDragRef.current.overId = overId;
+                          setHomeDragOver(overId ? `other_${overId}` : null);
+                        }}
+                        onTouchEnd={e => {
+                          clearTimeout(homeTouchTimerRef.current);
+                          if (!homeTouchDragRef.current.active) { homeTouchDragRef.current.active = false; return; }
+                          e.preventDefault();
+                          finishHomeTouchDrop();
+                        }}
+                        style={{ opacity: homeDragId === b.id ? 0.4 : 1, outline: homeDragOver === `other_${b.id}` && homeDragId !== b.id ? '2px dashed #f5a500' : 'none', borderRadius: 12, transition: 'opacity .15s' }}
+                      >
+                        <HomeBoardCard board={b} isFav={false} onToggleFav={cur => togglePersonalFavorite(b.id, cur)} onClick={() => openBoard(b)} typeColor={getBoardTypeColor(b)} isHidden={hiddenBoardIds.has(b.id)} onHide={() => hideBoard(b.id)} onUnhide={() => unhideBoard(b.id)} />
+                      </div>
                     ))}
                   </div>
             }
@@ -1824,7 +1935,6 @@ export default function App() {
                   style={{ background: showArchived ? 'rgba(120,80,160,0.25)' : 'rgba(255,255,255,.06)', border: showArchived ? '1px solid rgba(160,100,220,0.6)' : '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', color: showArchived ? '#c090f0' : 'var(--text-muted)', fontSize: 11, cursor: 'pointer', flexShrink: 0, fontWeight: showArchived ? 700 : 400 }}
                 >📦 {archiveCount}</button>
               )}
-              <button onClick={() => setShowSearch(true)} style={{ background: 'var(--accent)', border: 'none', borderRadius: 7, padding: '7px 10px', color: '#fff', fontWeight: 700, fontSize: 12, flexShrink: 0 }}>+ {isTaskBoard ? t('nav.add_task_short').slice(2) : t('nav.add_game_short').slice(2)}</button>
               <button onClick={refreshPublicBoard} title={t('nav.refresh')} style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', color: 'var(--text-muted)', fontSize: 14, cursor: 'pointer', flexShrink: 0, lineHeight: 1 }}>↻</button>
               <button onClick={closePublicBoard} style={{ background: 'rgba(255,255,255,.08)', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 10px', color: 'var(--text-muted)', fontSize: 11, cursor: 'pointer', flexShrink: 0 }}>✕</button>
             </>
@@ -1849,7 +1959,6 @@ export default function App() {
                   style={{ background: showArchived ? 'rgba(120,80,160,0.25)' : 'rgba(255,255,255,.06)', border: showArchived ? '1px solid rgba(160,100,220,0.6)' : '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', color: showArchived ? '#c090f0' : 'var(--text-muted)', fontSize: 11, cursor: 'pointer', flexShrink: 0, fontWeight: showArchived ? 700 : 400 }}
                 >📦 {archiveCount}</button>
               )}
-              {activeBoardId && <button onClick={() => setShowSearch(true)} style={{ background: 'var(--accent)', border: 'none', borderRadius: 7, padding: '7px 14px', color: '#fff', fontWeight: 700, fontSize: 12, flexShrink: 0 }}>{isTaskBoard ? t('nav.add_task') : t('nav.add_game')}</button>}
             </>
           )}
         </header>
