@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import GameCard from './GameCard.jsx';
 import { useLang } from '../i18n.js';
 
@@ -114,12 +114,15 @@ function Section({ cat, tasks, onOpenTask, hiddenDeadlineIds, showHiddenDeadline
   const [order, setOrder] = useState(() => {
     try { return JSON.parse(localStorage.getItem(`dlOrder_${cat}`) || 'null') || []; } catch { return []; }
   });
-  const [dragKey, setDragKey] = useState(null);
-  const [dragOver, setDragOver] = useState(null);
+  const [dragKey,      setDragKey]      = useState(null);
+  const [dragOver,     setDragOver]     = useState(null);
+  const [touchDragKey, setTouchDragKey] = useState(null);
+  const [touchDragOver,setTouchDragOver]= useState(null);
+  const touchTimerRef = useRef(null);
+  const touchDragRef  = useRef({ active: false, key: null, overKey: null, scrollBlocker: null, pendingX: 0, pendingY: 0 });
   const meta = CAT_META[cat];
   if (tasks.length === 0) return null;
 
-  // Build a stable key per task for ordering
   const taskKey = t => `${t.boardId}__${t.gameId}`;
 
   function applyOrder(items) {
@@ -130,18 +133,38 @@ function Section({ cat, tasks, onOpenTask, hiddenDeadlineIds, showHiddenDeadline
     return [...sorted, ...extra];
   }
 
-  function handleDrop(overId) {
-    if (!dragKey || dragKey === overId) return;
+  function applyReorder(fromKey, toKey) {
+    if (!fromKey || fromKey === toKey) return;
     const base = applyOrder(tasks).map(taskKey);
-    const from = base.indexOf(dragKey);
-    const to = base.indexOf(overId);
+    const from = base.indexOf(fromKey);
+    const to   = base.indexOf(toKey);
     if (from === -1 || to === -1) return;
     const next = [...base];
     next.splice(from, 1);
-    next.splice(to, 0, dragKey);
+    next.splice(to, 0, fromKey);
     try { localStorage.setItem(`dlOrder_${cat}`, JSON.stringify(next)); } catch {}
     setOrder(next);
+  }
+
+  function handleDrop(overId) {
+    applyReorder(dragKey, overId);
     setDragKey(null); setDragOver(null);
+  }
+
+  function finishTouchDrop() {
+    const { key, overKey, scrollBlocker } = touchDragRef.current;
+    if (scrollBlocker) { document.removeEventListener('touchmove', scrollBlocker); }
+    touchDragRef.current = { active: false, key: null, overKey: null, scrollBlocker: null, pendingX: 0, pendingY: 0 };
+    setTouchDragKey(null); setTouchDragOver(null);
+    applyReorder(key, overKey);
+  }
+
+  function cancelTouchDrag() {
+    clearTimeout(touchTimerRef.current);
+    const { scrollBlocker } = touchDragRef.current;
+    if (scrollBlocker) { document.removeEventListener('touchmove', scrollBlocker); }
+    touchDragRef.current = { active: false, key: null, overKey: null, scrollBlocker: null, pendingX: 0, pendingY: 0 };
+    setTouchDragKey(null); setTouchDragOver(null);
   }
 
   const allSorted = applyOrder(tasks);
@@ -164,24 +187,63 @@ function Section({ cat, tasks, onOpenTask, hiddenDeadlineIds, showHiddenDeadline
       </div>
 
       {!collapsed && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 10 }}>
           {sorted.map((task, i) => {
             const game = taskToGame(task);
-            const isPublic = task.isPublic;
             const key = taskKey(task);
+            const isTouchDragging = touchDragKey === key;
+            const isTouchOver     = touchDragOver === key && touchDragKey !== key;
             return (
               <div
                 key={`${key}-${i}`}
+                data-dlkey={key}
                 draggable
                 onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; setDragKey(key); }}
                 onDragEnd={() => { setDragKey(null); setDragOver(null); }}
                 onDragOver={e => { e.preventDefault(); setDragOver(key); }}
                 onDrop={e => { e.preventDefault(); handleDrop(key); }}
+                onContextMenu={e => e.preventDefault()}
+                onTouchStart={e => {
+                  clearTimeout(touchTimerRef.current);
+                  touchDragRef.current = { active: false, key, overKey: null, scrollBlocker: null, pendingX: e.touches[0].clientX, pendingY: e.touches[0].clientY };
+                  touchTimerRef.current = setTimeout(() => {
+                    touchDragRef.current.active = true;
+                    setTouchDragKey(key);
+                    if (navigator.vibrate) navigator.vibrate(40);
+                    const blocker = (ev) => ev.preventDefault();
+                    touchDragRef.current.scrollBlocker = blocker;
+                    document.addEventListener('touchmove', blocker, { passive: false });
+                  }, 400);
+                }}
+                onTouchMove={e => {
+                  const d = touchDragRef.current;
+                  if (!d.active) {
+                    const dx = Math.abs(e.touches[0].clientX - d.pendingX);
+                    const dy = Math.abs(e.touches[0].clientY - d.pendingY);
+                    if (dx > 5 || dy > 5) clearTimeout(touchTimerRef.current);
+                    return;
+                  }
+                  const touch = e.touches[0];
+                  const el = document.elementFromPoint(touch.clientX, touch.clientY)?.closest('[data-dlkey]');
+                  const overKey = el?.getAttribute('data-dlkey') ?? null;
+                  d.overKey = overKey;
+                  setTouchDragOver(overKey);
+                }}
+                onTouchEnd={e => {
+                  clearTimeout(touchTimerRef.current);
+                  if (!touchDragRef.current.active) { touchDragRef.current.active = false; return; }
+                  e.preventDefault();
+                  finishTouchDrop();
+                }}
+                onTouchCancel={cancelTouchDrag}
                 style={{
                   display: 'flex', flexDirection: 'column', gap: 4,
-                  opacity: dragKey === key ? 0.4 : 1,
-                  outline: dragOver === key && dragKey !== key ? `2px dashed ${meta.color}` : 'none',
+                  opacity: (dragKey === key || isTouchDragging) ? 0.4 : 1,
+                  outline: (dragOver === key && dragKey !== key) || isTouchOver ? `2px dashed ${meta.color}` : 'none',
                   borderRadius: 8, cursor: 'grab',
+                  transform: isTouchDragging ? 'rotate(1deg) scale(1.02)' : 'none',
+                  boxShadow: isTouchDragging ? '0 6px 20px rgba(0,0,0,0.5)' : 'none',
+                  transition: 'opacity .15s, transform .15s, box-shadow .15s',
                 }}
               >
                 <GameCard

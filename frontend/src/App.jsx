@@ -163,14 +163,49 @@ function getSteamGenreColor(genres) {
 
 const API = import.meta.env.VITE_API_URL || '/api';
 
-function HomeBoardCard({ board, isPublic, isFav, onToggleFav, onClick, typeColor = '#66c0f4', isHidden = false, onHide, onUnhide }) {
+function HomeBoardCard({ board, isPublic, isFav, onToggleFav, onClick, typeColor = '#66c0f4', isHidden = false, onHide, onUnhide, compact = false }) {
   const [favHover, setFavHover] = useState(false);
   const { t } = useLang();
+
+  if (compact) {
+    return (
+      <div
+        onClick={onClick}
+        style={{
+          background: isFav
+            ? `linear-gradient(var(--surface1), var(--surface1)) padding-box, linear-gradient(to right, ${isPublic ? '#3db86a' : '#f5c518'} 0%, ${typeColor} 100%) border-box`
+            : 'var(--surface1)',
+          border: isFav ? '2px solid transparent' : `2px solid ${typeColor}`,
+          borderRadius: 10, display: 'flex', alignItems: 'center', gap: 8,
+          padding: '7px 10px', cursor: 'pointer',
+          opacity: isHidden ? 0.5 : 1, filter: isHidden ? 'saturate(0.3)' : 'none',
+        }}
+      >
+        <div style={{ width: 32, height: 32, borderRadius: 6, overflow: 'hidden', flexShrink: 0, background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {(board.headerImg || board.gameIcon)
+            ? <img src={board.headerImg || board.gameIcon} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            : <span style={{ fontSize: 18 }}>{board.emoji || '🎮'}</span>
+          }
+        </div>
+        {isFav && <svg viewBox="0 0 24 24" width="9" height="9" fill="#f5c518" stroke="#f5c518" strokeWidth="1.5" style={{ flexShrink: 0 }}><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>}
+        <span style={{ flex: 1, fontWeight: 700, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text)' }}>{board.name}</span>
+        <span style={{ fontSize: 9, fontWeight: 700, color: (isPublic || board.public) ? '#3db86a' : '#f5a500', border: `1.5px solid ${(isPublic || board.public) ? '#3db86a' : '#f5a500'}`, borderRadius: 4, padding: '1px 4px', flexShrink: 0 }}>
+          {(isPublic || board.public) ? t('hbc.public') : t('hbc.private')}
+        </span>
+        {(onHide || onUnhide) && (
+          <button onClick={e => { e.stopPropagation(); isHidden ? onUnhide() : onHide(); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 2, display: 'flex' }}>
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              {isHidden ? <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></> : <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></>}
+            </svg>
+          </button>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div
       style={{
-        // Bordure dégradée pour les épinglés : doré/vert gauche → couleur Steam droite
-        // Technique background-clip : fonctionne avec border-radius
         background: isFav
           ? `linear-gradient(var(--surface1), var(--surface1)) padding-box, linear-gradient(to right, ${isPublic ? '#3db86a' : '#f5c518'} 0%, ${typeColor} 100%) border-box`
           : 'var(--surface1)',
@@ -1284,7 +1319,7 @@ export default function App() {
                   onContextMenu={e => e.preventDefault()}
                   style={{ opacity: homeDragId === b.id ? 0.4 : 1, outline: homeDragOver === `public_${b.id}` && homeDragId !== b.id ? '2px dashed var(--accent)' : 'none', borderRadius: 12, transition: 'opacity .15s, transform .15s, box-shadow .15s', transform: homeDragId === b.id ? 'rotate(2deg) scale(1.03)' : 'none', boxShadow: homeDragId === b.id ? '0 8px 28px rgba(0,0,0,0.55)' : 'none' }}
                 >
-                  <HomeBoardCard board={b} isPublic isFav={favBoards.some(f => f.id === b.id)} onToggleFav={cur => toggleFavorite(b.id, b, cur)} onClick={() => openPublicBoard(b)} typeColor={getBoardTypeColor(b)} isHidden={hiddenBoardIds.has(b.id)} onHide={() => hideBoard(b.id)} onUnhide={() => unhideBoard(b.id)} />
+                  <HomeBoardCard board={b} isPublic isFav={favBoards.some(f => f.id === b.id)} onToggleFav={cur => toggleFavorite(b.id, b, cur)} onClick={() => openPublicBoard(b)} typeColor={getBoardTypeColor(b)} isHidden={hiddenBoardIds.has(b.id)} onHide={() => hideBoard(b.id)} onUnhide={() => unhideBoard(b.id)} compact={compactView} />
                 </div>
               ))}
             </div>
@@ -1337,7 +1372,7 @@ export default function App() {
                     onContextMenu={e => e.preventDefault()}
                     style={{ opacity: homeDragId === b.id ? 0.4 : 1, outline: homeDragOver === `fav_${b.id}` && homeDragId !== b.id ? '2px dashed #f5c518' : 'none', borderRadius: 12, transition: 'opacity .15s, transform .15s, box-shadow .15s', transform: homeDragId === b.id ? 'rotate(2deg) scale(1.03)' : 'none', boxShadow: homeDragId === b.id ? '0 8px 28px rgba(0,0,0,0.55)' : 'none' }}
                   >
-                    <HomeBoardCard board={b} isFav onToggleFav={cur => togglePersonalFavorite(b.id, cur)} onClick={() => openBoard(b)} typeColor={getBoardTypeColor(b)} isHidden={hiddenBoardIds.has(b.id)} onHide={() => hideBoard(b.id)} onUnhide={() => unhideBoard(b.id)} />
+                    <HomeBoardCard board={b} isFav onToggleFav={cur => togglePersonalFavorite(b.id, cur)} onClick={() => openBoard(b)} typeColor={getBoardTypeColor(b)} isHidden={hiddenBoardIds.has(b.id)} onHide={() => hideBoard(b.id)} onUnhide={() => unhideBoard(b.id)} compact={compactView} />
                   </div>
                 ))}
               </div>
@@ -1386,7 +1421,7 @@ export default function App() {
                         onContextMenu={e => e.preventDefault()}
                         style={{ opacity: homeDragId === b.id ? 0.4 : 1, outline: homeDragOver === `other_${b.id}` && homeDragId !== b.id ? '2px dashed #f5a500' : 'none', borderRadius: 12, transition: 'opacity .15s, transform .15s, box-shadow .15s', transform: homeDragId === b.id ? 'rotate(2deg) scale(1.03)' : 'none', boxShadow: homeDragId === b.id ? '0 8px 28px rgba(0,0,0,0.55)' : 'none' }}
                       >
-                        <HomeBoardCard board={b} isFav={false} onToggleFav={cur => togglePersonalFavorite(b.id, cur)} onClick={() => openBoard(b)} typeColor={getBoardTypeColor(b)} isHidden={hiddenBoardIds.has(b.id)} onHide={() => hideBoard(b.id)} onUnhide={() => unhideBoard(b.id)} />
+                        <HomeBoardCard board={b} isFav={false} onToggleFav={cur => togglePersonalFavorite(b.id, cur)} onClick={() => openBoard(b)} typeColor={getBoardTypeColor(b)} isHidden={hiddenBoardIds.has(b.id)} onHide={() => hideBoard(b.id)} onUnhide={() => unhideBoard(b.id)} compact={compactView} />
                       </div>
                     ))}
                   </div>
