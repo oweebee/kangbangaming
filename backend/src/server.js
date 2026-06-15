@@ -986,7 +986,7 @@ function parseSteamDate(ts, str) {
   return null;
 }
 
-// Fetch release date + nom pour UN appid (appdetails est peu fiable en multi-id)
+// Fetch release date + nom + header_image pour UN appid
 async function fetchOneAppDate(appid) {
   try {
     const url = `https://store.steampowered.com/api/appdetails?appids=${appid}&filters=release_date,basic&l=english`;
@@ -996,8 +996,9 @@ async function fetchOneAppDate(appid) {
     const info = data?.[String(appid)];
     if (!info?.success) return null;
     return {
-      date: parseSteamDate(0, info?.data?.release_date?.date),
-      name: info?.data?.name || null,
+      date:       parseSteamDate(0, info?.data?.release_date?.date),
+      name:       info?.data?.name || null,
+      header_img: info?.data?.header_image || null,
     };
   } catch { return null; }
 }
@@ -1065,9 +1066,10 @@ app.get('/api/steam/wishlist/deadline', requireAuth, async (req, res) => {
             await Promise.all(batch.map(async appid => {
               const info = await fetchOneAppDate(appid);
               appReleaseDateCache.set(appid, {
-                date: info?.date || null,
-                name: info?.name || null,
-                fetchedAt: now,
+                date:       info?.date || null,
+                name:       info?.name || null,
+                header_img: info?.header_img || null,
+                fetchedAt:  now,
               });
             }));
             if (i + 3 < uncached.length) await new Promise(r => setTimeout(r, 300));
@@ -1078,7 +1080,7 @@ app.get('/api/steam/wishlist/deadline', requireAuth, async (req, res) => {
             return {
               appid,
               name:         c?.name || `App ${appid}`,
-              header_img:   `https://cdn.akamai.steamstatic.com/steam/apps/${appid}/header.jpg`,
+              header_img:   c?.header_img || `https://cdn.akamai.steamstatic.com/steam/apps/${appid}/header.jpg`,
               release_date: c?.date || null,
             };
           }).filter(i => i.release_date !== null);

@@ -237,6 +237,7 @@ function Section({ cat, tasks, onOpenTask, hiddenDeadlineIds, showHiddenDeadline
                   finishTouchDrop();
                 })}
                 onTouchCancel={task._isWishlist ? undefined : cancelTouchDrag}
+                onClick={task._isWishlist ? () => window.open(`https://store.steampowered.com/app/${task._steamAppid}/`, '_blank') : undefined}
                 style={{
                   position: 'relative',
                   display: 'flex', flexDirection: 'column', gap: 4,
@@ -269,6 +270,7 @@ function Section({ cat, tasks, onOpenTask, hiddenDeadlineIds, showHiddenDeadline
                   onHide={onHideDeadline ? () => onHideDeadline(key) : undefined}
                   onUnhide={onUnhideDeadline ? () => onUnhideDeadline(key) : undefined}
                   compact={compact}
+                  headerHeight={88}
                 />
                 {/* Nom du board / source */}
                 <div style={{
@@ -300,11 +302,7 @@ function Section({ cat, tasks, onOpenTask, hiddenDeadlineIds, showHiddenDeadline
                       }}>
                         {task.boardName}
                       </span>
-                      {task.ownerUsername && (
-                        <span style={{ fontSize: 9, color: '#47a7f5', opacity: 0.7, flexShrink: 0 }}>
-                          🌐 {task.ownerUsername}
-                        </span>
-                      )}
+
                     </>
                   )}
                 </div>

@@ -8,7 +8,7 @@ import { useLang } from '../i18n.js';
 
 const COMPACT_ICON_SIZE = 32; // 40 * 0.8 (-20%)
 
-export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArchive, onUnarchive, onDelete, onEdit, isDragging, readOnly, isTaskBoard, compact = false, assignees = [], appUsers = [], onToggleDone, onToggleUrgent, onUpdateAssignees, onClickNotes, genreColor = null, isHidden = false, onHide, onUnhide }) {
+export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArchive, onUnarchive, onDelete, onEdit, isDragging, readOnly, isTaskBoard, compact = false, assignees = [], appUsers = [], onToggleDone, onToggleUrgent, onUpdateAssignees, onClickNotes, genreColor = null, isHidden = false, onHide, onUnhide, headerHeight = null }) {
   const { t } = useLang();
   const [imgError, setImgError] = useState(false);
   const [ttImgError, setTtImgError] = useState(false);
@@ -71,11 +71,11 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
               src={tt.img}
               alt={tt.label}
               onError={() => setTtImgError(true)}
-              style={{ width: '100%', height: 'auto', display: 'block' }}
+              style={{ width: '100%', height: headerHeight ? headerHeight : 'auto', objectFit: headerHeight ? 'cover' : undefined, display: 'block' }}
             />
           ) : (
             <div style={{
-              width: '100%', height: 88,
+              width: '100%', height: headerHeight ?? 88,
               background: 'linear-gradient(135deg, #111 0%, #1a1a1a 100%)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
@@ -108,7 +108,7 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
         </div>
       ) : !compact && isCustom ? (
         <div style={{
-          width: '100%', height: 88, position: 'relative',
+          width: '100%', height: headerHeight ?? 88, position: 'relative',
           background: customColor
             ? `linear-gradient(135deg, ${customColor}30 0%, ${customColor}18 50%, ${customColor}08 100%)`
             : 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
@@ -138,7 +138,7 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
           <img
             src={game.header_img} alt={game.name}
             onError={() => setImgError(true)}
-            style={{ width: '100%', height: 'auto', display: 'block' }}
+            style={{ width: '100%', height: headerHeight ? headerHeight : 'auto', objectFit: headerHeight ? 'cover' : undefined, display: 'block' }}
             draggable={false}
           />
           {isUrgent && !isArchived && (
@@ -161,7 +161,7 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
         </div>
       ) : !compact ? (
         <div style={{
-          width: '100%', height: 88, position: 'relative', background: 'var(--steam)',
+          width: '100%', height: headerHeight ?? 88, position: 'relative', background: 'var(--steam)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24,
         }}>
           🎮
