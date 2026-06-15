@@ -123,7 +123,7 @@ function Section({ cat, tasks, onOpenTask, hiddenDeadlineIds, showHiddenDeadline
   const meta = CAT_META[cat];
   if (tasks.length === 0) return null;
 
-  const taskKey = t => `${t.boardId}__${t.gameId}`;
+  const taskKey = t => t._isWishlist ? `wishlist__${t._steamAppid}` : `${t.boardId}__${t.gameId}`;
 
   function applyOrder(items) {
     if (!order || order.length === 0) return items;
@@ -197,13 +197,13 @@ function Section({ cat, tasks, onOpenTask, hiddenDeadlineIds, showHiddenDeadline
               <div
                 key={`${key}-${i}`}
                 data-dlkey={key}
-                draggable
-                onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; setDragKey(key); }}
-                onDragEnd={() => { setDragKey(null); setDragOver(null); }}
-                onDragOver={e => { e.preventDefault(); setDragOver(key); }}
-                onDrop={e => { e.preventDefault(); handleDrop(key); }}
+                draggable={!task._isWishlist}
+                onDragStart={task._isWishlist ? undefined : (e => { e.dataTransfer.effectAllowed = 'move'; setDragKey(key); })}
+                onDragEnd={task._isWishlist ? undefined : (() => { setDragKey(null); setDragOver(null); })}
+                onDragOver={task._isWishlist ? undefined : (e => { e.preventDefault(); setDragOver(key); })}
+                onDrop={task._isWishlist ? undefined : (e => { e.preventDefault(); handleDrop(key); })}
                 onContextMenu={e => e.preventDefault()}
-                onTouchStart={e => {
+                onTouchStart={task._isWishlist ? undefined : (e => {
                   clearTimeout(touchTimerRef.current);
                   touchDragRef.current = { active: false, key, overKey: null, scrollBlocker: null, pendingX: e.touches[0].clientX, pendingY: e.touches[0].clientY };
                   touchTimerRef.current = setTimeout(() => {
@@ -214,8 +214,8 @@ function Section({ cat, tasks, onOpenTask, hiddenDeadlineIds, showHiddenDeadline
                     touchDragRef.current.scrollBlocker = blocker;
                     document.addEventListener('touchmove', blocker, { passive: false });
                   }, 400);
-                }}
-                onTouchMove={e => {
+                })}
+                onTouchMove={task._isWishlist ? undefined : (e => {
                   const d = touchDragRef.current;
                   if (!d.active) {
                     const dx = Math.abs(e.touches[0].clientX - d.pendingX);
@@ -228,59 +228,88 @@ function Section({ cat, tasks, onOpenTask, hiddenDeadlineIds, showHiddenDeadline
                   const overKey = el?.getAttribute('data-dlkey') ?? null;
                   d.overKey = overKey;
                   setTouchDragOver(overKey);
-                }}
-                onTouchEnd={e => {
+                })}
+                onTouchEnd={task._isWishlist ? undefined : (e => {
                   clearTimeout(touchTimerRef.current);
                   if (!touchDragRef.current.active) { touchDragRef.current.active = false; return; }
                   e.preventDefault();
                   finishTouchDrop();
-                }}
-                onTouchCancel={cancelTouchDrag}
+                })}
+                onTouchCancel={task._isWishlist ? undefined : cancelTouchDrag}
                 style={{
+                  position: 'relative',
                   display: 'flex', flexDirection: 'column', gap: 4,
                   opacity: (dragKey === key || isTouchDragging) ? 0.4 : 1,
                   outline: (dragOver === key && dragKey !== key) || isTouchOver ? `2px dashed ${meta.color}` : 'none',
-                  borderRadius: 8, cursor: 'grab',
+                  borderRadius: 8, cursor: task._isWishlist ? 'pointer' : 'grab',
                   transform: isTouchDragging ? 'rotate(1deg) scale(1.02)' : 'none',
                   boxShadow: isTouchDragging ? '0 6px 20px rgba(0,0,0,0.5)' : 'none',
                   transition: 'opacity .15s, transform .15s, box-shadow .15s',
                 }}
               >
+                {/* Badge WISHLIST */}
+                {task._isWishlist && (
+                  <div style={{
+                    position: 'absolute', top: 6, left: 6, zIndex: 10,
+                    background: 'rgba(13,52,89,0.92)', border: '1px solid #47a7f5',
+                    borderRadius: 4, padding: '2px 6px',
+                    fontSize: 9, fontWeight: 800, color: '#7dc8ff',
+                    letterSpacing: '0.07em', textTransform: 'uppercase',
+                    pointerEvents: 'none', userSelect: 'none',
+                  }}>★ WISHLIST</div>
+                )}
                 <GameCard
                   game={game}
-                  onClick={() => onOpenTask(task)}
-                  readOnly={false}
-                  isTaskBoard={task.type === 'custom'}
+                  onClick={task._isWishlist
+                    ? () => window.open(`https://store.steampowered.com/app/${task._steamAppid}/`, '_blank')
+                    : () => onOpenTask(task)
+                  }
+                  readOnly={task._isWishlist}
+                  isTaskBoard={!task._isWishlist && task.type === 'custom'}
                   onDragStart={() => {}}
                   onDragEnd={() => {}}
-                  genreColor={task.type === 'custom' ? (task.color || null) : null}
+                  genreColor={task._isWishlist ? null : (task.type === 'custom' ? (task.color || null) : null)}
                   isHidden={hiddenDeadlineIds.has(key)}
                   onHide={onHideDeadline ? () => onHideDeadline(key) : undefined}
                   onUnhide={onUnhideDeadline ? () => onUnhideDeadline(key) : undefined}
                   compact={compact}
                 />
-                {/* Nom du board */}
+                {/* Nom du board / source */}
                 <div style={{
                   display: 'flex', alignItems: 'center', gap: 4,
                   padding: '3px 6px',
-                  background: 'var(--surface2)', borderRadius: 5,
-                  border: '1px solid var(--border)',
+                  background: task._isWishlist ? 'rgba(13,52,89,0.55)' : 'var(--surface2)',
+                  borderRadius: 5,
+                  border: task._isWishlist ? '1px solid rgba(71,167,245,0.3)' : '1px solid var(--border)',
                 }}>
-                  {task.boardIcon
-                    ? <img src={task.boardIcon} alt="" style={{ width: 14, height: 14, borderRadius: '50%', flexShrink: 0 }} />
-                    : <span style={{ fontSize: 11, flexShrink: 0 }}>📋</span>
-                  }
-                  <span style={{
-                    fontSize: 10, color: task.ownerUsername ? '#47a7f5' : 'var(--text-muted)',
-                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1,
-                    fontWeight: 600,
-                  }}>
-                    {task.boardName}
-                  </span>
-                  {task.ownerUsername && (
-                    <span style={{ fontSize: 9, color: '#47a7f5', opacity: 0.7, flexShrink: 0 }}>
-                      🌐 {task.ownerUsername}
-                    </span>
+                  {task._isWishlist ? (
+                    <>
+                      <svg viewBox="0 0 496 512" xmlns="http://www.w3.org/2000/svg" style={{ width: 11, height: 11, fill: '#47a7f5', flexShrink: 0 }}>
+                        <path d="M496 256c0 137-111.2 248-248.4 248-113.8 0-209.7-76.3-239-180.4l95.2 39.3c6.4 32.1 34.9 56.4 68.9 56.4 38.2 0 69.1-31.1 68.9-69.3l84.5-60.2c52.1 1.3 95.8-40.9 95.8-93.5 0-51.6-42-93.5-93.7-93.5s-93.7 42-93.7 93.5v1.2L176.6 279c-15.5-.9-30.7 3.4-43.5 12.1L0 236.1C10.2 108.4 117.1 8 247.6 8 384.8 8 496 119 496 256z"/>
+                      </svg>
+                      <span style={{ fontSize: 10, color: '#47a7f5', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                        Steam Wishlist
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      {task.boardIcon
+                        ? <img src={task.boardIcon} alt="" style={{ width: 14, height: 14, borderRadius: '50%', flexShrink: 0 }} />
+                        : <span style={{ fontSize: 11, flexShrink: 0 }}>📋</span>
+                      }
+                      <span style={{
+                        fontSize: 10, color: task.ownerUsername ? '#47a7f5' : 'var(--text-muted)',
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1,
+                        fontWeight: 600,
+                      }}>
+                        {task.boardName}
+                      </span>
+                      {task.ownerUsername && (
+                        <span style={{ fontSize: 9, color: '#47a7f5', opacity: 0.7, flexShrink: 0 }}>
+                          🌐 {task.ownerUsername}
+                        </span>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
@@ -299,6 +328,7 @@ export default function DeadlinePanel({ token, onOpenTask, refreshKey = 0, hidde
   const [loading, setLoading]   = useState(true);
   const [apiCount, setApiCount] = useState(null); // nb brut renvoyé par l'API
   const [manualKey, setManualKey] = useState(0);
+  const [wishlistItems, setWishlistItems] = useState([]);
 
   useEffect(() => {
     if (!token) return;
@@ -314,6 +344,15 @@ export default function DeadlinePanel({ token, onOpenTask, refreshKey = 0, hidde
       .catch(() => { setApiCount(0); setLoading(false); if (onEmpty) onEmpty(); });
   }, [token, refreshKey, manualKey]);
 
+  // Wishlist Steam deadline items (profil public uniquement)
+  useEffect(() => {
+    if (!token) return;
+    fetch(`${API}/steam/wishlist/deadline`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : [])
+      .then(data => setWishlistItems(Array.isArray(data) ? data : []))
+      .catch(() => setWishlistItems([]));
+  }, [token, refreshKey, manualKey]);
+
   const categorized = { overdue: [], active: [], tomorrow: [], upcoming: [] };
   for (const task of tasks) {
     if (task.urgentOnly && !task.done) {
@@ -324,6 +363,22 @@ export default function DeadlinePanel({ token, onOpenTask, refreshKey = 0, hidde
       if (c && categorized[c.cat]) categorized[c.cat].push({ ...task, _refDate: c.refDate });
     }
   }
+  // Merge wishlist items as pseudo-tasks
+  for (const item of wishlistItems) {
+    if (!item.release_date) continue;
+    const fakeTask = {
+      boardId: 'wishlist', gameId: item.appid,
+      name: item.name, header_img: item.header_img, icon_img: null,
+      type: 'steam', taskType: null, emoji: null, progress: null,
+      done: false, urgent: false,
+      dueDate: item.release_date, startDate: null, endDate: null,
+      boardName: 'Steam Wishlist', boardIcon: null, ownerUsername: null,
+      _isWishlist: true, _steamAppid: item.appid,
+    };
+    const c = categorize(fakeTask);
+    if (c && categorized[c.cat]) categorized[c.cat].push({ ...fakeTask, _refDate: c.refDate });
+  }
+
   for (const cat of Object.keys(categorized)) {
     categorized[cat].sort((a, b) => a._refDate - b._refDate);
   }
@@ -405,7 +460,7 @@ export default function DeadlinePanel({ token, onOpenTask, refreshKey = 0, hidde
           <Section cat="active"   tasks={categorized.active}    onOpenTask={onOpenTask} hiddenDeadlineIds={hiddenDeadlineIds} showHiddenDeadlines={showHiddenDeadlines} onHideDeadline={onHideDeadline} onUnhideDeadline={onUnhideDeadline} compact={compact} />
           <Section cat="tomorrow" tasks={categorized.tomorrow}  onOpenTask={onOpenTask} hiddenDeadlineIds={hiddenDeadlineIds} showHiddenDeadlines={showHiddenDeadlines} onHideDeadline={onHideDeadline} onUnhideDeadline={onUnhideDeadline} compact={compact} />
           <Section cat="upcoming" tasks={categorized.upcoming}  onOpenTask={onOpenTask} hiddenDeadlineIds={hiddenDeadlineIds} showHiddenDeadlines={showHiddenDeadlines} onHideDeadline={onHideDeadline} onUnhideDeadline={onUnhideDeadline} compact={compact} />
-        </>
+          </>
       )}
     </>
   );

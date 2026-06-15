@@ -177,7 +177,7 @@ function HomeBoardCard({ board, isPublic, isFav, onToggleFav, onClick, typeColor
             : 'var(--surface1)',
           border: isFav ? '2px solid transparent' : `2px solid ${typeColor}`,
           borderRadius: 10, display: 'flex', alignItems: 'center', gap: 8,
-          padding: '7px 10px', cursor: 'pointer',
+          padding: '7px 10px', cursor: 'pointer', minWidth: 0, overflow: 'hidden',
           opacity: isHidden ? 0.5 : 1, filter: isHidden ? 'saturate(0.3)' : 'none',
         }}
       >

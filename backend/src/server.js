@@ -961,6 +961,38 @@ app.get('/api/steam/wishlist', requireAuth, async (req, res) => {
   } catch { res.json([]); }
 });
 
+
+// ── Steam wishlist deadline items (profil public requis) ────────────────────
+const wishlistDeadlineCache = new Map(); // userId → { items, fetchedAt }
+const WISHLIST_DEADLINE_TTL = 15 * 60 * 1000;
+
+app.get('/api/steam/wishlist/deadline', requireAuth, async (req, res) => {
+  const creds = getUserSteamCreds(req.user.id);
+  if (!creds.steamId) return res.json([]);
+  const now = Date.now();
+  const cached = wishlistDeadlineCache.get(req.user.id);
+  if (cached && now - cached.fetchedAt < WISHLIST_DEADLINE_TTL) return res.json(cached.items);
+  try {
+    const url = `https://store.steampowered.com/wishlist/profiles/${creds.steamId}/wishlistdata/?p=0`;
+    const resp = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+    if (!resp.ok) return res.json([]);
+    const data = await resp.json();
+    if (!data || typeof data !== 'object') return res.json([]);
+    const items = Object.entries(data).map(([appid, info]) => {
+      const relTs = info.release_date; // unix timestamp seconds, 0 = TBD
+      return {
+        appid:          Number(appid),
+        name:           info.name || `App ${appid}`,
+        header_img:     `https://cdn.akamai.steamstatic.com/steam/apps/${appid}/header.jpg`,
+        release_date:   (relTs && relTs > 0) ? new Date(relTs * 1000).toISOString().split('T')[0] : null,
+        release_string: info.release_string || null,
+      };
+    }).filter(item => item.release_date !== null);
+    wishlistDeadlineCache.set(req.user.id, { items, fetchedAt: now });
+    res.json(items);
+  } catch { res.json([]); }
+});
+
 // ── Steam featured (homepage populaires/recommandés) ─────────────────────────
 
 let featuredCache = { data: null, fetchedAt: 0 };
