@@ -289,16 +289,18 @@ export default function KanbanBoard({ columns, byColumn, dragging, setDragging, 
                 <button
                   onClick={() => onAddToColumn(col.id)}
                   style={{
-                    width: '100%', background: 'none',
-                    border: '1px dashed rgba(255,255,255,0.12)',
+                    width: '100%',
+                    background: 'linear-gradient(135deg, rgba(192,87,10,0.12) 0%, rgba(192,87,10,0.04) 100%)',
+                    border: '1.5px solid rgba(192,87,10,0.35)',
                     borderRadius: 7, padding: '7px 8px',
-                    color: 'var(--text-muted)', fontSize: 11,
+                    color: 'var(--accent)', fontSize: 11, fontWeight: 600,
                     cursor: 'pointer', textAlign: 'center',
-                    opacity: 0.6, transition: 'opacity .15s, border-color .15s',
+                    boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
+                    transition: 'background .15s, border-color .15s, box-shadow .15s',
                     marginTop: games.length > 0 ? 2 : 0,
                   }}
-                  onMouseEnter={e => { e.currentTarget.style.opacity = 1; e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.color = 'var(--accent)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.opacity = 0.6; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; e.currentTarget.style.color = 'var(--text-muted)'; }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'linear-gradient(135deg, rgba(192,87,10,0.22) 0%, rgba(192,87,10,0.10) 100%)'; e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.boxShadow = '0 0 0 2px rgba(192,87,10,0.18), 0 2px 8px rgba(0,0,0,0.3)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'linear-gradient(135deg, rgba(192,87,10,0.12) 0%, rgba(192,87,10,0.04) 100%)'; e.currentTarget.style.borderColor = 'rgba(192,87,10,0.35)'; e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.2)'; }}
                 >
                   + {isTaskBoard ? t('col.add_task') : t('col.add_card_game')}
                 </button>
