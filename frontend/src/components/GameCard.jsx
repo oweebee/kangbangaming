@@ -26,6 +26,10 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
     (!isCustom && !!game.icon_img) ||
     (isCustom && tt && !!tt.img && !ttImgError)
   );
+  const compactThumbSrc = compact
+    ? (!isCustom ? (game.icon_img || game.header_img || null)
+       : (tt && tt.img && !ttImgError ? tt.img : null))
+    : null;
 
   return (
     <div
@@ -182,7 +186,19 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
       ) : null}
 
       {/* ── Info area ── */}
-      <div style={{ padding: compact ? '4px 9px' : '7px 9px', paddingRight: compact ? 60 : 9, paddingBottom: compact ? (hasCompactIcon ? COMPACT_ICON_SIZE + 6 : 6) : 7 }}>
+      <div style={{ padding: compact ? '4px 6px' : '7px 9px', paddingRight: compact ? 60 : 9, paddingBottom: compact ? 5 : 7, display: compact ? 'flex' : 'block', alignItems: compact ? 'center' : undefined, gap: compact ? 7 : undefined }}>
+        {/* Thumbnail carré gauche — compact seulement */}
+        {compact && (
+          <div style={{ width: 30, height: 30, borderRadius: 5, overflow: 'hidden', flexShrink: 0, background: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {compactThumbSrc
+              ? <img src={compactThumbSrc} alt="" onError={() => isCustom ? setTtImgError(true) : setImgError(true)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              : isCustom
+                ? <span style={{ fontSize: 15 }}>{game.emoji || (tt?.emoji) || '📋'}</span>
+                : <span style={{ fontSize: 15 }}>🎮</span>
+            }
+          </div>
+        )}
+        <div style={{ flex: compact ? 1 : undefined, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 4 }}>
           <div style={{
             fontWeight: 600, fontSize: compact ? 13 : 14, lineHeight: compact ? '1.2' : '1.3', marginBottom: compact ? 1 : 3,
@@ -254,6 +270,7 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
             </div>
           )}
         </div>
+        </div>{/* end flex inner */}
       </div>
 
       {/* ── Compact : colonne de boutons absolue haut-droite ── */}
