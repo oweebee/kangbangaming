@@ -2188,10 +2188,7 @@ export default function App() {
               {(activeBoardId || publicBoardMode) && (
                 <button onClick={toggleCompact} style={{ background: compactView ? 'rgba(192,87,10,0.15)' : 'var(--surface2)', border: compactView ? '1px solid var(--accent)' : '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: compactView ? 'var(--accent)' : 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0, fontWeight: compactView ? 700 : 400 }}>{t('nav.compact')}</button>
               )}
-              {/* ── Steam game info — encart centre du header (collections seulement, pas boards tâches) ── */}
-              {!isTaskBoard && <div style={{ flex: '1 1 0', display: 'flex', justifyContent: 'center', minWidth: gameInfo ? 200 : 0, minHeight: 0 }}>
-                <SteamEncart gameInfo={gameInfo} />
-              </div>}
+              {/* SteamEncart retiré du header perso — GameInfoPanel latéral suffit */}
               {(activeBoardId || publicBoardMode) && archiveCount > 0 && (
                 <button
                   onClick={toggleShowArchived}
