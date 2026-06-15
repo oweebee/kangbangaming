@@ -182,7 +182,7 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
       ) : null}
 
       {/* ── Info area ── */}
-      <div style={{ padding: compact ? '4px 9px' : '7px 9px', paddingRight: compact ? 96 : 9, paddingBottom: compact ? (hasCompactIcon ? COMPACT_ICON_SIZE + 6 : 6) : 7 }}>
+      <div style={{ padding: compact ? '4px 9px' : '7px 9px', paddingRight: compact ? 60 : 9, paddingBottom: compact ? (hasCompactIcon ? COMPACT_ICON_SIZE + 6 : 6) : 7 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 4 }}>
           <div style={{
             fontWeight: 600, fontSize: compact ? 13 : 14, lineHeight: compact ? '1.2' : '1.3', marginBottom: compact ? 1 : 3,

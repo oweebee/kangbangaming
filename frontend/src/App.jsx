@@ -1283,7 +1283,7 @@ export default function App() {
                     finishHomeTouchDrop();
                   }}
                   onContextMenu={e => e.preventDefault()}
-                  style={{ opacity: homeDragId === b.id ? 0.4 : 1, outline: homeDragOver === `public_${b.id}` && homeDragId !== b.id ? '2px dashed var(--accent)' : 'none', borderRadius: 12, transition: 'opacity .15s' }}
+                  style={{ opacity: homeDragId === b.id ? 0.4 : 1, outline: homeDragOver === `public_${b.id}` && homeDragId !== b.id ? '2px dashed var(--accent)' : 'none', borderRadius: 12, transition: 'opacity .15s, transform .15s, box-shadow .15s', transform: homeDragId === b.id ? 'rotate(2deg) scale(1.03)' : 'none', boxShadow: homeDragId === b.id ? '0 8px 28px rgba(0,0,0,0.55)' : 'none' }}
                 >
                   <HomeBoardCard board={b} isPublic isFav={favBoards.some(f => f.id === b.id)} onToggleFav={cur => toggleFavorite(b.id, b, cur)} onClick={() => openPublicBoard(b)} typeColor={getBoardTypeColor(b)} isHidden={hiddenBoardIds.has(b.id)} onHide={() => hideBoard(b.id)} onUnhide={() => unhideBoard(b.id)} />
                 </div>
@@ -1336,7 +1336,7 @@ export default function App() {
                       finishHomeTouchDrop();
                     }}
                     onContextMenu={e => e.preventDefault()}
-                    style={{ opacity: homeDragId === b.id ? 0.4 : 1, outline: homeDragOver === `fav_${b.id}` && homeDragId !== b.id ? '2px dashed #f5c518' : 'none', borderRadius: 12, transition: 'opacity .15s' }}
+                    style={{ opacity: homeDragId === b.id ? 0.4 : 1, outline: homeDragOver === `fav_${b.id}` && homeDragId !== b.id ? '2px dashed #f5c518' : 'none', borderRadius: 12, transition: 'opacity .15s, transform .15s, box-shadow .15s', transform: homeDragId === b.id ? 'rotate(2deg) scale(1.03)' : 'none', boxShadow: homeDragId === b.id ? '0 8px 28px rgba(0,0,0,0.55)' : 'none' }}
                   >
                     <HomeBoardCard board={b} isFav onToggleFav={cur => togglePersonalFavorite(b.id, cur)} onClick={() => openBoard(b)} typeColor={getBoardTypeColor(b)} isHidden={hiddenBoardIds.has(b.id)} onHide={() => hideBoard(b.id)} onUnhide={() => unhideBoard(b.id)} />
                   </div>
@@ -1385,7 +1385,7 @@ export default function App() {
                           finishHomeTouchDrop();
                         }}
                         onContextMenu={e => e.preventDefault()}
-                        style={{ opacity: homeDragId === b.id ? 0.4 : 1, outline: homeDragOver === `other_${b.id}` && homeDragId !== b.id ? '2px dashed #f5a500' : 'none', borderRadius: 12, transition: 'opacity .15s' }}
+                        style={{ opacity: homeDragId === b.id ? 0.4 : 1, outline: homeDragOver === `other_${b.id}` && homeDragId !== b.id ? '2px dashed #f5a500' : 'none', borderRadius: 12, transition: 'opacity .15s, transform .15s, box-shadow .15s', transform: homeDragId === b.id ? 'rotate(2deg) scale(1.03)' : 'none', boxShadow: homeDragId === b.id ? '0 8px 28px rgba(0,0,0,0.55)' : 'none' }}
                       >
                         <HomeBoardCard board={b} isFav={false} onToggleFav={cur => togglePersonalFavorite(b.id, cur)} onClick={() => openBoard(b)} typeColor={getBoardTypeColor(b)} isHidden={hiddenBoardIds.has(b.id)} onHide={() => hideBoard(b.id)} onUnhide={() => unhideBoard(b.id)} />
                       </div>
@@ -1410,7 +1410,7 @@ export default function App() {
     >
       {/* Panneau 0 : Échéances */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px 14px' }}>
-        <DeadlinePanel token={token} onOpenTask={handleDeadlineOpen} refreshKey={deadlineRefreshKey} hiddenDeadlineIds={hiddenDeadlineIds} showHiddenDeadlines={showHiddenDeadlines} onHideDeadline={hideDeadline} onUnhideDeadline={unhideDeadline} onToggleShowHidden={() => setShowHiddenDeadlines(v => !v)} />
+        <DeadlinePanel token={token} onOpenTask={handleDeadlineOpen} refreshKey={deadlineRefreshKey} hiddenDeadlineIds={hiddenDeadlineIds} showHiddenDeadlines={showHiddenDeadlines} onHideDeadline={hideDeadline} onUnhideDeadline={unhideDeadline} onToggleShowHidden={() => setShowHiddenDeadlines(v => !v)} compact={compactView} />
       </div>
       {/* Panneau 1 : Boards */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -1428,7 +1428,7 @@ export default function App() {
 
       {/* ── Colonne gauche : Échéances ── */}
       <div style={{ width: `${homeSplitPct}%`, minWidth: 0, flexShrink: 0, overflowY: 'auto', padding: '28px 20px' }}>
-        <DeadlinePanel token={token} onOpenTask={handleDeadlineOpen} refreshKey={deadlineRefreshKey} hiddenDeadlineIds={hiddenDeadlineIds} showHiddenDeadlines={showHiddenDeadlines} onHideDeadline={hideDeadline} onUnhideDeadline={unhideDeadline} onToggleShowHidden={() => setShowHiddenDeadlines(v => !v)} />
+        <DeadlinePanel token={token} onOpenTask={handleDeadlineOpen} refreshKey={deadlineRefreshKey} hiddenDeadlineIds={hiddenDeadlineIds} showHiddenDeadlines={showHiddenDeadlines} onHideDeadline={hideDeadline} onUnhideDeadline={unhideDeadline} onToggleShowHidden={() => setShowHiddenDeadlines(v => !v)} compact={compactView} />
       </div>
 
       {/* ── Séparateur redimensionnable ── */}
@@ -1991,15 +1991,9 @@ export default function App() {
         {showHome && !publicBoardMode ? (
           mobileHomeView
         ) : publicBoardMode ? (
-          loading ? (
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Chargement...</div>
-          ) : (
-            <MobileBoard columns={columns} byColumn={byColumn} onCardClick={g => { setSelectedGameDefaultTab('infos'); setSelectedGame(g); }} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} isTaskBoard={isTaskBoard} onToggleDone={(appid, done) => patchGame(appid, { done })} onToggleUrgent={(appid, urgent) => patchGame(appid, { urgent })} onUpdateAssignees={(appid, assignees) => patchGame(appid, { assignees })} onClickNotes={handleCardNotesClick} genreColors={boardGenreColors} hiddenCardIds={new Set()} showHiddenCards={false} onHideCard={undefined} onUnhideCard={undefined} compact={compactView} moveGame={moveGame} onReorderGames={reorderGamesInColumn} onAddToColumn={colId => { setSearchTargetCol(colId); setShowSearch(true); }} />
-          )
+          <MobileBoard columns={columns} byColumn={byColumn} onCardClick={g => { setSelectedGameDefaultTab('infos'); setSelectedGame(g); }} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} isTaskBoard={isTaskBoard} onToggleDone={(appid, done) => patchGame(appid, { done })} onToggleUrgent={(appid, urgent) => patchGame(appid, { urgent })} onUpdateAssignees={(appid, assignees) => patchGame(appid, { assignees })} onClickNotes={handleCardNotesClick} genreColors={boardGenreColors} hiddenCardIds={new Set()} showHiddenCards={false} onHideCard={undefined} onUnhideCard={undefined} compact={compactView} moveGame={moveGame} onReorderGames={reorderGamesInColumn} onAddToColumn={colId => { setSearchTargetCol(colId); setShowSearch(true); }} />
         ) : !activeBoardId ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Crée un board pour commencer</div>
-        ) : loading ? (
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Chargement...</div>
         ) : (
           <MobileBoard columns={columns} byColumn={byColumn} onCardClick={g => { setSelectedGameDefaultTab('infos'); setSelectedGame(g); }} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} isTaskBoard={isTaskBoard} onToggleDone={(appid, done) => patchGame(appid, { done })} onToggleUrgent={(appid, urgent) => patchGame(appid, { urgent })} onUpdateAssignees={(appid, assignees) => patchGame(appid, { assignees })} onClickNotes={handleCardNotesClick} genreColors={boardGenreColors} hiddenCardIds={new Set()} showHiddenCards={false} onHideCard={undefined} onUnhideCard={undefined} compact={compactView} moveGame={moveGame} onReorderGames={reorderGamesInColumn} onAddToColumn={colId => { setSearchTargetCol(colId); setShowSearch(true); }} />
         )}

@@ -102,7 +102,7 @@ function taskToGame(task) {
 }
 
 // ── Section ────────────────────────────────────────────────────────────────────
-function Section({ cat, tasks, onOpenTask, hiddenDeadlineIds, showHiddenDeadlines, onHideDeadline, onUnhideDeadline }) {
+function Section({ cat, tasks, onOpenTask, hiddenDeadlineIds, showHiddenDeadlines, onHideDeadline, onUnhideDeadline, compact = false }) {
   const { t } = useLang();
   const CAT_META = {
     overdue:  { label: t('deadline.cat_warning'),  color: '#e05555', icon: null },
@@ -195,6 +195,7 @@ function Section({ cat, tasks, onOpenTask, hiddenDeadlineIds, showHiddenDeadline
                   isHidden={hiddenDeadlineIds.has(key)}
                   onHide={onHideDeadline ? () => onHideDeadline(key) : undefined}
                   onUnhide={onUnhideDeadline ? () => onUnhideDeadline(key) : undefined}
+                  compact={compact}
                 />
                 {/* Nom du board */}
                 <div style={{
@@ -230,7 +231,7 @@ function Section({ cat, tasks, onOpenTask, hiddenDeadlineIds, showHiddenDeadline
 }
 
 // ── Composant principal ────────────────────────────────────────────────────────
-export default function DeadlinePanel({ token, onOpenTask, refreshKey = 0, hiddenDeadlineIds = new Set(), showHiddenDeadlines = false, onHideDeadline, onUnhideDeadline, onToggleShowHidden }) {
+export default function DeadlinePanel({ token, onOpenTask, refreshKey = 0, hiddenDeadlineIds = new Set(), showHiddenDeadlines = false, onHideDeadline, onUnhideDeadline, onToggleShowHidden, compact = false }) {
   const { t } = useLang();
   const [tasks, setTasks]       = useState([]);
   const [loading, setLoading]   = useState(true);
@@ -333,10 +334,10 @@ export default function DeadlinePanel({ token, onOpenTask, refreshKey = 0, hidde
         </div>
       ) : (
         <>
-          <Section cat="overdue"  tasks={categorized.overdue}   onOpenTask={onOpenTask} hiddenDeadlineIds={hiddenDeadlineIds} showHiddenDeadlines={showHiddenDeadlines} onHideDeadline={onHideDeadline} onUnhideDeadline={onUnhideDeadline} />
-          <Section cat="active"   tasks={categorized.active}    onOpenTask={onOpenTask} hiddenDeadlineIds={hiddenDeadlineIds} showHiddenDeadlines={showHiddenDeadlines} onHideDeadline={onHideDeadline} onUnhideDeadline={onUnhideDeadline} />
-          <Section cat="tomorrow" tasks={categorized.tomorrow}  onOpenTask={onOpenTask} hiddenDeadlineIds={hiddenDeadlineIds} showHiddenDeadlines={showHiddenDeadlines} onHideDeadline={onHideDeadline} onUnhideDeadline={onUnhideDeadline} />
-          <Section cat="upcoming" tasks={categorized.upcoming}  onOpenTask={onOpenTask} hiddenDeadlineIds={hiddenDeadlineIds} showHiddenDeadlines={showHiddenDeadlines} onHideDeadline={onHideDeadline} onUnhideDeadline={onUnhideDeadline} />
+          <Section cat="overdue"  tasks={categorized.overdue}   onOpenTask={onOpenTask} hiddenDeadlineIds={hiddenDeadlineIds} showHiddenDeadlines={showHiddenDeadlines} onHideDeadline={onHideDeadline} onUnhideDeadline={onUnhideDeadline} compact={compact} />
+          <Section cat="active"   tasks={categorized.active}    onOpenTask={onOpenTask} hiddenDeadlineIds={hiddenDeadlineIds} showHiddenDeadlines={showHiddenDeadlines} onHideDeadline={onHideDeadline} onUnhideDeadline={onUnhideDeadline} compact={compact} />
+          <Section cat="tomorrow" tasks={categorized.tomorrow}  onOpenTask={onOpenTask} hiddenDeadlineIds={hiddenDeadlineIds} showHiddenDeadlines={showHiddenDeadlines} onHideDeadline={onHideDeadline} onUnhideDeadline={onUnhideDeadline} compact={compact} />
+          <Section cat="upcoming" tasks={categorized.upcoming}  onOpenTask={onOpenTask} hiddenDeadlineIds={hiddenDeadlineIds} showHiddenDeadlines={showHiddenDeadlines} onHideDeadline={onHideDeadline} onUnhideDeadline={onUnhideDeadline} compact={compact} />
         </>
       )}
     </>

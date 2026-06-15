@@ -180,15 +180,40 @@ export default function MobileBoard({
       if (idx !== activeIdxRef.current) setActiveColId(columns[idx].id);
     };
 
-    el.addEventListener('touchstart', onStart, { passive: true });
-    el.addEventListener('touchmove',  onMove,  { passive: false });
-    el.addEventListener('touchend',   onEnd,   { passive: true });
-    return () => {
-      el.removeEventListener('touchstart', onStart);
-      el.removeEventListener('touchmove',  onMove);
-      el.removeEventListener('touchend',   onEnd);
+    const onCancel = () => {
+      // Nettoie le swipe ET le drag si interrompus (ex: notification, appel)
+      const s = swipeRef.current;
+      if (s.active) {
+        s.active = false; s.isHorizontal = null;
+        snapToIndex(activeIdxRef.current, true);
+      }
+      const d = dragState.current;
+      if (d.scrollBlocker) {
+        document.removeEventListener('touchmove', d.scrollBlocker);
+        d.scrollBlocker = null;
+      }
+      if (d.active) {
+        d.active = false;
+        setDragAppid(null); setDragToIdx(null); setDragColId(null);
+      }
     };
-  }, [columns]);
+
+    // Même nettoyage quand la page repasse au premier plan (retour d'une autre app)
+    const onVisibility = () => { if (document.visibilityState === 'visible') onCancel(); };
+
+    el.addEventListener('touchstart',  onStart,     { passive: true });
+    el.addEventListener('touchmove',   onMove,      { passive: false });
+    el.addEventListener('touchend',    onEnd,       { passive: true });
+    el.addEventListener('touchcancel', onCancel,    { passive: true });
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      el.removeEventListener('touchstart',  onStart);
+      el.removeEventListener('touchmove',   onMove);
+      el.removeEventListener('touchend',    onEnd);
+      el.removeEventListener('touchcancel', onCancel);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [columns, snapToIndex]);
 
   const goToCol = (colId) => {
     const idx = columns.findIndex(c => c.id === colId);
@@ -201,6 +226,9 @@ export default function MobileBoard({
     const touch   = e.touches[0];
     const fromIdx = colGames.findIndex(g => g.appid === game.appid);
     const d       = dragState.current;
+    // Stocker la position initiale pour le seuil de 5px
+    d.pendingX = touch.clientX;
+    d.pendingY = touch.clientY;
 
     // Long press timer: 400 ms
     d.longPressTimer = setTimeout(() => {
@@ -224,11 +252,10 @@ export default function MobileBoard({
 
   const handleCardTouchMove = useCallback((e) => {
     const d = dragState.current;
-    clearTimeout(d.longPressTimer);
     if (!d.active) return;
-    e.stopPropagation(); // prevent column swipe
-    const dy       = e.touches[0].clientY - d.startClientY;
-    const newIdx   = Math.max(0, Math.min(
+    e.stopPropagation();
+    const dy     = e.touches[0].clientY - d.startClientY;
+    const newIdx = Math.max(0, Math.min(
       d.colGames.length - 1,
       d.fromIdx + Math.round(dy / d.cardHeight)
     ));
@@ -236,10 +263,22 @@ export default function MobileBoard({
     setDragToIdx(newIdx);
   }, []);
 
+  const cleanupDrag = useCallback(() => {
+    const d = dragState.current;
+    clearTimeout(d.longPressTimer);
+    if (d.scrollBlocker) {
+      document.removeEventListener('touchmove', d.scrollBlocker);
+      d.scrollBlocker = null;
+    }
+    d.active = false;
+    setDragAppid(null);
+    setDragToIdx(null);
+    setDragColId(null);
+  }, []);
+
   const handleCardTouchEnd = useCallback(() => {
     const d = dragState.current;
     clearTimeout(d.longPressTimer);
-    // Retirer le bloqueur de scroll
     if (d.scrollBlocker) {
       document.removeEventListener('touchmove', d.scrollBlocker);
       d.scrollBlocker = null;
@@ -247,8 +286,8 @@ export default function MobileBoard({
     if (!d.active) { d.active = false; return; }
 
     // Reorder
-    const games     = [...d.colGames];
-    const [moved]   = games.splice(d.fromIdx, 1);
+    const games   = [...d.colGames];
+    const [moved] = games.splice(d.fromIdx, 1);
     games.splice(d.toIdx, 0, moved);
     onReorderGames?.(d.colId, games.map(g => g.appid));
 
@@ -258,9 +297,13 @@ export default function MobileBoard({
     setDragColId(null);
   }, [onReorderGames]);
 
-  // Cancel long press on any significant touch move before 400ms
-  const handleCardTouchMoveEarly = useCallback(() => {
-    clearTimeout(dragState.current.longPressTimer);
+  // Annule le long-press seulement si le doigt bouge > 5px
+  const handleCardTouchMoveEarly = useCallback((e) => {
+    const d = dragState.current;
+    if (d.active) return;
+    const dx = Math.abs(e.touches[0].clientX - d.pendingX);
+    const dy = Math.abs(e.touches[0].clientY - d.pendingY);
+    if (dx > 5 || dy > 5) clearTimeout(d.longPressTimer);
   }, []);
 
   if (columns.length === 0) {
@@ -367,10 +410,11 @@ export default function MobileBoard({
                       }}
                       onTouchStart={e => handleCardTouchStart(e, game, col.id, colGames)}
                       onTouchMove={e => {
-                        handleCardTouchMoveEarly();
+                        handleCardTouchMoveEarly(e);
                         handleCardTouchMove(e);
                       }}
                       onTouchEnd={handleCardTouchEnd}
+                      onTouchCancel={cleanupDrag}
                     >
                       <GameCard
                         game={game}
