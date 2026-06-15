@@ -271,13 +271,13 @@ function Section({ cat, tasks, onOpenTask, hiddenDeadlineIds, showHiddenDeadline
                     : <span style={{ fontSize: 11, flexShrink: 0 }}>📋</span>
                   }
                   <span style={{
-                    fontSize: 10, color: isPublic ? '#47a7f5' : 'var(--text-muted)',
+                    fontSize: 10, color: task.ownerUsername ? '#47a7f5' : 'var(--text-muted)',
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1,
                     fontWeight: 600,
                   }}>
                     {task.boardName}
                   </span>
-                  {isPublic && task.ownerUsername && (
+                  {task.ownerUsername && (
                     <span style={{ fontSize: 9, color: '#47a7f5', opacity: 0.7, flexShrink: 0 }}>
                       🌐 {task.ownerUsername}
                     </span>
