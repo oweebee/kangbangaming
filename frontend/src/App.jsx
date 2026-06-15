@@ -318,7 +318,10 @@ export default function App() {
 
   // Home view
   const [showHome, setShowHome] = useState(true);
-  const [mobileHomeTab, setMobileHomeTab] = useState('boards'); // 'deadlines' | 'boards' | 'upcoming'
+  const [mobileHomeTab, setMobileHomeTab] = useState(() => {
+    try { return localStorage.getItem('mobileHomeTab') || 'boards'; } catch { return 'boards'; }
+  }); // 'deadlines' | 'boards' | 'upcoming'
+  const setMobileHomeTabPersist = (tab) => { setMobileHomeTab(tab); try { localStorage.setItem('mobileHomeTab', tab); } catch {} };
   const mobileHomeTabs = ['deadlines', 'boards', 'upcoming'];
   const [homePublicBoards, setHomePublicBoards] = useState([]);
   const [deadlineRefreshKey, setDeadlineRefreshKey] = useState(0);
@@ -365,7 +368,14 @@ export default function App() {
   const [selectedGame, setSelectedGame] = useState(null);
   const [selectedGameDefaultTab, setSelectedGameDefaultTab] = useState('infos');
   const [editingGame,  setEditingGame]  = useState(null);
-  const [showArchived, setShowArchived] = useState(false);
+  const [showArchived, setShowArchived] = useState(() => {
+    try { return localStorage.getItem('showArchived') === '1'; } catch { return false; }
+  });
+  const toggleShowArchived = () => setShowArchived(v => {
+    const next = !v;
+    try { localStorage.setItem('showArchived', next ? '1' : '0'); } catch {}
+    return next;
+  });
   // ── Masquage cartes (localStorage par user+board) ──────────────────────────
   const [hiddenCardIds, setHiddenCardIds] = useState(() => new Set());
   const [showHiddenCards, setShowHiddenCards] = useState(false);
@@ -1378,7 +1388,7 @@ export default function App() {
   const mobileHomeView = (
     <MobileHomeSlider
       tab={mobileHomeTab}
-      onTabChange={setMobileHomeTab}
+      onTabChange={setMobileHomeTabPersist}
       tabLabels={[
         { id: 'deadlines', label: t('home.deadlines_tab') },
         { id: 'boards',    label: t('home.boards_tab')    },
@@ -1933,7 +1943,7 @@ export default function App() {
               <button onClick={toggleCompact} title={t('nav.compact')} style={{ background: compactView ? 'rgba(192,87,10,0.15)' : 'rgba(255,255,255,.06)', border: compactView ? '1px solid var(--accent)' : '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', color: compactView ? 'var(--accent)' : 'var(--text-muted)', fontSize: 11, cursor: 'pointer', flexShrink: 0 }}>⊟</button>
               {archiveCount > 0 && (
                 <button
-                  onClick={() => setShowArchived(v => !v)}
+                  onClick={toggleShowArchived}
                   title={showArchived ? t('nav.hide_archives') : t('nav.show_archives')}
                   style={{ background: showArchived ? 'rgba(120,80,160,0.25)' : 'rgba(255,255,255,.06)', border: showArchived ? '1px solid rgba(160,100,220,0.6)' : '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', color: showArchived ? '#c090f0' : 'var(--text-muted)', fontSize: 11, cursor: 'pointer', flexShrink: 0, fontWeight: showArchived ? 700 : 400 }}
                 >📦 {archiveCount}</button>
@@ -1954,10 +1964,10 @@ export default function App() {
                   {activeBoard.public ? t('common.public') : t('common.private')}
                 </span>
               )}
-              {activeBoardId && <button onClick={toggleCompact} title={t('nav.compact')} style={{ background: compactView ? 'rgba(192,87,10,0.15)' : 'rgba(255,255,255,.06)', border: compactView ? '1px solid var(--accent)' : '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', color: compactView ? 'var(--accent)' : 'var(--text-muted)', fontSize: 11, cursor: 'pointer', flexShrink: 0 }}>⊟</button>}
+              <button onClick={toggleCompact} title={t('nav.compact')} style={{ background: compactView ? 'rgba(192,87,10,0.15)' : 'rgba(255,255,255,.06)', border: compactView ? '1px solid var(--accent)' : '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', color: compactView ? 'var(--accent)' : 'var(--text-muted)', fontSize: 11, cursor: 'pointer', flexShrink: 0 }}>⊟</button>
               {activeBoardId && archiveCount > 0 && (
                 <button
-                  onClick={() => setShowArchived(v => !v)}
+                  onClick={toggleShowArchived}
                   title={showArchived ? t('nav.hide_archives') : t('nav.show_archives')}
                   style={{ background: showArchived ? 'rgba(120,80,160,0.25)' : 'rgba(255,255,255,.06)', border: showArchived ? '1px solid rgba(160,100,220,0.6)' : '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', color: showArchived ? '#c090f0' : 'var(--text-muted)', fontSize: 11, cursor: 'pointer', flexShrink: 0, fontWeight: showArchived ? 700 : 400 }}
                 >📦 {archiveCount}</button>
@@ -1985,7 +1995,7 @@ export default function App() {
             <button onClick={addColumn} style={{ flex: 1, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '8px', color: 'var(--text-muted)', fontSize: 12 }}>+ Colonne</button>
             {archiveCount > 0 && (
               <button
-                onClick={() => setShowArchived(v => !v)}
+                onClick={toggleShowArchived}
                 style={{
                   background: showArchived ? 'rgba(120,80,160,0.25)' : 'var(--surface2)',
                   border: showArchived ? '1px solid rgba(160,100,220,0.6)' : '1px solid var(--border)',
@@ -2139,7 +2149,7 @@ export default function App() {
               </div>
               {(activeBoardId || publicBoardMode) && archiveCount > 0 && (
                 <button
-                  onClick={() => setShowArchived(v => !v)}
+                  onClick={toggleShowArchived}
                   style={{
                     background: showArchived ? 'rgba(120,80,160,0.25)' : 'var(--surface2)',
                     border: showArchived ? '1px solid rgba(160,100,220,0.6)' : '1px solid var(--border)',

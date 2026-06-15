@@ -202,8 +202,10 @@ export default function MobileBoard({
       setDragAppid(game.appid);
       setDragToIdx(fromIdx);
       setDragColId(colId);
-      // Vibrate feedback if available
       if (navigator.vibrate) navigator.vibrate(40);
+      // Bloquer TOUT scroll pendant le drag (non-passif sur document)
+      d.scrollBlocker = (ev) => ev.preventDefault();
+      document.addEventListener('touchmove', d.scrollBlocker, { passive: false });
     }, 400);
   }, [onReorderGames]);
 
@@ -224,6 +226,11 @@ export default function MobileBoard({
   const handleCardTouchEnd = useCallback(() => {
     const d = dragState.current;
     clearTimeout(d.longPressTimer);
+    // Retirer le bloqueur de scroll
+    if (d.scrollBlocker) {
+      document.removeEventListener('touchmove', d.scrollBlocker);
+      d.scrollBlocker = null;
+    }
     if (!d.active) { d.active = false; return; }
 
     // Reorder
@@ -342,7 +349,7 @@ export default function MobileBoard({
                         opacity:   isBeingDragged ? 0.55 : 1,
                         transform: isBeingDragged ? 'scale(0.97)' : 'none',
                         transition: 'opacity .15s, transform .15s',
-                        touchAction: dragColId ? 'none' : 'pan-y',
+                        touchAction: 'pan-y',
                       }}
                       onTouchStart={e => handleCardTouchStart(e, game, col.id, colGames)}
                       onTouchMove={e => {
