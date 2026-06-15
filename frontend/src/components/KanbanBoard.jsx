@@ -179,7 +179,7 @@ export default function KanbanBoard({ columns, byColumn, dragging, setDragging, 
             onDrop={e => {
               e.preventDefault();
               if (draggingColId) { handleColDrop(col.id); return; }
-              e.currentTarget.style.background = '';
+              e.currentTarget.style.background = 'var(--surface)';
               if (dragging) {
                 if (dragInsert?.colId === col.id) {
                   // Reorder within same column OR cross-column with specific position
@@ -200,7 +200,7 @@ export default function KanbanBoard({ columns, byColumn, dragging, setDragging, 
             onDragEnter={e => { if (!draggingColId) e.currentTarget.style.background = 'rgba(192,87,10,.07)'; }}
             onDragLeave={e => {
               if (!e.currentTarget.contains(e.relatedTarget)) {
-                if (!draggingColId) e.currentTarget.style.background = '';
+                if (!draggingColId) e.currentTarget.style.background = 'var(--surface)';
                 setDragInsert(null);
               }
             }}

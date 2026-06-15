@@ -2117,16 +2117,8 @@ export default function App() {
                   <circle cx="10" cy="7" r="4"/><path d="M4 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M15 3.13a4 4 0 0 1 0 7.75"/><path d="M20 21v-2a4 4 0 0 0-3-3.85"/>
                 </svg> Public
               </span>
-              {isOwnPublicBoard && (
-                <button onClick={async () => {
-                  try {
-                    const res = await fetch(`${API}/boards/${publicBoardMode.id}/columns`, { method: 'POST', headers: authHeaders(token), body: JSON.stringify({ label: t('col.new_label') }) });
-                    if (!res.ok) { const e = await res.json().catch(() => ({})); alert(t('err.col_create') + (e.error || res.status)); return; }
-                    const col = await res.json();
-                    setColumns(prev => [...prev, col]);
-                    setBoards(prev => prev.map(b => b.id === publicBoardMode.id ? { ...b, columns: [...(b.columns || []), col] } : b));
-                  } catch (err) { alert(t('err.col_network') + err.message); }
-                }} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>{t('board.add_col')}</button>
+              {publicBoardMode && (
+                <button onClick={addColumn} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>{t('board.add_col')}</button>
               )}
               <button onClick={toggleCompact} style={{ background: compactView ? 'rgba(192,87,10,0.15)' : 'var(--surface2)', border: compactView ? '1px solid var(--accent)' : '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: compactView ? 'var(--accent)' : 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0, fontWeight: compactView ? 700 : 400 }}>{t('nav.compact')}</button>
               <button onClick={refreshPublicBoard} style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 11px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ fontSize: 15, lineHeight: 1 }}>↻</span> {t('nav.refresh').replace('↻ ', '')}</button>
@@ -2190,7 +2182,7 @@ export default function App() {
                   ) : '🔒 Privé'}
                 </span>
               )}
-              {activeBoardId && (
+              {(activeBoardId || publicBoardMode) && (
                 <button onClick={addColumn} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>{t('board.add_col')}</button>
               )}
               {(activeBoardId || publicBoardMode) && (
