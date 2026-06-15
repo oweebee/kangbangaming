@@ -127,7 +127,10 @@ export default function MobileBoard({
     };
 
     const onMove = (e) => {
-      if (dragState.current.active) return;
+      if (dragState.current.active) {
+        e.preventDefault(); // bloque le scroll page pendant le drag carte
+        return;
+      }
       const s = swipeRef.current;
       if (!s.active) return;
       const dx = e.touches[0].clientX - s.startX;
@@ -339,7 +342,7 @@ export default function MobileBoard({
                         opacity:   isBeingDragged ? 0.55 : 1,
                         transform: isBeingDragged ? 'scale(0.97)' : 'none',
                         transition: 'opacity .15s, transform .15s',
-                        touchAction: 'pan-y',
+                        touchAction: dragColId ? 'none' : 'pan-y',
                       }}
                       onTouchStart={e => handleCardTouchStart(e, game, col.id, colGames)}
                       onTouchMove={e => {
