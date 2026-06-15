@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import GameCard from './GameCard.jsx';
 import { useLang } from '../i18n.js';
+import { WishlistDot } from './SteamUI.jsx';
 
 const API = '/api';
 
@@ -249,14 +250,9 @@ function Section({ cat, tasks, onOpenTask, hiddenDeadlineIds, showHiddenDeadline
               >
                 {/* Badge WISHLIST */}
                 {task._isWishlist && (
-                  <div style={{
-                    position: 'absolute', top: 6, left: 6, zIndex: 10,
-                    background: 'rgba(13,52,89,0.92)', border: '1px solid #47a7f5',
-                    borderRadius: 4, padding: '2px 6px',
-                    fontSize: 9, fontWeight: 800, color: '#7dc8ff',
-                    letterSpacing: '0.07em', textTransform: 'uppercase',
-                    pointerEvents: 'none', userSelect: 'none',
-                  }}>★ WISHLIST</div>
+                  <div style={{ position: 'absolute', top: 6, left: 6, zIndex: 10, pointerEvents: 'none' }}>
+                    <WishlistDot />
+                  </div>
                 )}
                 <GameCard
                   game={game}

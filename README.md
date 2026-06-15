@@ -12,9 +12,11 @@ Organise ta backlog, suis tes heures de jeu, partage tes boards avec ta communau
 - **Connexion Steam** — authentification via Steam OpenID, compte créé automatiquement
 - **Bannière "En jeu"** — affiche les membres de ta communauté actuellement en train de jouer
 - **Panneau infos jeu** — glisse depuis la sidebar, verrouillable, déplaçable gauche/droite
-- **Boards publics** — partage un lien en lecture seule sans compte
+- **Boards publics collaboratifs** — partage un lien sans compte ; tout utilisateur connecté peut ajouter colonnes et cartes (pas seulement le propriétaire)
 - **Tâches personnalisées** — cartes non-Steam avec types, assignation, notes, échéances
-- **Panneau Échéances** — vue synthétique des dates limites, alertes urgentes
+- **Panneau Échéances** — vue synthétique des dates limites et alertes urgentes ; colonnes adaptatives (1 → 2 → 3 selon la largeur du panneau redimensionnable)
+- **Wishlist Steam dans les Échéances** — les jeux de ta wishlist avec une date de sortie connue apparaissent automatiquement dans le panneau Échéances (badge ★ WISHLIST, clic → page Steam Store, masquables). Profil Steam public requis.
+- **Onglet Wishlist dans le profil** — affiche ta wishlist Steam en grille avec avertissement si le profil n'est pas public
 - **Multi-langue** — interface en français, anglais, espagnol, allemand, russe et chinois (détection auto)
 - **Corbeille** — les cartes archivées supprimées et les notes effacées sont conservées 30 jours avant suppression définitive ; restauration en un clic depuis l'onglet "Corbeille" du profil. Les admins ont une vue globale de toutes les suppressions et peuvent purger.
 - **Admin** — gestion des utilisateurs, création de comptes, config Discord, approbation

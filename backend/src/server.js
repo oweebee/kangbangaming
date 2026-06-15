@@ -964,7 +964,7 @@ app.get('/api/steam/wishlist', requireAuth, async (req, res) => {
 
 // ── Steam wishlist deadline items (profil public requis) ────────────────────
 const wishlistDeadlineCache = new Map(); // userId → { items, fetchedAt }
-const WISHLIST_DEADLINE_TTL = 15 * 60 * 1000;
+const WISHLIST_DEADLINE_TTL = 5 * 60 * 1000; // 5 min (sortie jour J peut changer rapidement)
 
 app.get('/api/steam/wishlist/deadline', requireAuth, async (req, res) => {
   const creds = getUserSteamCreds(req.user.id);
@@ -979,12 +979,23 @@ app.get('/api/steam/wishlist/deadline', requireAuth, async (req, res) => {
     const data = await resp.json();
     if (!data || typeof data !== 'object') return res.json([]);
     const items = Object.entries(data).map(([appid, info]) => {
-      const relTs = info.release_date; // unix timestamp seconds, 0 = TBD
+      const relTs = info.release_date; // unix timestamp seconds, 0 = TBD/jour J
+      let releaseDate = null;
+      if (relTs && relTs > 0) {
+        releaseDate = new Date(relTs * 1000).toISOString().split('T')[0];
+      } else if (info.release_string) {
+        // Fallback : Steam met release_date=0 le jour même de la sortie —
+        // on tente de parser le release_string (ex: "Jun 15, 2025")
+        const parsed = new Date(info.release_string);
+        if (!isNaN(parsed.getTime())) {
+          releaseDate = parsed.toISOString().split('T')[0];
+        }
+      }
       return {
         appid:          Number(appid),
         name:           info.name || `App ${appid}`,
         header_img:     `https://cdn.akamai.steamstatic.com/steam/apps/${appid}/header.jpg`,
-        release_date:   (relTs && relTs > 0) ? new Date(relTs * 1000).toISOString().split('T')[0] : null,
+        release_date:   releaseDate,
         release_string: info.release_string || null,
       };
     }).filter(item => item.release_date !== null);
