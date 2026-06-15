@@ -341,6 +341,7 @@ export default function MobileBoard({
                   width: `${100 / columns.length}%`,
                   height: '100%',
                   overflowY: 'auto',
+                  touchAction: 'none',
                   padding: '10px 12px',
                   display: 'flex',
                   flexDirection: 'column',
