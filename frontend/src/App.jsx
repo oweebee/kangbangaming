@@ -370,6 +370,13 @@ export default function App() {
   const [homeOtherOrder, setHomeOtherOrder] = useState(() => {
     try { return JSON.parse(localStorage.getItem('homeOtherOrder') || 'null') || []; } catch { return []; }
   });
+  const [homeFollowedOrder, setHomeFollowedOrder] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('homeFollowedOrder') || 'null') || []; } catch { return []; }
+  });
+  const [homePublicCollapsed,   setHomePublicCollapsed]   = useState(false);
+  const [homeFollowedCollapsed, setHomeFollowedCollapsed] = useState(false);
+  const [homeFavCollapsed,      setHomeFavCollapsed]      = useState(false);
+  const [homeOtherCollapsed,    setHomeOtherCollapsed]    = useState(false);
   const [homeDragId, setHomeDragId] = useState(null);
   const [homeDragOver, setHomeDragOver] = useState(null);
   const homeTouchTimerRef = useRef(null);
@@ -1140,6 +1147,10 @@ export default function App() {
       })
     : boards;
 
+  // Public boards split: followed vs non-followed
+  const followedPublicBoards = homePublicBoards.filter(b => favBoards.some(f => f.id === b.id));
+  const nonFollowedPublicBoards = homePublicBoards.filter(b => !favBoards.some(f => f.id === b.id));
+
   const handleBoardDrop = (targetId) => {
     if (!boardDragId || boardDragId === targetId) { setBoardDragId(null); setBoardDragOverId(null); return; }
     const base = boardOrder.length > 0 ? boardOrder : sortedBoards.map(b => b.id);
@@ -1214,7 +1225,8 @@ export default function App() {
     if (!homeDragId || homeDragId === overId) return;
     setOrder(prev => {
       const base = applySectionOrder(
-        section === 'public' ? homePublicBoards
+        section === 'public' ? nonFollowedPublicBoards
+        : section === 'followed' ? followedPublicBoards
         : section === 'fav' ? sortedBoards.filter(b => personalFavIds.includes(b.id))
         : sortedBoards.filter(b => !personalFavIds.includes(b.id)),
         prev
@@ -1241,11 +1253,12 @@ export default function App() {
     homeTouchDragRef.current = { active: false, id: null, section: null, overId: null };
     setHomeDragId(null); setHomeDragOver(null);
     if (!id || !overId || id === overId) return;
-    const isPublic = section === 'public', isFav = section === 'fav';
-    const setOrder  = isPublic ? setHomePublicOrder  : isFav ? setHomeFavOrder  : setHomeOtherOrder;
-    const key       = isPublic ? 'homePublicOrder'   : isFav ? 'homeFavOrder'   : 'homeOtherOrder';
-    const curOrder  = isPublic ? homePublicOrder      : isFav ? homeFavOrder      : homeOtherOrder;
-    const sectionItems = isPublic ? homePublicBoards
+    const isPublic = section === 'public', isFav = section === 'fav', isFollowed = section === 'followed';
+    const setOrder  = isPublic ? setHomePublicOrder  : isFollowed ? setHomeFollowedOrder  : isFav ? setHomeFavOrder  : setHomeOtherOrder;
+    const key       = isPublic ? 'homePublicOrder'   : isFollowed ? 'homeFollowedOrder'   : isFav ? 'homeFavOrder'   : 'homeOtherOrder';
+    const curOrder  = isPublic ? homePublicOrder      : isFollowed ? homeFollowedOrder      : isFav ? homeFavOrder      : homeOtherOrder;
+    const sectionItems = isPublic ? nonFollowedPublicBoards
+      : isFollowed ? followedPublicBoards
       : isFav ? sortedBoards.filter(b => personalFavIds.includes(b.id))
       : sortedBoards.filter(b => !personalFavIds.includes(b.id));
     setOrder(() => {
@@ -1277,17 +1290,18 @@ export default function App() {
           </button>
         </div>
       )}
-      {/* Boards publics */}
-      <div style={{ marginBottom: 28 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
-          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#3db86a" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="10" cy="7" r="4"/><path d="M4 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg>
+      {/* Boards publics (non-suivis) */}
+      <div style={{ marginBottom: homePublicCollapsed ? 12 : 28 }}>
+        <div onClick={() => setHomePublicCollapsed(v => !v)} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: homePublicCollapsed ? 0 : 12, cursor: 'pointer', userSelect: 'none' }}>
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#3db86a" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="10" cy="7" r="4"/><path d="M4 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M15 3.13a4 4 0 0 1 0 7.75"/><path d="M20 21v-2a4 4 0 0 0-3-3.85"/></svg>
           <span style={{ fontSize: 11, fontWeight: 700, color: '#3db86a', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{t('board.public_section')}</span>
-          <span style={{ fontSize: 10, color: 'var(--text-muted)', background: 'var(--surface2)', borderRadius: 99, padding: '1px 6px' }}>{homePublicBoards.length}</span>
+          <span style={{ fontSize: 10, color: 'var(--text-muted)', background: 'var(--surface2)', borderRadius: 99, padding: '1px 6px' }}>{nonFollowedPublicBoards.length}</span>
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#3db86a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transition: 'transform .2s', transform: homePublicCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', flexShrink: 0, opacity: 0.7 }}><polyline points="6 9 12 15 18 9"/></svg>
         </div>
-        {homePublicBoards.length === 0
+        {!homePublicCollapsed && (nonFollowedPublicBoards.length === 0
           ? <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>{t('board.no_public')}</div>
           : <div style={{ display: 'grid', gridTemplateColumns: compactView ? '1fr' : 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
-              {applySectionOrder(homePublicBoards, homePublicOrder).filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).map(b => (
+              {applySectionOrder(nonFollowedPublicBoards, homePublicOrder).filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).map(b => (
                 <div
                   key={b.id}
                   data-hbd-id={b.id}
@@ -1320,12 +1334,63 @@ export default function App() {
                   onContextMenu={e => e.preventDefault()}
                   style={{ opacity: homeDragId === b.id ? 0.4 : 1, outline: homeDragOver === `public_${b.id}` && homeDragId !== b.id ? '2px dashed var(--accent)' : 'none', borderRadius: 12, transition: 'opacity .15s, transform .15s, box-shadow .15s', transform: homeDragId === b.id ? 'rotate(2deg) scale(1.03)' : 'none', boxShadow: homeDragId === b.id ? '0 8px 28px rgba(0,0,0,0.55)' : 'none' }}
                 >
-                  <HomeBoardCard board={b} isPublic isFav={favBoards.some(f => f.id === b.id)} onToggleFav={cur => toggleFavorite(b.id, b, cur)} onClick={() => openPublicBoard(b)} typeColor={getBoardTypeColor(b)} isHidden={hiddenBoardIds.has(b.id)} onHide={() => hideBoard(b.id)} onUnhide={() => unhideBoard(b.id)} compact={compactView} />
+                  <HomeBoardCard board={b} isPublic isFav={false} onToggleFav={cur => toggleFavorite(b.id, b, cur)} onClick={() => openPublicBoard(b)} typeColor={getBoardTypeColor(b)} isHidden={hiddenBoardIds.has(b.id)} onHide={() => hideBoard(b.id)} onUnhide={() => unhideBoard(b.id)} compact={compactView} />
                 </div>
               ))}
             </div>
-        }
+        )}
       </div>
+      <div style={{ borderTop: '1px solid var(--border)', marginBottom: 24 }} />
+
+      {/* Boards publics suivis */}
+      {followedPublicBoards.length > 0 && (
+        <div style={{ marginBottom: homeFollowedCollapsed ? 12 : 28 }}>
+          <div onClick={() => setHomeFollowedCollapsed(v => !v)} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: homeFollowedCollapsed ? 0 : 12, cursor: 'pointer', userSelect: 'none' }}>
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#70b8ff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 20h.01"/><path d="M7 20v-4"/><path d="M12 20v-8"/><path d="M17 20V8"/><path d="M22 4v16"/></svg>
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#70b8ff', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{t('board.followed_public')}</span>
+            <span style={{ fontSize: 10, color: 'var(--text-muted)', background: 'var(--surface2)', borderRadius: 99, padding: '1px 6px' }}>{followedPublicBoards.length}</span>
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#70b8ff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transition: 'transform .2s', transform: homeFollowedCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', flexShrink: 0, opacity: 0.7 }}><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+          {!homeFollowedCollapsed && <div style={{ display: 'grid', gridTemplateColumns: compactView ? '1fr' : 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
+            {applySectionOrder(followedPublicBoards, homeFollowedOrder).filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).map(b => (
+              <div
+                key={b.id}
+                data-hbd-id={b.id}
+                onTouchStart={() => {
+                  clearTimeout(homeTouchTimerRef.current);
+                  homeTouchDragRef.current = { active: false, id: b.id, section: 'followed', overId: null, scrollBlocker: null };
+                  homeTouchTimerRef.current = setTimeout(() => {
+                    homeTouchDragRef.current.active = true;
+                    setHomeDragId(b.id);
+                    if (navigator.vibrate) navigator.vibrate(40);
+                    const blocker = (ev) => ev.preventDefault();
+                    homeTouchDragRef.current.scrollBlocker = blocker;
+                    document.addEventListener('touchmove', blocker, { passive: false });
+                  }, 400);
+                }}
+                onTouchMove={e => {
+                  if (!homeTouchDragRef.current.active) { clearTimeout(homeTouchTimerRef.current); return; }
+                  const touch = e.touches[0];
+                  const el = document.elementFromPoint(touch.clientX, touch.clientY)?.closest('[data-hbd-id]');
+                  const overId = el?.getAttribute('data-hbd-id') ?? null;
+                  homeTouchDragRef.current.overId = overId;
+                  setHomeDragOver(overId ? `followed_${overId}` : null);
+                }}
+                onTouchEnd={e => {
+                  clearTimeout(homeTouchTimerRef.current);
+                  if (!homeTouchDragRef.current.active) { homeTouchDragRef.current.active = false; return; }
+                  e.preventDefault();
+                  finishHomeTouchDrop();
+                }}
+                onContextMenu={e => e.preventDefault()}
+                style={{ opacity: homeDragId === b.id ? 0.4 : 1, outline: homeDragOver === `followed_${b.id}` && homeDragId !== b.id ? '2px dashed #70b8ff' : 'none', borderRadius: 12, transition: 'opacity .15s, transform .15s, box-shadow .15s', transform: homeDragId === b.id ? 'rotate(2deg) scale(1.03)' : 'none', boxShadow: homeDragId === b.id ? '0 8px 28px rgba(0,0,0,0.55)' : 'none' }}
+              >
+                <HomeBoardCard board={b} isPublic isFav onToggleFav={cur => toggleFavorite(b.id, b, cur)} onClick={() => openPublicBoard(b)} typeColor={getBoardTypeColor(b)} isHidden={hiddenBoardIds.has(b.id)} onHide={() => hideBoard(b.id)} onUnhide={() => unhideBoard(b.id)} compact={compactView} />
+              </div>
+            ))}
+          </div>}
+        </div>
+      )}
       <div style={{ borderTop: '1px solid var(--border)', marginBottom: 24 }} />
       {/* Mes boards */}
       {(() => {
@@ -1334,12 +1399,14 @@ export default function App() {
         const otherBoards = sortedBoards.filter(b => !favSet.has(b.id));
         return (<>
           {favBoards2.length > 0 && (
-            <div style={{ marginBottom: 24 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+            <div style={{ marginBottom: homeFavCollapsed ? 12 : 24 }}>
+              <div onClick={() => setHomeFavCollapsed(v => !v)} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: homeFavCollapsed ? 0 : 12, cursor: 'pointer', userSelect: 'none' }}>
                 <svg viewBox="0 0 24 24" width="13" height="13" fill="#f5c518" stroke="#f5c518" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
                 <span style={{ fontSize: 11, fontWeight: 700, color: '#f5c518', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{t('board.pinned_section')}</span>
+                <span style={{ fontSize: 10, color: 'var(--text-muted)', background: 'var(--surface2)', borderRadius: 99, padding: '1px 6px' }}>{favBoards2.length}</span>
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#f5c518" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transition: 'transform .2s', transform: homeFavCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', flexShrink: 0, opacity: 0.7 }}><polyline points="6 9 12 15 18 9"/></svg>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: compactView ? '1fr' : 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
+              {!homeFavCollapsed && <div style={{ display: 'grid', gridTemplateColumns: compactView ? '1fr' : 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
                 {applySectionOrder(favBoards2, homeFavOrder).filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).map(b => (
                   <div
                     key={b.id}
@@ -1376,15 +1443,17 @@ export default function App() {
                     <HomeBoardCard board={b} isFav onToggleFav={cur => togglePersonalFavorite(b.id, cur)} onClick={() => openBoard(b)} typeColor={getBoardTypeColor(b)} isHidden={hiddenBoardIds.has(b.id)} onHide={() => hideBoard(b.id)} onUnhide={() => unhideBoard(b.id)} compact={compactView} />
                   </div>
                 ))}
-              </div>
+              </div>}
             </div>
           )}
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+            <div onClick={() => setHomeOtherCollapsed(v => !v)} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: homeOtherCollapsed ? 0 : 12, cursor: 'pointer', userSelect: 'none' }}>
               <span style={{ fontSize: 13 }}>🔒</span>
               <span style={{ fontSize: 11, fontWeight: 700, color: '#f5a500', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{t('board.my_boards')}</span>
+              <span style={{ fontSize: 10, color: 'var(--text-muted)', background: 'var(--surface2)', borderRadius: 99, padding: '1px 6px' }}>{otherBoards.length}</span>
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#f5a500" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transition: 'transform .2s', transform: homeOtherCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', flexShrink: 0, opacity: 0.7 }}><polyline points="6 9 12 15 18 9"/></svg>
             </div>
-            {sortedBoards.length === 0
+            {!homeOtherCollapsed && (sortedBoards.length === 0
               ? <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>{t('board.create_start')}</div>
               : otherBoards.length === 0
                 ? <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>{t('board.all_pinned')}</div>
@@ -1426,7 +1495,7 @@ export default function App() {
                       </div>
                     ))}
                   </div>
-            }
+            )}
           </div>
         </>);
       })()}
@@ -1512,20 +1581,21 @@ export default function App() {
             </button>
           </div>
         )}
-        {/* Boards publics de la communauté */}
-        <div style={{ marginBottom: 36 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+        {/* Boards publics de la communauté (non-suivis) */}
+        <div style={{ marginBottom: homePublicCollapsed ? 16 : 36 }}>
+          <div onClick={() => setHomePublicCollapsed(v => !v)} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: homePublicCollapsed ? 0 : 14, cursor: 'pointer', userSelect: 'none' }}>
             <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#3db86a" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="10" cy="7" r="4"/><path d="M4 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M15 3.13a4 4 0 0 1 0 7.75"/><path d="M20 21v-2a4 4 0 0 0-3-3.85"/>
             </svg>
             <span style={{ fontSize: 12, fontWeight: 700, color: '#3db86a', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{t('board.public_section')}</span>
-            <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--surface2)', borderRadius: 99, padding: '1px 7px' }}>{homePublicBoards.length}</span>
+            <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--surface2)', borderRadius: 99, padding: '1px 7px' }}>{nonFollowedPublicBoards.length}</span>
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#3db86a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transition: 'transform .2s', transform: homePublicCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', flexShrink: 0, opacity: 0.7 }}><polyline points="6 9 12 15 18 9"/></svg>
           </div>
-          {homePublicBoards.length === 0 ? (
+          {!homePublicCollapsed && (nonFollowedPublicBoards.length === 0 ? (
             <div style={{ color: 'var(--text-muted)', fontSize: 12, padding: '16px 0' }}>{t('board.no_public_long')}</div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
-              {applySectionOrder(homePublicBoards, homePublicOrder).filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).map(b => (
+              {applySectionOrder(nonFollowedPublicBoards, homePublicOrder).filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).map(b => (
                 <div key={b.id}
                   draggable
                   onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; setHomeDragId(b.id); }}
@@ -1535,7 +1605,7 @@ export default function App() {
                   style={{ opacity: homeDragId === b.id ? 0.4 : 1, outline: homeDragOver === `pub_${b.id}` && homeDragId !== b.id ? '2px dashed var(--accent)' : 'none', borderRadius: 12, cursor: 'grab', transition: 'opacity .15s, transform .15s, box-shadow .15s', transform: homeDragId === b.id ? 'rotate(2deg) scale(1.03)' : 'none', boxShadow: homeDragId === b.id ? '0 8px 28px rgba(0,0,0,0.55)' : 'none' }}
                 >
                   <HomeBoardCard board={b} isPublic
-                    isFav={favBoards.some(f => f.id === b.id)}
+                    isFav={false}
                     onToggleFav={(cur) => toggleFavorite(b.id, b, cur)}
                     onClick={() => openPublicBoard(b)}
                     typeColor={getBoardTypeColor(b)}
@@ -1545,11 +1615,42 @@ export default function App() {
                 </div>
               ))}
             </div>
-          )}
+          ))}
         </div>
 
         {/* Séparateur */}
         <div style={{ borderTop: '1px solid var(--border)', marginBottom: 32 }} />
+
+        {/* Boards publics suivis */}
+        {followedPublicBoards.length > 0 && (
+          <>
+            <div style={{ marginBottom: homeFollowedCollapsed ? 16 : 36 }}>
+              <div onClick={() => setHomeFollowedCollapsed(v => !v)} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: homeFollowedCollapsed ? 0 : 14, cursor: 'pointer', userSelect: 'none' }}>
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#70b8ff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 20h.01"/><path d="M7 20v-4"/><path d="M12 20v-8"/><path d="M17 20V8"/><path d="M22 4v16"/></svg>
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#70b8ff', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{t('board.followed_public')}</span>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--surface2)', borderRadius: 99, padding: '1px 7px' }}>{followedPublicBoards.length}</span>
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#70b8ff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transition: 'transform .2s', transform: homeFollowedCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', flexShrink: 0, opacity: 0.7 }}><polyline points="6 9 12 15 18 9"/></svg>
+              </div>
+              {!homeFollowedCollapsed && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
+                  {applySectionOrder(followedPublicBoards, homeFollowedOrder).filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).map(b => (
+                    <div key={b.id}
+                      draggable
+                      onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; setHomeDragId(b.id); }}
+                      onDragEnd={() => { setHomeDragId(null); setHomeDragOver(null); }}
+                      onDragOver={e => { e.preventDefault(); setHomeDragOver(`followed_${b.id}`); }}
+                      onDrop={e => { e.preventDefault(); handleHomeDrop('followed', b.id, setHomeFollowedOrder, 'homeFollowedOrder'); }}
+                      style={{ opacity: homeDragId === b.id ? 0.4 : 1, outline: homeDragOver === `followed_${b.id}` && homeDragId !== b.id ? '2px dashed #70b8ff' : 'none', borderRadius: 12, cursor: 'grab', transition: 'opacity .15s, transform .15s, box-shadow .15s', transform: homeDragId === b.id ? 'rotate(2deg) scale(1.03)' : 'none', boxShadow: homeDragId === b.id ? '0 8px 28px rgba(0,0,0,0.55)' : 'none' }}
+                    >
+                      <HomeBoardCard board={b} isPublic isFav onToggleFav={(cur) => toggleFavorite(b.id, b, cur)} onClick={() => openPublicBoard(b)} typeColor={getBoardTypeColor(b)} isHidden={hiddenBoardIds.has(b.id)} onHide={() => hideBoard(b.id)} onUnhide={() => unhideBoard(b.id)} />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div style={{ borderTop: '1px solid var(--border)', marginBottom: 32 }} />
+          </>
+        )}
 
         {/* Mes boards */}
         {(() => {
@@ -1559,35 +1660,39 @@ export default function App() {
           return (
             <>
               {favBoards2.length > 0 && (
-                <div style={{ marginBottom: 28 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+                <div style={{ marginBottom: homeFavCollapsed ? 16 : 28 }}>
+                  <div onClick={() => setHomeFavCollapsed(v => !v)} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: homeFavCollapsed ? 0 : 14, cursor: 'pointer', userSelect: 'none' }}>
                     <svg viewBox="0 0 24 24" width="14" height="14" fill="#f5c518" stroke="#f5c518" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
                     <span style={{ fontSize: 12, fontWeight: 700, color: '#f5c518', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{t('board.pinned_section')}</span>
                     <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--surface2)', borderRadius: 99, padding: '1px 7px' }}>{favBoards2.length}</span>
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#f5c518" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transition: 'transform .2s', transform: homeFavCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', flexShrink: 0, opacity: 0.7 }}><polyline points="6 9 12 15 18 9"/></svg>
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
-                    {applySectionOrder(favBoards2, homeFavOrder).filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).map(b => (
-                      <div key={b.id}
-                        draggable
-                        onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; setHomeDragId(b.id); }}
-                        onDragEnd={() => { setHomeDragId(null); setHomeDragOver(null); }}
-                        onDragOver={e => { e.preventDefault(); setHomeDragOver(`fav_${b.id}`); }}
-                        onDrop={e => { e.preventDefault(); handleHomeDrop('fav', b.id, setHomeFavOrder, 'homeFavOrder'); }}
-                        style={{ opacity: homeDragId === b.id ? 0.4 : 1, outline: homeDragOver === `fav_${b.id}` && homeDragId !== b.id ? '2px dashed #f5c518' : 'none', borderRadius: 12, cursor: 'grab', transition: 'opacity .15s, transform .15s, box-shadow .15s', transform: homeDragId === b.id ? 'rotate(2deg) scale(1.03)' : 'none', boxShadow: homeDragId === b.id ? '0 8px 28px rgba(0,0,0,0.55)' : 'none' }}
-                      >
-                        <HomeBoardCard board={b} isFav onToggleFav={(cur) => togglePersonalFavorite(b.id, cur)} onClick={() => openBoard(b)} typeColor={getBoardTypeColor(b)} isHidden={hiddenBoardIds.has(b.id)} onHide={() => hideBoard(b.id)} onUnhide={() => unhideBoard(b.id)} />
-                      </div>
-                    ))}
-                  </div>
+                  {!homeFavCollapsed && (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
+                      {applySectionOrder(favBoards2, homeFavOrder).filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).map(b => (
+                        <div key={b.id}
+                          draggable
+                          onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; setHomeDragId(b.id); }}
+                          onDragEnd={() => { setHomeDragId(null); setHomeDragOver(null); }}
+                          onDragOver={e => { e.preventDefault(); setHomeDragOver(`fav_${b.id}`); }}
+                          onDrop={e => { e.preventDefault(); handleHomeDrop('fav', b.id, setHomeFavOrder, 'homeFavOrder'); }}
+                          style={{ opacity: homeDragId === b.id ? 0.4 : 1, outline: homeDragOver === `fav_${b.id}` && homeDragId !== b.id ? '2px dashed #f5c518' : 'none', borderRadius: 12, cursor: 'grab', transition: 'opacity .15s, transform .15s, box-shadow .15s', transform: homeDragId === b.id ? 'rotate(2deg) scale(1.03)' : 'none', boxShadow: homeDragId === b.id ? '0 8px 28px rgba(0,0,0,0.55)' : 'none' }}
+                        >
+                          <HomeBoardCard board={b} isFav onToggleFav={(cur) => togglePersonalFavorite(b.id, cur)} onClick={() => openBoard(b)} typeColor={getBoardTypeColor(b)} isHidden={hiddenBoardIds.has(b.id)} onHide={() => hideBoard(b.id)} onUnhide={() => unhideBoard(b.id)} />
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+                <div onClick={() => setHomeOtherCollapsed(v => !v)} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: homeOtherCollapsed ? 0 : 14, cursor: 'pointer', userSelect: 'none' }}>
                   <span style={{ fontSize: 14 }}>🔒</span>
                   <span style={{ fontSize: 12, fontWeight: 700, color: '#f5a500', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{t('board.my_boards')}</span>
                   <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--surface2)', borderRadius: 99, padding: '1px 7px' }}>{otherBoards.length}</span>
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#f5a500" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transition: 'transform .2s', transform: homeOtherCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', flexShrink: 0, opacity: 0.7 }}><polyline points="6 9 12 15 18 9"/></svg>
                 </div>
-                {sortedBoards.length === 0 ? (
+                {!homeOtherCollapsed && (sortedBoards.length === 0 ? (
                   <div style={{ color: 'var(--text-muted)', fontSize: 12, padding: '16px 0' }}>{t('board.create_start')}</div>
                 ) : otherBoards.length === 0 ? (
                   <div style={{ color: 'var(--text-muted)', fontSize: 12, padding: '8px 0' }}>{t('board.all_pinned')}</div>
@@ -1606,7 +1711,7 @@ export default function App() {
                       </div>
                     ))}
                   </div>
-                )}
+                ))}
               </div>
             </>
           );
@@ -1998,6 +2103,15 @@ export default function App() {
               )}
               <button onClick={refreshPublicBoard} title={t('nav.refresh')} style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', color: 'var(--text-muted)', fontSize: 14, cursor: 'pointer', flexShrink: 0, lineHeight: 1 }}>↻</button>
               <button onClick={closePublicBoard} style={{ background: 'rgba(255,255,255,.08)', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 10px', color: 'var(--text-muted)', fontSize: 11, cursor: 'pointer', flexShrink: 0 }}>✕</button>
+            </>
+          ) : showHome ? (
+            <>
+              <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', flex: 1 }}>Tableau de Board</span>
+              <button
+                onClick={() => { fetchBoards(); fetchFavorites(); fetchPersonalFavorites(); fetch(`${API}/public/boards`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : []).then(setHomePublicBoards).catch(() => {}); }}
+                title="Rafraîchir"
+                style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', color: 'var(--text-muted)', fontSize: 14, cursor: 'pointer', flexShrink: 0, lineHeight: 1 }}
+              >↻</button>
             </>
           ) : (
             <>

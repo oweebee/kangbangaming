@@ -154,7 +154,7 @@ export default function ProfilePage({ token, currentUser, onClose, onSaveSteam }
     if (activeTab !== 'wishlist' || wishlist !== null || !hasSteam) return;
     setWishlistLoading(true);
     setWishlistError(false);
-    fetch(`${API}/steam/wishlist`, { headers: { Authorization: `Bearer ${token}` } })
+    fetch(`${API}/steam/wishlist/deadline`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.ok ? r.json() : Promise.reject())
       .then(data => { setWishlist(data); setWishlistLoading(false); })
       .catch(() => { setWishlistError(true); setWishlistLoading(false); });
@@ -387,24 +387,60 @@ export default function ProfilePage({ token, currentUser, onClose, onSaveSteam }
                 </div>
               )}
 
-              {hasSteam && !wishlistLoading && !wishlistError && wishlist && wishlist.length > 0 && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 8 }}>
-                  {wishlist.map(appid => (
-                    <a key={appid} href={`https://store.steampowered.com/app/${appid}/`} target="_blank" rel="noopener noreferrer"
-                       style={{ display: 'block', borderRadius: 6, overflow: 'hidden', border: '1px solid var(--border)', textDecoration: 'none', transition: 'border-color .15s' }}
-                       onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--accent)'}
-                       onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}>
-                      <img
-                        src={`https://cdn.akamai.steamstatic.com/steam/apps/${appid}/capsule_sm_120.jpg`}
-                        alt={String(appid)}
-                        loading="lazy"
-                        style={{ width: '100%', display: 'block' }}
-                        onError={e => { e.currentTarget.style.display = 'none'; }}
-                      />
-                    </a>
-                  ))}
-                </div>
-              )}
+              {hasSteam && !wishlistLoading && !wishlistError && wishlist && wishlist.length > 0 && (() => {
+                const today = new Date(); today.setHours(0,0,0,0);
+                const sorted = [...wishlist].sort((a, b) => {
+                  const da = a.release_date ? new Date(a.release_date) : null;
+                  const db = b.release_date ? new Date(b.release_date) : null;
+                  const af = da && da >= today, bf = db && db >= today;
+                  if (af && bf) return da - db;       // futures : plus proche d'abord
+                  if (af) return -1; if (bf) return 1;
+                  if (da && db) return db - da;       // passées : plus récente d'abord
+                  if (da) return -1; if (db) return 1;
+                  return (a.name || '').localeCompare(b.name || '');
+                });
+                const fmtDate = iso => {
+                  if (!iso) return null;
+                  try { return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }); }
+                  catch { return iso; }
+                };
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {sorted.map(item => {
+                      const d = item.release_date ? new Date(item.release_date) : null;
+                      const isFuture = d && d >= today;
+                      const isPast = d && d < today;
+                      const daysLeft = isFuture ? Math.ceil((d - today) / 86400000) : null;
+                      const dateColor = isFuture
+                        ? (daysLeft <= 30 ? '#f5a500' : 'var(--text-muted)')
+                        : isPast ? '#3db86a' : 'var(--text-muted)';
+                      const dateLabel = isFuture
+                        ? (daysLeft <= 30 ? `Dans ${daysLeft} jour${daysLeft > 1 ? 's' : ''}` : fmtDate(item.release_date))
+                        : isPast ? fmtDate(item.release_date) : '—';
+                      return (
+                        <a key={item.appid}
+                          href={`https://store.steampowered.com/app/${item.appid}/`}
+                          target="_blank" rel="noopener noreferrer"
+                          style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 8px', borderRadius: 8, background: 'var(--surface2)', border: '1px solid var(--border)', textDecoration: 'none', transition: 'border-color .15s' }}
+                          onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--accent)'}
+                          onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
+                        >
+                          <img src={item.header_img} alt="" loading="lazy"
+                            style={{ width: 72, height: 34, objectFit: 'cover', borderRadius: 4, flexShrink: 0, background: 'var(--surface)' }}
+                            onError={e => { e.currentTarget.style.display = 'none'; }}
+                          />
+                          <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
+                            {item.name}
+                          </span>
+                          <span style={{ fontSize: 11, color: dateColor, flexShrink: 0, fontWeight: isFuture && daysLeft <= 30 ? 700 : 400 }}>
+                            {dateLabel}
+                          </span>
+                        </a>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
             </div>
 
           </div>{/* /track */}

@@ -184,7 +184,7 @@ function Section({ cat, tasks, onOpenTask, hiddenDeadlineIds, showHiddenDeadline
         <span style={{ fontSize: 10, color: 'var(--text-muted)', background: 'var(--surface2)', borderRadius: 99, padding: '1px 6px' }}>
           {tasks.length}
         </span>
-        <span style={{ fontSize: 9, color: 'var(--text-muted)', transition: 'transform .15s', transform: collapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }}>▾</span>
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke={meta.color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transition: 'transform .2s', transform: collapsed ? 'rotate(-90deg)' : 'rotate(0deg)', flexShrink: 0, opacity: 0.75 }}><polyline points="6 9 12 15 18 9"/></svg>
       </div>
 
       {!collapsed && (

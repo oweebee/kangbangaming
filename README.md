@@ -16,11 +16,13 @@ Organise ta backlog, suis tes heures de jeu, partage tes boards avec ta communau
 - **Tâches personnalisées** — cartes non-Steam avec types, assignation, notes, échéances
 - **Panneau Échéances** — vue synthétique des dates limites et alertes urgentes ; colonnes adaptatives (1 → 2 → 3 selon la largeur du panneau redimensionnable)
 - **Wishlist Steam dans les Échéances** — les jeux de ta wishlist avec une date de sortie connue apparaissent automatiquement dans le panneau Échéances (badge ★ WISHLIST, clic → page Steam Store, masquables). Profil Steam public requis.
-- **Onglet Wishlist dans le profil** — affiche ta wishlist Steam en grille avec avertissement si le profil n'est pas public
+- **Wishlist dans le profil** — liste compacte triée par date de sortie (plus proche en haut), avec miniature, nom et badge coloré (vert = sorti, orange = bientôt, gris = date lointaine ou inconnue)
 - **Multi-langue** — interface en français, anglais, espagnol, allemand, russe et chinois (détection auto)
-- **Corbeille** — les cartes archivées supprimées et les notes effacées sont conservées 30 jours avant suppression définitive ; restauration en un clic depuis l'onglet "Corbeille" du profil. Les admins ont une vue globale de toutes les suppressions et peuvent purger.
+- **Corbeille** — les cartes, notes **et boards** supprimés sont conservés 30 jours avant suppression définitive ; restauration en un clic depuis l'onglet "Corbeille" du profil. Les admins ont une vue globale de toutes les suppressions et peuvent purger. La suppression admin envoie aussi les boards en corbeille.
+- **Boards publics suivis** — les boards publics marqués comme "suivis" apparaissent dans une section dédiée sur l'accueil, séparée des autres boards publics, avec leur propre ordre drag & drop.
+- **Refresh accueil** — bouton ↻ dans la barre de navigation (desktop et mobile) pour rafraîchir tous les boards sans recharger la page.
 - **Admin** — gestion des utilisateurs, création de comptes, config Discord, approbation
-- **Mobile** — interface adaptée, onglets swipables, vue compacte, slider home
+- **Mobile** — interface adaptée, onglets swipables, vue compacte, slider home, drag tactile sur les boards de l'accueil
 - **APK Android** — application WebView sideloadable, URL configurable au premier lancement
 
 ---
