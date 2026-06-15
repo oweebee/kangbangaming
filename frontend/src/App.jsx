@@ -2131,6 +2131,11 @@ export default function App() {
             <>
               <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>Tableau de Board</span>
               <div style={{ flex: 1 }} />
+              <button
+                onClick={() => { fetchBoards(); fetchFavorites(); fetchPersonalFavorites(); fetch(`${API}/public/boards`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : []).then(setHomePublicBoards).catch(() => {}); }}
+                title="Rafraîchir"
+                style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 11px', color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 5 }}
+              >↻</button>
             </>
           ) : (
             <>
