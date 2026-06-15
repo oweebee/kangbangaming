@@ -83,7 +83,8 @@ export default function MobileBoard({
   const trackRef       = useRef(null);
   const tabBarRef      = useRef(null);
   const tabButtonRefs  = useRef({});
-  const swipeRef       = useRef({ active: false, startX: 0, startY: 0, startTime: 0, isHorizontal: null, w: 0 });
+  const colScrollRefs  = useRef({}); // refs aux divs scrollables de chaque colonne
+  const swipeRef       = useRef({ active: false, startX: 0, startY: 0, startTime: 0, isHorizontal: null, w: 0, prevY: 0 });
   const activeIdxRef   = useRef(0);
 
   const currentColId    = columns.find(c => c.id === activeColId)?.id || columns[0]?.id || null;
@@ -121,6 +122,7 @@ export default function MobileBoard({
       const s = swipeRef.current;
       s.active = true; s.isHorizontal = null;
       s.startX = e.touches[0].clientX; s.startY = e.touches[0].clientY;
+      s.prevY = e.touches[0].clientY;
       s.startTime = Date.now(); s.w = el.offsetWidth;
       const trk = trackRef.current;
       if (trk) trk.style.transition = 'none';
@@ -133,10 +135,21 @@ export default function MobileBoard({
       }
       const s = swipeRef.current;
       if (!s.active) return;
-      const dx = e.touches[0].clientX - s.startX;
-      const dy = e.touches[0].clientY - s.startY;
+      const touch = e.touches[0];
+      const dx = touch.clientX - s.startX;
+      const dy = touch.clientY - s.startY;
       if (s.isHorizontal === null && (Math.abs(dx) > 5 || Math.abs(dy) > 5))
         s.isHorizontal = Math.abs(dx) > Math.abs(dy);
+      if (s.isHorizontal === false) {
+        // Scroll vertical manuel dans la colonne active
+        e.preventDefault();
+        const deltaY = s.prevY - touch.clientY;
+        s.prevY = touch.clientY;
+        const colId = columns[activeIdxRef.current]?.id;
+        const colEl = colId ? colScrollRefs.current[colId] : null;
+        if (colEl) colEl.scrollTop += deltaY;
+        return;
+      }
       if (!s.isHorizontal) return;
       e.preventDefault();
       const base = -activeIdxRef.current * s.w;
@@ -295,7 +308,7 @@ export default function MobileBoard({
       </div>
 
       {/* ── Zone de slide ── */}
-      <div ref={containerRef} style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
+      <div ref={containerRef} style={{ flex: 1, overflow: 'hidden', position: 'relative', touchAction: 'none' }}>
         <div
           ref={trackRef}
           style={{
@@ -323,6 +336,7 @@ export default function MobileBoard({
             return (
               <div
                 key={col.id}
+                ref={el => { colScrollRefs.current[col.id] = el; }}
                 style={{
                   width: `${100 / columns.length}%`,
                   height: '100%',
@@ -349,7 +363,6 @@ export default function MobileBoard({
                         opacity:   isBeingDragged ? 0.55 : 1,
                         transform: isBeingDragged ? 'scale(0.97)' : 'none',
                         transition: 'opacity .15s, transform .15s',
-                        touchAction: 'pan-y',
                       }}
                       onTouchStart={e => handleCardTouchStart(e, game, col.id, colGames)}
                       onTouchMove={e => {

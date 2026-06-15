@@ -21,6 +21,11 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
   const customColor = isCustom && !tt ? (game.color || '#66c0f4') : null;
   const TtFallback = tt?.FallbackIcon;
   const dateInfo  = getDateInfo(game);
+  // En mode compact, on n'affiche l'icône en bas que s'il y a une vraie image (pas juste un emoji)
+  const hasCompactIcon = compact && (
+    (!isCustom && !!game.icon_img) ||
+    (isCustom && tt && !!tt.img && !ttImgError)
+  );
 
   return (
     <div
@@ -177,7 +182,7 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
       ) : null}
 
       {/* ── Info area ── */}
-      <div style={{ padding: compact ? '4px 9px' : '7px 9px', paddingRight: compact ? 26 : 9, paddingBottom: compact ? COMPACT_ICON_SIZE + 6 : 7 }}>
+      <div style={{ padding: compact ? '4px 9px' : '7px 9px', paddingRight: compact ? 26 : 9, paddingBottom: compact ? (hasCompactIcon ? COMPACT_ICON_SIZE + 6 : 6) : 7 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 4 }}>
           <div style={{
             fontWeight: 600, fontSize: compact ? 13 : 14, lineHeight: compact ? '1.2' : '1.3', marginBottom: compact ? 1 : 3,
@@ -292,8 +297,8 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
           ))}
         </div>
       )}
-      {/* ── Compact mode: icône bas-droite + avatars ── */}
-      {compact && (
+      {/* ── Compact mode: icône bas-droite + avatars (seulement si image réelle) ── */}
+      {hasCompactIcon && (
         <>
           {/* Icône bas-droite */}
           <div style={{
@@ -313,19 +318,9 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
             {!isCustom && game.icon_img && (
               <img src={game.icon_img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             )}
-            {!isCustom && !game.icon_img && (
-              <span style={{ fontSize: 18, lineHeight: 1 }}>🎮</span>
-            )}
             {/* Tâche avec type → image type */}
             {isCustom && tt && !ttImgError && tt.img && (
               <img src={tt.img} alt={tt.label} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            )}
-            {isCustom && tt && (ttImgError || !tt.img) && (
-              <span style={{ fontSize: 18, lineHeight: 1 }}>{tt.emoji}</span>
-            )}
-            {/* Tâche manuelle sans type → emoji de la tâche */}
-            {isCustom && !tt && (
-              <span style={{ fontSize: 18, lineHeight: 1 }}>{game.emoji || '🎮'}</span>
             )}
           </div>
           {/* Avatars en mode compact — bas gauche */}
