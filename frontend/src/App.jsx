@@ -319,7 +319,7 @@ export default function App() {
   // Home view
   const [showHome, setShowHome] = useState(true);
   const [mobileHomeTab, setMobileHomeTab] = useState(() => {
-    try { return localStorage.getItem('mobileHomeTab') || 'boards'; } catch { return 'boards'; }
+    try { return localStorage.getItem('mobileHomeTab') || 'deadlines'; } catch { return 'deadlines'; }
   }); // 'deadlines' | 'boards' | 'upcoming'
   const setMobileHomeTabPersist = (tab) => { setMobileHomeTab(tab); try { localStorage.setItem('mobileHomeTab', tab); } catch {} };
   const mobileHomeTabs = ['deadlines', 'boards', 'upcoming'];
