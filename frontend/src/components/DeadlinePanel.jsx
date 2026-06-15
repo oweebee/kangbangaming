@@ -265,7 +265,7 @@ function Section({ cat, tasks, onOpenTask, hiddenDeadlineIds, showHiddenDeadline
                     }}
                     title={hiddenDeadlineIds.has(key) ? 'Afficher' : 'Masquer'}
                     style={{
-                      position: 'absolute', top: 6, right: 6, zIndex: 10,
+                      position: 'absolute', top: 95, right: 9, zIndex: 10,
                       background: hiddenDeadlineIds.has(key) ? 'rgba(60,150,240,0.18)' : 'rgba(255,255,255,0.10)',
                       border: `1px solid ${hiddenDeadlineIds.has(key) ? 'rgba(60,150,240,0.55)' : 'rgba(255,255,255,0.28)'}`,
                       borderRadius: 4, width: 20, height: 20, padding: 0, cursor: 'pointer',
