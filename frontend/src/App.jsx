@@ -318,10 +318,9 @@ export default function App() {
 
   // Home view
   const [showHome, setShowHome] = useState(true);
-  const [mobileHomeTab, setMobileHomeTab] = useState(() => {
-    try { return localStorage.getItem('mobileHomeTab') || 'deadlines'; } catch { return 'deadlines'; }
-  }); // 'deadlines' | 'boards' | 'upcoming'
-  const setMobileHomeTabPersist = (tab) => { setMobileHomeTab(tab); try { localStorage.setItem('mobileHomeTab', tab); } catch {} };
+  // Toujours ouvrir sur deadlines — on switche sur boards seulement si deadlines est vide
+  const [mobileHomeTab, setMobileHomeTab] = useState('deadlines');
+  const setMobileHomeTabPersist = (tab) => { setMobileHomeTab(tab); };
   const mobileHomeTabs = ['deadlines', 'boards', 'upcoming'];
   const [homePublicBoards, setHomePublicBoards] = useState([]);
   const [deadlineRefreshKey, setDeadlineRefreshKey] = useState(0);
@@ -1410,7 +1409,7 @@ export default function App() {
     >
       {/* Panneau 0 : Échéances */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px 14px' }}>
-        <DeadlinePanel token={token} onOpenTask={handleDeadlineOpen} refreshKey={deadlineRefreshKey} hiddenDeadlineIds={hiddenDeadlineIds} showHiddenDeadlines={showHiddenDeadlines} onHideDeadline={hideDeadline} onUnhideDeadline={unhideDeadline} onToggleShowHidden={() => setShowHiddenDeadlines(v => !v)} compact={compactView} />
+        <DeadlinePanel token={token} onOpenTask={handleDeadlineOpen} refreshKey={deadlineRefreshKey} hiddenDeadlineIds={hiddenDeadlineIds} showHiddenDeadlines={showHiddenDeadlines} onHideDeadline={hideDeadline} onUnhideDeadline={unhideDeadline} onToggleShowHidden={() => setShowHiddenDeadlines(v => !v)} compact={compactView} onEmpty={() => setMobileHomeTab('boards')} />
       </div>
       {/* Panneau 1 : Boards */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -1428,7 +1427,7 @@ export default function App() {
 
       {/* ── Colonne gauche : Échéances ── */}
       <div style={{ width: `${homeSplitPct}%`, minWidth: 0, flexShrink: 0, overflowY: 'auto', padding: '28px 20px' }}>
-        <DeadlinePanel token={token} onOpenTask={handleDeadlineOpen} refreshKey={deadlineRefreshKey} hiddenDeadlineIds={hiddenDeadlineIds} showHiddenDeadlines={showHiddenDeadlines} onHideDeadline={hideDeadline} onUnhideDeadline={unhideDeadline} onToggleShowHidden={() => setShowHiddenDeadlines(v => !v)} compact={compactView} />
+        <DeadlinePanel token={token} onOpenTask={handleDeadlineOpen} refreshKey={deadlineRefreshKey} hiddenDeadlineIds={hiddenDeadlineIds} showHiddenDeadlines={showHiddenDeadlines} onHideDeadline={hideDeadline} onUnhideDeadline={unhideDeadline} onToggleShowHidden={() => setShowHiddenDeadlines(v => !v)} compact={compactView} onEmpty={() => setMobileHomeTab('boards')} />
       </div>
 
       {/* ── Séparateur redimensionnable ── */}

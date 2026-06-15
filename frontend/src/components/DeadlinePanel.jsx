@@ -231,7 +231,7 @@ function Section({ cat, tasks, onOpenTask, hiddenDeadlineIds, showHiddenDeadline
 }
 
 // ── Composant principal ────────────────────────────────────────────────────────
-export default function DeadlinePanel({ token, onOpenTask, refreshKey = 0, hiddenDeadlineIds = new Set(), showHiddenDeadlines = false, onHideDeadline, onUnhideDeadline, onToggleShowHidden, compact = false }) {
+export default function DeadlinePanel({ token, onOpenTask, refreshKey = 0, hiddenDeadlineIds = new Set(), showHiddenDeadlines = false, onHideDeadline, onUnhideDeadline, onToggleShowHidden, compact = false, onEmpty }) {
   const { t } = useLang();
   const [tasks, setTasks]       = useState([]);
   const [loading, setLoading]   = useState(true);
@@ -243,8 +243,13 @@ export default function DeadlinePanel({ token, onOpenTask, refreshKey = 0, hidde
     setLoading(true);
     fetch(`${API}/deadlines`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.ok ? r.json() : [])
-      .then(data => { setApiCount(data.length); setTasks(data); setLoading(false); })
-      .catch(() => { setApiCount(0); setLoading(false); });
+      .then(data => {
+        setApiCount(data.length);
+        setTasks(data);
+        setLoading(false);
+        if (data.length === 0 && onEmpty) onEmpty();
+      })
+      .catch(() => { setApiCount(0); setLoading(false); if (onEmpty) onEmpty(); });
   }, [token, refreshKey, manualKey]);
 
   const categorized = { overdue: [], active: [], tomorrow: [], upcoming: [] };

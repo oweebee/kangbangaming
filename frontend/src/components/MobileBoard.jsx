@@ -415,6 +415,7 @@ export default function MobileBoard({
                       }}
                       onTouchEnd={handleCardTouchEnd}
                       onTouchCancel={cleanupDrag}
+                      onContextMenu={e => e.preventDefault()}
                     >
                       <GameCard
                         game={game}
