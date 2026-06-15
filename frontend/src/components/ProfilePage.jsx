@@ -3,7 +3,7 @@ import { useLang, LANG_META, SUPPORTED_LANGS } from '../i18n.js';
 import TrashPanel from './TrashPanel.jsx';
 
 const API = '/api';
-const TABS = ['profile', 'trash'];
+const TABS = ['profile', 'trash', 'wishlist'];
 const N    = TABS.length;
 
 export default function ProfilePage({ token, currentUser, onClose, onSaveSteam }) {
@@ -92,6 +92,11 @@ export default function ProfilePage({ token, currentUser, onClose, onSaveSteam }
   const [steamSaving, setSteamSaving] = useState(false);
   const [steamMsg, setSteamMsg] = useState('');
 
+  // ── Steam wishlist ──────────────────────────────────────────────────────────
+  const [wishlist, setWishlist]         = useState(null); // null = not yet fetched
+  const [wishlistLoading, setWishlistLoading] = useState(false);
+  const [wishlistError, setWishlistError]     = useState(false);
+
   useEffect(() => {
     async function load() {
       try {
@@ -145,6 +150,16 @@ export default function ProfilePage({ token, currentUser, onClose, onSaveSteam }
   const hasSteam = !!savedSteamId;
   const isSteamAuth = profile?.steamAuth === true;
 
+  useEffect(() => {
+    if (activeTab !== 'wishlist' || wishlist !== null || !hasSteam) return;
+    setWishlistLoading(true);
+    setWishlistError(false);
+    fetch(`${API}/steam/wishlist`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then(data => { setWishlist(data); setWishlistLoading(false); })
+      .catch(() => { setWishlistError(true); setWishlistLoading(false); });
+  }, [activeTab, wishlist, hasSteam, token]);
+
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,.7)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
@@ -179,8 +194,9 @@ export default function ProfilePage({ token, currentUser, onClose, onSaveSteam }
         {/* Onglets Profil / Corbeille */}
         <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', flexShrink: 0, background: 'var(--surface1)' }}>
           {[
-            { id: 'profile', label: t('profile.tab_profile') },
-            { id: 'trash',   label: t('profile.tab_trash')   },
+            { id: 'profile',   label: t('profile.tab_profile')   },
+            { id: 'trash',     label: t('profile.tab_trash')     },
+            { id: 'wishlist',  label: t('profile.tab_wishlist')  },
           ].map(({ id, label }) => (
             <button
               key={id}
@@ -334,6 +350,61 @@ export default function ProfilePage({ token, currentUser, onClose, onSaveSteam }
             {/* ── Onglet Corbeille (index 1) ── */}
             <div style={{ width: `${100 / N}%`, height: '100%', flexShrink: 0, overflowY: 'auto', padding: '20px 24px', boxSizing: 'border-box' }}>
               <TrashPanel token={token} />
+            </div>
+
+            {/* ── Onglet Wishlist Steam (index 2) ── */}
+            <div style={{ width: `${100 / N}%`, height: '100%', flexShrink: 0, overflowY: 'auto', padding: '20px 24px', boxSizing: 'border-box' }}>
+              {/* Warning : profil public requis */}
+              <div style={{ background: 'rgba(255,180,0,0.08)', border: '1px solid rgba(255,180,0,0.3)', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+                {t('profile.wishlist_public_warn')}{' '}
+                <a href="https://steamcommunity.com/my/edit/settings" target="_blank" rel="noopener noreferrer"
+                   style={{ color: 'var(--accent)', textDecoration: 'underline' }}>
+                  {t('profile.wishlist_public_link')}
+                </a>
+              </div>
+
+              {!hasSteam && (
+                <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, marginTop: 40 }}>
+                  {t('profile.wishlist_no_steam')}
+                </div>
+              )}
+
+              {hasSteam && wishlistLoading && (
+                <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, marginTop: 40 }}>
+                  {t('profile.wishlist_loading')}
+                </div>
+              )}
+
+              {hasSteam && wishlistError && (
+                <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, marginTop: 40 }}>
+                  {t('profile.wishlist_error')}
+                </div>
+              )}
+
+              {hasSteam && !wishlistLoading && !wishlistError && wishlist !== null && wishlist.length === 0 && (
+                <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, marginTop: 40 }}>
+                  {t('profile.wishlist_empty')}
+                </div>
+              )}
+
+              {hasSteam && !wishlistLoading && !wishlistError && wishlist && wishlist.length > 0 && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 8 }}>
+                  {wishlist.map(appid => (
+                    <a key={appid} href={`https://store.steampowered.com/app/${appid}/`} target="_blank" rel="noopener noreferrer"
+                       style={{ display: 'block', borderRadius: 6, overflow: 'hidden', border: '1px solid var(--border)', textDecoration: 'none', transition: 'border-color .15s' }}
+                       onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--accent)'}
+                       onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}>
+                      <img
+                        src={`https://cdn.akamai.steamstatic.com/steam/apps/${appid}/capsule_sm_120.jpg`}
+                        alt={String(appid)}
+                        loading="lazy"
+                        style={{ width: '100%', display: 'block' }}
+                        onError={e => { e.currentTarget.style.display = 'none'; }}
+                      />
+                    </a>
+                  ))}
+                </div>
+              )}
             </div>
 
           </div>{/* /track */}

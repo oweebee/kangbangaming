@@ -514,6 +514,13 @@ fr: {
   // Onglets ProfilePage
   'profile.tab_profile':       '👤 Profil',
   'profile.tab_trash':         '🗑️ Corbeille',
+  'profile.tab_wishlist':       '🎮 Wishlist',
+  'profile.wishlist_public_warn': '⚠️ Cette fonctionnalité nécessite que votre profil Steam soit public.',
+  'profile.wishlist_public_link': 'Paramètres de confidentialité Steam',
+  'profile.wishlist_no_steam':  'Aucun compte Steam lié. Configurez votre Steam ID dans l'onglet Profil.',
+  'profile.wishlist_empty':     'Votre liste de souhaits Steam est vide.',
+  'profile.wishlist_loading':   'Chargement de la wishlist…',
+  'profile.wishlist_error':     'Impossible de charger la liste de souhaits.',
 
   // CardControls
   'ctrl.done':             'Terminée',
@@ -980,6 +987,13 @@ en: {
 
   'profile.tab_profile':       '👤 Profile',
   'profile.tab_trash':         '🗑️ Trash',
+  'profile.tab_wishlist':       '🎮 Wishlist',
+  'profile.wishlist_public_warn': '⚠️ This feature requires your Steam profile to be set to public.',
+  'profile.wishlist_public_link': 'Steam privacy settings',
+  'profile.wishlist_no_steam':  'No Steam account linked. Set up your Steam ID in the Profile tab.',
+  'profile.wishlist_empty':     'Your Steam wishlist is empty.',
+  'profile.wishlist_loading':   'Loading wishlist…',
+  'profile.wishlist_error':     'Failed to load wishlist.',
 
   'ctrl.done':             'Done',
   'ctrl.urgent':           'Urgent',
@@ -1442,6 +1456,13 @@ es: {
 
   'profile.tab_profile':       '👤 Perfil',
   'profile.tab_trash':         '🗑️ Papelera',
+  'profile.tab_wishlist':       '🎮 Wishlist',
+  'profile.wishlist_public_warn': '⚠️ Esta función requiere que tu perfil de Steam sea público.',
+  'profile.wishlist_public_link': 'Configuración de privacidad de Steam',
+  'profile.wishlist_no_steam':  'Ninguna cuenta de Steam vinculada. Configura tu Steam ID en la pestaña Perfil.',
+  'profile.wishlist_empty':     'Tu lista de deseos de Steam está vacía.',
+  'profile.wishlist_loading':   'Cargando wishlist…',
+  'profile.wishlist_error':     'No se pudo cargar la lista de deseos.',
 
   'ctrl.done':             'Completada',
   'ctrl.urgent':           'Urgente',
@@ -1904,6 +1925,13 @@ de: {
 
   'profile.tab_profile':       '👤 Profil',
   'profile.tab_trash':         '🗑️ Papierkorb',
+  'profile.tab_wishlist':       '🎮 Wishlist',
+  'profile.wishlist_public_warn': '⚠️ Diese Funktion erfordert ein öffentliches Steam-Profil.',
+  'profile.wishlist_public_link': 'Steam-Datenschutzeinstellungen',
+  'profile.wishlist_no_steam':  'Kein Steam-Konto verknüpft. Steam-ID im Profil-Tab einrichten.',
+  'profile.wishlist_empty':     'Deine Steam-Wunschliste ist leer.',
+  'profile.wishlist_loading':   'Wunschliste wird geladen…',
+  'profile.wishlist_error':     'Wunschliste konnte nicht geladen werden.',
 
   'ctrl.done':             'Erledigt',
   'ctrl.urgent':           'Dringend',
@@ -2366,6 +2394,13 @@ ru: {
 
   'profile.tab_profile':       '👤 Профиль',
   'profile.tab_trash':         '🗑️ Корзина',
+  'profile.tab_wishlist':       '🎮 Список желаний',
+  'profile.wishlist_public_warn': '⚠️ Для этой функции профиль Steam должен быть публичным.',
+  'profile.wishlist_public_link': 'Настройки конфиденциальности Steam',
+  'profile.wishlist_no_steam':  'Аккаунт Steam не привязан. Настройте Steam ID во вкладке Профиль.',
+  'profile.wishlist_empty':     'Ваш список желаний Steam пуст.',
+  'profile.wishlist_loading':   'Загрузка списка желаний…',
+  'profile.wishlist_error':     'Не удалось загрузить список желаний.',
 
   'ctrl.done':             'Выполнено',
   'ctrl.urgent':           'Срочно',
@@ -2828,6 +2863,13 @@ zh: {
 
   'profile.tab_profile':       '👤 个人资料',
   'profile.tab_trash':         '🗑️ 回收站',
+  'profile.tab_wishlist':       '🎮 愿望单',
+  'profile.wishlist_public_warn': '⚠️ 此功能需要您的 Steam 个人资料设置为公开。',
+  'profile.wishlist_public_link': 'Steam 隐私设置',
+  'profile.wishlist_no_steam':  '未关联 Steam 账号。请在资料标签中设置 Steam ID。',
+  'profile.wishlist_empty':     '您的 Steam 愿望单为空。',
+  'profile.wishlist_loading':   '正在加载愿望单…',
+  'profile.wishlist_error':     '无法加载愿望单。',
 
   'ctrl.done':             '已完成',
   'ctrl.urgent':           '紧急',
