@@ -1198,6 +1198,10 @@ export default function App() {
   }
 
   function finishHomeTouchDrop() {
+    if (homeTouchDragRef.current.scrollBlocker) {
+      document.removeEventListener('touchmove', homeTouchDragRef.current.scrollBlocker);
+      homeTouchDragRef.current.scrollBlocker = null;
+    }
     const { id, section, overId } = homeTouchDragRef.current;
     homeTouchDragRef.current = { active: false, id: null, section: null, overId: null };
     setHomeDragId(null); setHomeDragOver(null);
@@ -1254,11 +1258,14 @@ export default function App() {
                   data-hbd-id={b.id}
                   onTouchStart={() => {
                     clearTimeout(homeTouchTimerRef.current);
-                    homeTouchDragRef.current = { active: false, id: b.id, section: 'public', overId: null };
+                    homeTouchDragRef.current = { active: false, id: b.id, section: 'public', overId: null, scrollBlocker: null };
                     homeTouchTimerRef.current = setTimeout(() => {
                       homeTouchDragRef.current.active = true;
                       setHomeDragId(b.id);
                       if (navigator.vibrate) navigator.vibrate(40);
+                      const blocker = (ev) => ev.preventDefault();
+                      homeTouchDragRef.current.scrollBlocker = blocker;
+                      document.addEventListener('touchmove', blocker, { passive: false });
                     }, 400);
                   }}
                   onTouchMove={e => {
@@ -1304,11 +1311,14 @@ export default function App() {
                     data-hbd-id={b.id}
                     onTouchStart={() => {
                       clearTimeout(homeTouchTimerRef.current);
-                      homeTouchDragRef.current = { active: false, id: b.id, section: 'fav', overId: null };
+                      homeTouchDragRef.current = { active: false, id: b.id, section: 'fav', overId: null, scrollBlocker: null };
                       homeTouchTimerRef.current = setTimeout(() => {
                         homeTouchDragRef.current.active = true;
                         setHomeDragId(b.id);
                         if (navigator.vibrate) navigator.vibrate(40);
+                        const blocker = (ev) => ev.preventDefault();
+                        homeTouchDragRef.current.scrollBlocker = blocker;
+                        document.addEventListener('touchmove', blocker, { passive: false });
                       }, 400);
                     }}
                     onTouchMove={e => {
@@ -1350,11 +1360,14 @@ export default function App() {
                         data-hbd-id={b.id}
                         onTouchStart={() => {
                           clearTimeout(homeTouchTimerRef.current);
-                          homeTouchDragRef.current = { active: false, id: b.id, section: 'other', overId: null };
+                          homeTouchDragRef.current = { active: false, id: b.id, section: 'other', overId: null, scrollBlocker: null };
                           homeTouchTimerRef.current = setTimeout(() => {
                             homeTouchDragRef.current.active = true;
                             setHomeDragId(b.id);
                             if (navigator.vibrate) navigator.vibrate(40);
+                            const blocker = (ev) => ev.preventDefault();
+                            homeTouchDragRef.current.scrollBlocker = blocker;
+                            document.addEventListener('touchmove', blocker, { passive: false });
                           }, 400);
                         }}
                         onTouchMove={e => {
