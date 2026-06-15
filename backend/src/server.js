@@ -962,9 +962,46 @@ app.get('/api/steam/wishlist', requireAuth, async (req, res) => {
 });
 
 
-// ── Steam wishlist deadline items (profil public requis) ────────────────────
+// ── Steam wishlist deadline items ───────────────────────────────────────────
+// Stratégie 1 : wishlistdata (profil public) → données complètes en un appel
+// Stratégie 2 : API officielle (marche profil privé) + appdetails par batch
 const wishlistDeadlineCache = new Map(); // userId → { items, fetchedAt }
-const WISHLIST_DEADLINE_TTL = 5 * 60 * 1000; // 5 min (sortie jour J peut changer rapidement)
+const WISHLIST_DEADLINE_TTL = 5 * 60 * 1000; // 5 min
+const appReleaseDateCache   = new Map(); // appid → { date, fetchedAt }
+const APP_DATE_TTL = 24 * 60 * 60 * 1000; // 24h
+
+function parseSteamDate(ts, str) {
+  // ts = unix seconds (peut être 0), str = chaîne lisible Steam
+  if (ts && ts > 0) return new Date(ts * 1000).toISOString().split('T')[0];
+  if (!str) return null;
+  if (/coming soon|tbd|tba|q[1-4]|\d{4}$/i.test(str.trim()) && !/\d{1,2}\s+\w/.test(str)) return null;
+  const direct = new Date(str);
+  if (!isNaN(direct.getTime())) return direct.toISOString().split('T')[0];
+  // "15 Jun, 2025" → "Jun 15, 2025"
+  const m = str.match(/^(\d{1,2})\s+(\w+),?\s+(\d{4})/);
+  if (m) {
+    const d = new Date(`${m[2]} ${m[1]}, ${m[3]}`);
+    if (!isNaN(d.getTime())) return d.toISOString().split('T')[0];
+  }
+  return null;
+}
+
+// Fetch release dates + noms pour un batch d'appids (appdetails multi-id)
+async function fetchBatchDates(appids) {
+  const results = {}; // appid → { date, name }
+  try {
+    const url = `https://store.steampowered.com/api/appdetails?appids=${appids.join(',')}&filters=release_date,basic&l=english`;
+    const resp = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' } });
+    if (!resp.ok) return results;
+    const data = await resp.json();
+    for (const [aid, info] of Object.entries(data || {})) {
+      const date = info?.success ? parseSteamDate(0, info?.data?.release_date?.date) : null;
+      const name = info?.data?.name || null;
+      results[aid] = { date, name };
+    }
+  } catch {}
+  return results;
+}
 
 app.get('/api/steam/wishlist/deadline', requireAuth, async (req, res) => {
   const creds = getUserSteamCreds(req.user.id);
@@ -972,36 +1009,85 @@ app.get('/api/steam/wishlist/deadline', requireAuth, async (req, res) => {
   const now = Date.now();
   const cached = wishlistDeadlineCache.get(req.user.id);
   if (cached && now - cached.fetchedAt < WISHLIST_DEADLINE_TTL) return res.json(cached.items);
+
+  let items = [];
+
+  // ── Stratégie 1 : wishlistdata (profil + wishlist publics) ──────────────
   try {
     const url = `https://store.steampowered.com/wishlist/profiles/${creds.steamId}/wishlistdata/?p=0`;
-    const resp = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
-    if (!resp.ok) return res.json([]);
-    const data = await resp.json();
-    if (!data || typeof data !== 'object') return res.json([]);
-    const items = Object.entries(data).map(([appid, info]) => {
-      const relTs = info.release_date; // unix timestamp seconds, 0 = TBD/jour J
-      let releaseDate = null;
-      if (relTs && relTs > 0) {
-        releaseDate = new Date(relTs * 1000).toISOString().split('T')[0];
-      } else if (info.release_string) {
-        // Fallback : Steam met release_date=0 le jour même de la sortie —
-        // on tente de parser le release_string (ex: "Jun 15, 2025")
-        const parsed = new Date(info.release_string);
-        if (!isNaN(parsed.getTime())) {
-          releaseDate = parsed.toISOString().split('T')[0];
+    const resp = await fetch(url, {
+      headers: {
+        'User-Agent':      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept':          'application/json, text/javascript, */*; q=0.01',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Referer':         'https://store.steampowered.com/',
+      },
+    });
+    if (resp.ok) {
+      const data = await resp.json().catch(() => null);
+      if (data && typeof data === 'object' && Object.keys(data).length > 0) {
+        console.log(`[wishlist/deadline] wishlistdata OK – ${Object.keys(data).length} jeux pour user ${req.user.id}`);
+        items = Object.entries(data).map(([appid, info]) => ({
+          appid:        Number(appid),
+          name:         info.name || `App ${appid}`,
+          header_img:   `https://cdn.akamai.steamstatic.com/steam/apps/${appid}/header.jpg`,
+          release_date: parseSteamDate(info.release_date, info.release_string),
+        })).filter(i => i.release_date !== null);
+      } else {
+        console.log(`[wishlist/deadline] wishlistdata vide/privé pour user ${req.user.id} – fallback API officielle`);
+      }
+    } else {
+      console.log(`[wishlist/deadline] wishlistdata HTTP ${resp.status} – fallback API officielle`);
+    }
+  } catch (e) {
+    console.log(`[wishlist/deadline] wishlistdata error: ${e.message} – fallback API officielle`);
+  }
+
+  // ── Stratégie 2 : API officielle + appdetails (fonctionne profil privé) ──
+  if (items.length === 0 && creds.apiKey) {
+    try {
+      const wUrl = `https://api.steampowered.com/IWishlistService/GetWishlist/v1/?key=${creds.apiKey}&steamid=${creds.steamId}`;
+      const wResp = await fetch(wUrl, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+      if (wResp.ok) {
+        const wData = await wResp.json();
+        const appids = (wData?.response?.items || []).map(i => Number(i.appid)).filter(Boolean);
+        console.log(`[wishlist/deadline] API officielle – ${appids.length} appids pour user ${req.user.id}`);
+
+        if (appids.length > 0) {
+          // Résoudre les dates depuis le cache ou appdetails (batch 20)
+          const uncached = appids.filter(id => {
+            const c = appReleaseDateCache.get(id);
+            return !c || (now - c.fetchedAt) > APP_DATE_TTL;
+          });
+
+          // Fetch par batch de 20
+          for (let i = 0; i < uncached.length; i += 20) {
+            const batch = uncached.slice(i, i + 20);
+            const dates = await fetchBatchDates(batch);
+            for (const [aid, info] of Object.entries(dates)) {
+              appReleaseDateCache.set(Number(aid), { date: info.date, name: info.name, fetchedAt: now });
+            }
+            if (i + 20 < uncached.length) await new Promise(r => setTimeout(r, 300)); // throttle
+          }
+
+          items = appids.map(appid => {
+            const c = appReleaseDateCache.get(appid);
+            return {
+              appid,
+              name:         c?.name || `App ${appid}`,
+              header_img:   `https://cdn.akamai.steamstatic.com/steam/apps/${appid}/header.jpg`,
+              release_date: c?.date || null,
+            };
+          }).filter(i => i.release_date !== null);
         }
       }
-      return {
-        appid:          Number(appid),
-        name:           info.name || `App ${appid}`,
-        header_img:     `https://cdn.akamai.steamstatic.com/steam/apps/${appid}/header.jpg`,
-        release_date:   releaseDate,
-        release_string: info.release_string || null,
-      };
-    }).filter(item => item.release_date !== null);
-    wishlistDeadlineCache.set(req.user.id, { items, fetchedAt: now });
-    res.json(items);
-  } catch { res.json([]); }
+    } catch (e) {
+      console.log(`[wishlist/deadline] fallback API error: ${e.message}`);
+    }
+  }
+
+  wishlistDeadlineCache.set(req.user.id, { items, fetchedAt: now });
+  res.json(items);
 });
 
 // ── Steam featured (homepage populaires/recommandés) ─────────────────────────
