@@ -517,7 +517,7 @@ fr: {
   'profile.tab_wishlist':       '🎮 Wishlist',
   'profile.wishlist_public_warn': '⚠️ Cette fonctionnalité nécessite que votre profil Steam soit public.',
   'profile.wishlist_public_link': 'Paramètres de confidentialité Steam',
-  'profile.wishlist_no_steam':  'Aucun compte Steam lié. Configurez votre Steam ID dans l'onglet Profil.',
+  'profile.wishlist_no_steam':  "Aucun compte Steam lié. Configurez votre Steam ID dans l'onglet Profil.",
   'profile.wishlist_empty':     'Votre liste de souhaits Steam est vide.',
   'profile.wishlist_loading':   'Chargement de la wishlist…',
   'profile.wishlist_error':     'Impossible de charger la liste de souhaits.',
