@@ -2122,10 +2122,10 @@ export default function App() {
               )}
               <button onClick={toggleCompact} style={{ background: compactView ? 'rgba(192,87,10,0.15)' : 'var(--surface2)', border: compactView ? '1px solid var(--accent)' : '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: compactView ? 'var(--accent)' : 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0, fontWeight: compactView ? 700 : 400 }}>{t('nav.compact')}</button>
               <button onClick={refreshPublicBoard} style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 11px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ fontSize: 15, lineHeight: 1 }}>↻</span> {t('nav.refresh').replace('↻ ', '')}</button>
-              {/* ── Steam game info — encart centre du header (public board) ── */}
-              <div style={{ flex: '1 1 0', display: 'flex', justifyContent: 'center', minWidth: gameInfo ? 200 : 0, minHeight: 0 }}>
+              {/* ── Steam game info — encart centre du header (public board, collections seulement) ── */}
+              {!isTaskBoard && <div style={{ flex: '1 1 0', display: 'flex', justifyContent: 'center', minWidth: gameInfo ? 200 : 0, minHeight: 0 }}>
                 <SteamEncart gameInfo={gameInfo} />
-              </div>
+              </div>}
               <input type="search" placeholder={t('nav.filter_ph')} value={search} onChange={e => setSearch(e.target.value)}
                 style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 10px', color: 'var(--text)', fontSize: 12, outline: 'none', maxWidth: 180 }} />
               <button onClick={closePublicBoard} style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>{t('nav.quit')}</button>
@@ -2188,10 +2188,10 @@ export default function App() {
               {(activeBoardId || publicBoardMode) && (
                 <button onClick={toggleCompact} style={{ background: compactView ? 'rgba(192,87,10,0.15)' : 'var(--surface2)', border: compactView ? '1px solid var(--accent)' : '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: compactView ? 'var(--accent)' : 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0, fontWeight: compactView ? 700 : 400 }}>{t('nav.compact')}</button>
               )}
-              {/* ── Steam game info — encart centre du header ── */}
-              <div style={{ flex: '1 1 0', display: 'flex', justifyContent: 'center', minWidth: gameInfo ? 200 : 0, minHeight: 0 }}>
+              {/* ── Steam game info — encart centre du header (collections seulement, pas boards tâches) ── */}
+              {!isTaskBoard && <div style={{ flex: '1 1 0', display: 'flex', justifyContent: 'center', minWidth: gameInfo ? 200 : 0, minHeight: 0 }}>
                 <SteamEncart gameInfo={gameInfo} />
-              </div>
+              </div>}
               {(activeBoardId || publicBoardMode) && archiveCount > 0 && (
                 <button
                   onClick={toggleShowArchived}

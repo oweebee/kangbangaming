@@ -383,6 +383,7 @@ export default function MobileBoard({
                 style={{
                   width: `${100 / columns.length}%`,
                   height: '100%',
+                  overflowX: 'hidden',
                   overflowY: 'auto',
                   touchAction: 'none',
                   padding: '10px 12px',
@@ -404,6 +405,7 @@ export default function MobileBoard({
                     <div
                       key={game.appid}
                       style={{
+                        width: '100%', minWidth: 0, overflow: 'hidden',
                         opacity:   isBeingDragged ? 0.55 : 1,
                         transform: isBeingDragged ? 'scale(0.97)' : 'none',
                         transition: 'opacity .15s, transform .15s',

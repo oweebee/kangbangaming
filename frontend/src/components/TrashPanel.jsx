@@ -26,11 +26,12 @@ function TrashIcon({ size = 11 }) {
 // Composant réutilisable pour user (isAdmin=false) et admin (isAdmin=true).
 export default function TrashPanel({ token, isAdmin = false }) {
   const { t } = useLang();
-  const [items, setItems]     = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [items, setItems]         = useState([]);
+  const [boards, setBoards]       = useState([]);
+  const [loading, setLoading]     = useState(true);
   const [fetchError, setFetchError] = useState(null);
-  const [purging, setPurging] = useState(false);
-  const [acting, setActing]   = useState(new Set());
+  const [purging, setPurging]     = useState(false);
+  const [acting, setActing]       = useState(new Set());
 
   const baseUrl = isAdmin ? `${API}/admin/trash` : `${API}/trash/notes`;
 
@@ -38,13 +39,14 @@ export default function TrashPanel({ token, isAdmin = false }) {
     setLoading(true);
     setFetchError(null);
     try {
-      const res = await fetch(baseUrl, { headers: { Authorization: `Bearer ${token}` } });
-      if (res.ok) {
-        const data = await res.json();
-        setItems(data);
-      } else {
-        setFetchError(`Erreur ${res.status}`);
-      }
+      const headers = { Authorization: `Bearer ${token}` };
+      const [itemsRes, boardsRes] = await Promise.all([
+        fetch(baseUrl, { headers }),
+        isAdmin ? Promise.resolve(null) : fetch(`${API}/trash/boards`, { headers }),
+      ]);
+      if (!itemsRes.ok) { setFetchError(`Erreur ${itemsRes.status}`); setLoading(false); return; }
+      setItems(await itemsRes.json());
+      if (boardsRes?.ok) setBoards(await boardsRes.json());
     } catch {
       setFetchError('Erreur réseau');
     }
@@ -96,12 +98,31 @@ export default function TrashPanel({ token, isAdmin = false }) {
     act(item.id, () => fetch(url, { method: 'DELETE', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body) }));
   }
 
+  // ── Actions board ──────────────────────────────────────────────────
+  async function restoreBoard(board) {
+    act(`board_${board.id}`, () => fetch(`${API}/trash/boards/restore`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ boardId: board.id }),
+    }));
+  }
+
+  async function permDeleteBoard(board) {
+    if (!window.confirm(t('trash.confirm_perm_delete'))) return;
+    act(`board_${board.id}`, () => fetch(`${API}/trash/boards/item`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ boardId: board.id }),
+    }));
+  }
+
   async function purgeAll() {
     if (!window.confirm(t('trash.confirm_purge'))) return;
     setPurging(true);
     await fetch(baseUrl, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
     setPurging(false);
     setItems([]);
+    setBoards([]);
   }
 
   // ── États vide / chargement / erreur ──────────────────────────────
@@ -120,7 +141,7 @@ export default function TrashPanel({ token, isAdmin = false }) {
     </div>
   );
 
-  if (items.length === 0) return (
+  if (items.length === 0 && boards.length === 0) return (
     <div style={{ textAlign: 'center', padding: '48px 20px' }}>
       <div style={{ fontSize: 40, marginBottom: 12 }}>🗑️</div>
       <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)', marginBottom: 6 }}>
@@ -140,7 +161,7 @@ export default function TrashPanel({ token, isAdmin = false }) {
       {/* En-tête */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, gap: 8 }}>
         <div style={{ fontSize: 12, color: 'var(--text-muted)', flex: 1 }}>
-          {t('trash.count', { count: items.length })}
+          {t('trash.count', { count: items.length + boards.length })}
         </div>
         <button onClick={load} title="Rafraîchir"
           style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 7, padding: '4px 9px', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 13, lineHeight: 1 }}>
@@ -151,6 +172,78 @@ export default function TrashPanel({ token, isAdmin = false }) {
           {purging ? '…' : t('trash.purge_btn')}
         </button>
       </div>
+
+      {/* ── Boards supprimés ── */}
+      {boards.length > 0 && (
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.1em', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 8 }}>
+            Boards supprimés
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {boards.map(board => {
+              const actKey = `board_${board.id}`;
+              const busy   = acting.has(actKey);
+              const urgent = board.daysLeft <= 3;
+              return (
+                <div key={board.id} style={{
+                  background: 'var(--surface2)', border: '1px solid var(--border)',
+                  borderRadius: 10, overflow: 'hidden',
+                  borderLeft: `3px solid ${urgent ? '#d07070' : 'rgba(192,120,60,0.6)'}`,
+                  opacity: busy ? 0.55 : 1, transition: 'opacity .15s',
+                }}>
+                  {board.headerImg && (
+                    <div style={{ position: 'relative', height: 48, overflow: 'hidden' }}>
+                      <img src={board.headerImg} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.45 }} />
+                      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 20%, var(--surface2))' }} />
+                      <span style={{ position: 'absolute', top: 6, left: 9, fontSize: 9, fontWeight: 800, color: '#fff', textShadow: '0 1px 3px #000', letterSpacing: '0.1em', background: 'rgba(0,0,0,0.45)', borderRadius: 3, padding: '1px 5px' }}>
+                        CORBEILLE
+                      </span>
+                    </div>
+                  )}
+                  <div style={{ padding: '9px 13px 11px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                      {!board.headerImg && (
+                        <span style={{ fontSize: 22, lineHeight: 1, flexShrink: 0 }}>{board.emoji || '🎮'}</span>
+                      )}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {board.name}
+                        </div>
+                        <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 1 }}>
+                          {board.gameCount} carte{board.gameCount !== 1 ? 's' : ''}
+                        </div>
+                      </div>
+                      <span style={{ flexShrink: 0, fontSize: 10, fontWeight: urgent ? 700 : 400, color: urgent ? '#d07070' : 'var(--text-muted)' }}>
+                        {t('trash.days_left', { days: board.daysLeft })}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 8 }}>
+                      {t('trash.deleted_on')} {formatDate(board.deletedAt)}
+                    </div>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button onClick={() => restoreBoard(board)} disabled={busy}
+                        style={{ flex: 1, background: 'rgba(61,184,106,0.1)', border: '1px solid rgba(61,184,106,0.4)', borderRadius: 6, padding: '5px 0', cursor: busy ? 'not-allowed' : 'pointer', color: '#3db86a', fontSize: 11, fontWeight: 600 }}>
+                        {t('trash.restore')}
+                      </button>
+                      <button onClick={() => permDeleteBoard(board)} disabled={busy}
+                        style={{ background: 'rgba(192,80,80,0.08)', border: '1px solid rgba(192,80,80,0.3)', borderRadius: 6, padding: '5px 10px', cursor: busy ? 'not-allowed' : 'pointer', color: '#d07070', fontSize: 11, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <TrashIcon size={10} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── Cartes & notes ── */}
+      {items.length > 0 && boards.length > 0 && (
+        <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.1em', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 8 }}>
+          Cartes & notes
+        </div>
+      )}
 
       {/* Liste */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

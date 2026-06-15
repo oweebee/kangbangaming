@@ -710,10 +710,12 @@ app.delete('/api/trash/games/item', requireAuth, (req, res) => {
   res.json({ ok: true });
 });
 
-// DELETE /api/trash/notes — vider toute la corbeille (cartes + notes)
+// DELETE /api/trash/notes — vider toute la corbeille (boards + cartes + notes)
 app.delete('/api/trash/notes', requireAuth, (req, res) => {
   const userBoards = getUserBoards(req.user.id);
-  for (const board of Object.values(userBoards)) {
+  for (const [boardId, board] of Object.entries(userBoards)) {
+    // Boards soft-deletés → suppression définitive
+    if (board.deletedAt) { delete userBoards[boardId]; continue; }
     for (const [gameId, game] of Object.entries(board.games || {})) {
       if (game.deletedAt) { delete board.games[gameId]; continue; }
       if (game.notes) game.notes = game.notes.filter(n => !n.deletedAt);
@@ -1850,11 +1852,13 @@ app.delete('/api/public/boards/:boardId/games/:appid', requireAuth, (req, res) =
 
 app.get('/api/boards', requireAuth, (req, res) => {
   const userBoards = getUserBoards(req.user.id);
-  res.json(Object.entries(userBoards).map(([id, b]) => {
-    // Only return the explicitly stored headerImg — do NOT fall back to game cards.
-    // The Steam encart must only appear on boards intentionally linked to a Steam game.
-    return { id, name: b.name, emoji: b.emoji || '🎮', gameIcon: b.gameIcon || null, headerImg: b.headerImg || null, columns: b.columns || [], public: b.public || false };
-  }));
+  res.json(Object.entries(userBoards)
+    .filter(([, b]) => !b.deletedAt)  // exclure les boards en corbeille
+    .map(([id, b]) => {
+      // Only return the explicitly stored headerImg — do NOT fall back to game cards.
+      // The Steam encart must only appear on boards intentionally linked to a Steam game.
+      return { id, name: b.name, emoji: b.emoji || '🎮', gameIcon: b.gameIcon || null, headerImg: b.headerImg || null, columns: b.columns || [], public: b.public || false };
+    }));
 });
 
 const DEFAULT_COL_LABELS = {
@@ -1921,8 +1925,52 @@ app.patch('/api/boards/:boardId', requireAuth, (req, res) => {
 
 app.delete('/api/boards/:boardId', requireAuth, (req, res) => {
   const userBoards = getUserBoards(req.user.id);
-  if (!userBoards[req.params.boardId]) return res.status(404).json({ error: 'Board not found' });
-  delete userBoards[req.params.boardId];
+  const board = userBoards[req.params.boardId];
+  if (!board) return res.status(404).json({ error: 'Board not found' });
+  // Soft-delete : conservé 30 jours en corbeille
+  board.deletedAt = new Date().toISOString();
+  setUserBoards(req.user.id, userBoards);
+  res.json({ ok: true });
+});
+
+// ── Corbeille boards ──────────────────────────────────────────────────────────
+
+// GET /api/trash/boards — liste les boards soft-deletés de l'utilisateur
+app.get('/api/trash/boards', requireAuth, (req, res) => {
+  const userBoards = getUserBoards(req.user.id);
+  const now = Date.now();
+  let changed = false;
+  const result = [];
+  for (const [id, board] of Object.entries(userBoards)) {
+    if (!board.deletedAt) continue;
+    const age = now - new Date(board.deletedAt).getTime();
+    if (age > TRASH_TTL_MS) { delete userBoards[id]; changed = true; continue; }
+    const daysLeft = Math.max(1, Math.ceil((TRASH_TTL_MS - age) / 86400000));
+    result.push({ id, name: board.name, emoji: board.emoji || '🎮', gameIcon: board.gameIcon || null, headerImg: board.headerImg || null, deletedAt: board.deletedAt, daysLeft, gameCount: Object.values(board.games || {}).filter(g => !g.deletedAt).length });
+  }
+  if (changed) setUserBoards(req.user.id, userBoards);
+  res.json(result.sort((a, b) => new Date(b.deletedAt) - new Date(a.deletedAt)));
+});
+
+// POST /api/trash/boards/restore — restaurer un board depuis la corbeille
+app.post('/api/trash/boards/restore', requireAuth, (req, res) => {
+  const { boardId } = req.body;
+  if (!boardId) return res.status(400).json({ error: 'Missing boardId' });
+  const userBoards = getUserBoards(req.user.id);
+  const board = userBoards[boardId];
+  if (!board || !board.deletedAt) return res.status(404).json({ error: 'Board not found in trash' });
+  delete board.deletedAt;
+  setUserBoards(req.user.id, userBoards);
+  res.json({ ok: true });
+});
+
+// DELETE /api/trash/boards/item — suppression définitive d'un board
+app.delete('/api/trash/boards/item', requireAuth, (req, res) => {
+  const { boardId } = req.body;
+  if (!boardId) return res.status(400).json({ error: 'Missing boardId' });
+  const userBoards = getUserBoards(req.user.id);
+  if (!userBoards[boardId]?.deletedAt) return res.status(404).json({ error: 'Board not found in trash' });
+  delete userBoards[boardId];
   setUserBoards(req.user.id, userBoards);
   res.json({ ok: true });
 });
