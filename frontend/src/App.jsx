@@ -1532,7 +1532,7 @@ export default function App() {
                   onDragEnd={() => { setHomeDragId(null); setHomeDragOver(null); }}
                   onDragOver={e => { e.preventDefault(); setHomeDragOver(`pub_${b.id}`); }}
                   onDrop={e => { e.preventDefault(); handleHomeDrop('public', b.id, setHomePublicOrder, 'homePublicOrder'); }}
-                  style={{ opacity: homeDragId === b.id ? 0.4 : 1, outline: homeDragOver === `pub_${b.id}` && homeDragId !== b.id ? '2px dashed var(--accent)' : 'none', borderRadius: 12, cursor: 'grab' }}
+                  style={{ opacity: homeDragId === b.id ? 0.4 : 1, outline: homeDragOver === `pub_${b.id}` && homeDragId !== b.id ? '2px dashed var(--accent)' : 'none', borderRadius: 12, cursor: 'grab', transition: 'opacity .15s, transform .15s, box-shadow .15s', transform: homeDragId === b.id ? 'rotate(2deg) scale(1.03)' : 'none', boxShadow: homeDragId === b.id ? '0 8px 28px rgba(0,0,0,0.55)' : 'none' }}
                 >
                   <HomeBoardCard board={b} isPublic
                     isFav={favBoards.some(f => f.id === b.id)}
@@ -1573,7 +1573,7 @@ export default function App() {
                         onDragEnd={() => { setHomeDragId(null); setHomeDragOver(null); }}
                         onDragOver={e => { e.preventDefault(); setHomeDragOver(`fav_${b.id}`); }}
                         onDrop={e => { e.preventDefault(); handleHomeDrop('fav', b.id, setHomeFavOrder, 'homeFavOrder'); }}
-                        style={{ opacity: homeDragId === b.id ? 0.4 : 1, outline: homeDragOver === `fav_${b.id}` && homeDragId !== b.id ? '2px dashed #f5c518' : 'none', borderRadius: 12, cursor: 'grab' }}
+                        style={{ opacity: homeDragId === b.id ? 0.4 : 1, outline: homeDragOver === `fav_${b.id}` && homeDragId !== b.id ? '2px dashed #f5c518' : 'none', borderRadius: 12, cursor: 'grab', transition: 'opacity .15s, transform .15s, box-shadow .15s', transform: homeDragId === b.id ? 'rotate(2deg) scale(1.03)' : 'none', boxShadow: homeDragId === b.id ? '0 8px 28px rgba(0,0,0,0.55)' : 'none' }}
                       >
                         <HomeBoardCard board={b} isFav onToggleFav={(cur) => togglePersonalFavorite(b.id, cur)} onClick={() => openBoard(b)} typeColor={getBoardTypeColor(b)} isHidden={hiddenBoardIds.has(b.id)} onHide={() => hideBoard(b.id)} onUnhide={() => unhideBoard(b.id)} />
                       </div>
@@ -1600,7 +1600,7 @@ export default function App() {
                         onDragEnd={() => { setHomeDragId(null); setHomeDragOver(null); }}
                         onDragOver={e => { e.preventDefault(); setHomeDragOver(`other_${b.id}`); }}
                         onDrop={e => { e.preventDefault(); handleHomeDrop('other', b.id, setHomeOtherOrder, 'homeOtherOrder'); }}
-                        style={{ opacity: homeDragId === b.id ? 0.4 : 1, outline: homeDragOver === `other_${b.id}` && homeDragId !== b.id ? '2px dashed #f5a500' : 'none', borderRadius: 12, cursor: 'grab' }}
+                        style={{ opacity: homeDragId === b.id ? 0.4 : 1, outline: homeDragOver === `other_${b.id}` && homeDragId !== b.id ? '2px dashed #f5a500' : 'none', borderRadius: 12, cursor: 'grab', transition: 'opacity .15s, transform .15s, box-shadow .15s', transform: homeDragId === b.id ? 'rotate(2deg) scale(1.03)' : 'none', boxShadow: homeDragId === b.id ? '0 8px 28px rgba(0,0,0,0.55)' : 'none' }}
                       >
                         <HomeBoardCard board={b} isFav={false} onToggleFav={(cur) => togglePersonalFavorite(b.id, cur)} onClick={() => openBoard(b)} typeColor={getBoardTypeColor(b)} isHidden={hiddenBoardIds.has(b.id)} onHide={() => hideBoard(b.id)} onUnhide={() => unhideBoard(b.id)} />
                       </div>
@@ -2122,8 +2122,8 @@ export default function App() {
               )}
               <button onClick={toggleCompact} style={{ background: compactView ? 'rgba(192,87,10,0.15)' : 'var(--surface2)', border: compactView ? '1px solid var(--accent)' : '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: compactView ? 'var(--accent)' : 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0, fontWeight: compactView ? 700 : 400 }}>{t('nav.compact')}</button>
               <button onClick={refreshPublicBoard} style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 11px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ fontSize: 15, lineHeight: 1 }}>↻</span> {t('nav.refresh').replace('↻ ', '')}</button>
-              {/* ── Steam game info — encart centre du header (public board, collections seulement) ── */}
-              {!isTaskBoard && <div style={{ flex: '1 1 0', display: 'flex', justifyContent: 'center', minWidth: gameInfo ? 200 : 0, minHeight: 0 }}>
+              {/* ── Steam game info — encart centre du header (public board avec lien Steam explicite seulement) ── */}
+              {!isTaskBoard && !!(publicBoardMode?.headerImg || publicBoardMode?.gameIcon) && <div style={{ flex: '1 1 0', display: 'flex', justifyContent: 'center', minWidth: gameInfo ? 200 : 0, minHeight: 0 }}>
                 <SteamEncart gameInfo={gameInfo} />
               </div>}
               <input type="search" placeholder={t('nav.filter_ph')} value={search} onChange={e => setSearch(e.target.value)}
