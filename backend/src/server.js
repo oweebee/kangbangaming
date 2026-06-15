@@ -583,7 +583,8 @@ app.delete('/api/admin/boards/:userId/:boardId', requireAdmin, (req, res) => {
   const { userId, boardId } = req.params;
   const all = readBoards();
   if (!all[userId] || !all[userId][boardId]) return res.status(404).json({ error: 'Board not found' });
-  delete all[userId][boardId];
+  // Soft-delete : envoyer en corbeille plutôt que supprimer définitivement
+  all[userId][boardId].deletedAt = new Date().toISOString();
   writeBoards(all);
   res.json({ ok: true });
 });
