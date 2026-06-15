@@ -1265,6 +1265,7 @@ export default function App() {
                     e.preventDefault();
                     finishHomeTouchDrop();
                   }}
+                  onContextMenu={e => e.preventDefault()}
                   style={{ opacity: homeDragId === b.id ? 0.4 : 1, outline: homeDragOver === `public_${b.id}` && homeDragId !== b.id ? '2px dashed var(--accent)' : 'none', borderRadius: 12, transition: 'opacity .15s' }}
                 >
                   <HomeBoardCard board={b} isPublic isFav={favBoards.some(f => f.id === b.id)} onToggleFav={cur => toggleFavorite(b.id, b, cur)} onClick={() => openPublicBoard(b)} typeColor={getBoardTypeColor(b)} isHidden={hiddenBoardIds.has(b.id)} onHide={() => hideBoard(b.id)} onUnhide={() => unhideBoard(b.id)} />
@@ -1314,6 +1315,7 @@ export default function App() {
                       e.preventDefault();
                       finishHomeTouchDrop();
                     }}
+                    onContextMenu={e => e.preventDefault()}
                     style={{ opacity: homeDragId === b.id ? 0.4 : 1, outline: homeDragOver === `fav_${b.id}` && homeDragId !== b.id ? '2px dashed #f5c518' : 'none', borderRadius: 12, transition: 'opacity .15s' }}
                   >
                     <HomeBoardCard board={b} isFav onToggleFav={cur => togglePersonalFavorite(b.id, cur)} onClick={() => openBoard(b)} typeColor={getBoardTypeColor(b)} isHidden={hiddenBoardIds.has(b.id)} onHide={() => hideBoard(b.id)} onUnhide={() => unhideBoard(b.id)} />
@@ -1359,6 +1361,7 @@ export default function App() {
                           e.preventDefault();
                           finishHomeTouchDrop();
                         }}
+                        onContextMenu={e => e.preventDefault()}
                         style={{ opacity: homeDragId === b.id ? 0.4 : 1, outline: homeDragOver === `other_${b.id}` && homeDragId !== b.id ? '2px dashed #f5a500' : 'none', borderRadius: 12, transition: 'opacity .15s' }}
                       >
                         <HomeBoardCard board={b} isFav={false} onToggleFav={cur => togglePersonalFavorite(b.id, cur)} onClick={() => openBoard(b)} typeColor={getBoardTypeColor(b)} isHidden={hiddenBoardIds.has(b.id)} onHide={() => hideBoard(b.id)} onUnhide={() => unhideBoard(b.id)} />
