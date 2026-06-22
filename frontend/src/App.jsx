@@ -411,14 +411,15 @@ export default function App() {
   const [selectedGame, setSelectedGame] = useState(null);
   const [selectedGameDefaultTab, setSelectedGameDefaultTab] = useState('infos');
   const [editingGame,  setEditingGame]  = useState(null);
-  const [showArchived, setShowArchived] = useState(() => {
-    try { return localStorage.getItem('showArchived') === '1'; } catch { return false; }
-  });
-  const toggleShowArchived = () => setShowArchived(v => {
-    const next = !v;
-    try { localStorage.setItem('showArchived', next ? '1' : '0'); } catch {}
-    return next;
-  });
+  // Toujours désactivé par défaut (jamais persisté) : sinon, dès qu'on l'active une
+  // fois pour jeter un œil aux archives, il reste "activé" pour toujours — sur tous
+  // les boards, même après un rechargement de la page. Le useEffect ci-dessous le
+  // remet aussi à false à chaque changement de board (pas de fuite d'un board à l'autre).
+  const [showArchived, setShowArchived] = useState(false);
+  const toggleShowArchived = () => setShowArchived(v => !v);
+  useEffect(() => {
+    setShowArchived(false);
+  }, [activeBoardId, publicBoardMode?.id]);
   // ── Masquage cartes (localStorage par user+board) ──────────────────────────
   const [hiddenCardIds, setHiddenCardIds] = useState(() => new Set());
   const [showHiddenCards, setShowHiddenCards] = useState(false);
@@ -1001,7 +1002,6 @@ export default function App() {
     // la carte qu'on vient d'archiver (et toutes les autres déjà archivées)
     // disparaît immédiatement ; le bouton reste dispo pour les réafficher manuellement.
     setShowArchived(false);
-    try { localStorage.setItem('showArchived', '0'); } catch {}
     const boardApi = getBoardApi();
     fetch(`${boardApi}/games/${appid}`, { method: 'PATCH', headers: authHeaders(token), body: JSON.stringify({ archived: true }) });
   };

@@ -9,16 +9,24 @@
  * Si l'espace dispo est trop petit pour l'afficher sans qu'il chevauche un
  * autre élément du header, il est automatiquement masqué.
  *
- * Mesure de la place disponible : on ne peut PAS déduire l'espace libre de
- * header.scrollWidth/clientWidth directement, car le wrapper flex:1 absorbe
- * tout le slack restant — scrollWidth sature alors toujours à clientWidth
- * (aucun "overflow" réel à détecter), ce qui rend ce calcul faux à coup sûr
- * (cartouche masqué en permanence, quel que soit l'espace réel dispo). On
- * retire donc temporairement le wrapper du flux (display:none) le temps de
- * la mesure : scrollWidth du header reflète alors la largeur réellement
- * nécessaire au reste du header (icône, nom, boutons, recherche…), ce qui
- * donne l'espace dispo correct. Ce toggle est fait de façon synchrone dans
- * useLayoutEffect (avant le paint du navigateur) donc invisible à l'écran.
+ * Mesure de la place disponible : header.scrollWidth ne marche PAS pour ça,
+ * même en retirant temporairement le wrapper flex:1 du flux — scrollWidth
+ * sature toujours à clientWidth dès qu'il n'y a pas de vrai débordement
+ * (scrollWidth ne reflète que l'overflow, jamais le "sous-remplissage" d'un
+ * conteneur). Comme le cas normal est justement "le reste du header ne
+ * remplit pas toute la largeur" (c'est pour ça qu'il y a de la place pour le
+ * cartouche), scrollWidth==clientWidth quasi systématiquement → espace dispo
+ * calculé à 0 → cartouche masqué en permanence. (Bug réel constaté, pas
+ * théorique : c'est exactement ce qui faisait que le cartouche restait
+ * invisible malgré le retrait du wrapper.)
+ * On mesure donc directement la largeur réellement utilisée par les AUTRES
+ * enfants du header : on retire le wrapper du flux (display:none), le moteur
+ * flex re-tasse alors automatiquement les enfants restants (ceux qui étaient
+ * après le wrapper remontent combler le vide), puis on lit le bord droit du
+ * dernier enfant visible — ça donne la largeur naturelle exacte (gaps inclus)
+ * quel que soit l'espace dispo, sans dépendre de scrollWidth. Ce toggle est
+ * fait de façon synchrone dans useLayoutEffect (avant le paint du navigateur)
+ * donc invisible à l'écran.
  */
 import { useState, useRef, useLayoutEffect } from 'react';
 import { useLang } from '../i18n.js';
@@ -41,13 +49,24 @@ export default function SteamEncart({ gameInfo }) {
 
     function recompute() {
       const naturalWidth = measureEl.offsetWidth;
-      // Retrait temporaire du wrapper (hors-flux) pour mesurer la largeur réellement
-      // nécessaire au reste du header, sans que son flex-grow ne fausse la mesure.
+      // Retrait temporaire du wrapper (hors-flux) : les autres enfants du header
+      // se re-tassent automatiquement (ceux après le wrapper remontent). On lit
+      // alors le bord droit le plus à droite parmi les enfants visibles restants
+      // pour obtenir la largeur naturelle exacte qu'ils occupent (gaps compris) —
+      // scrollWidth ne convient pas ici (cf. commentaire en tête de fichier).
       const prevDisplay = wrapper.style.display;
       wrapper.style.display = 'none';
-      const otherWidth = header.scrollWidth;
+      const headerLeft = header.getBoundingClientRect().left;
+      let usedWidth = 0;
+      for (const child of header.children) {
+        if (child === wrapper) continue;
+        const r = child.getBoundingClientRect();
+        if (r.width === 0) continue; // enfant vide/masqué, ignoré
+        const right = r.right - headerLeft;
+        if (right > usedWidth) usedWidth = right;
+      }
       wrapper.style.display = prevDisplay;
-      const available = header.clientWidth - otherWidth;
+      const available = header.clientWidth - usedWidth;
       setFits(available >= naturalWidth + FIT_SAFETY_MARGIN);
     }
 

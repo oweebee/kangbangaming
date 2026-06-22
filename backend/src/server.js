@@ -1854,12 +1854,15 @@ app.patch('/api/public/boards/:boardId/columns/:colId/games/reorder', requireAut
 app.delete('/api/public/boards/:boardId/games/:appid', requireAuth, (req, res) => {
   const f = findPublicBoard(req.params.boardId);
   if (!f) return res.status(404).json({ error: 'Not found' });
-  if (!(f.board.games || {})[req.params.appid]) return res.status(404).json({ error: 'Not found' });
-  delete f.board.games[req.params.appid];
+  const game = (f.board.games || {})[req.params.appid];
+  if (!game) return res.status(404).json({ error: 'Not found' });
+  // Soft-delete (corbeille 30 j côté propriétaire du board) — même filet de
+  // sécurité que les boards perso, qu'elle soit archivée ou non.
+  game.deletedAt = new Date().toISOString();
   f.userBoards[req.params.boardId] = f.board;
   f.all[f.userId] = f.userBoards;
   writeBoards(f.all);
-  res.json({ ok: true });
+  res.json({ ok: true, softDeleted: true, deletedAt: game.deletedAt });
 });
 
 // ── Board routes ──────────────────────────────────────────────────────────────
@@ -2115,17 +2118,13 @@ app.delete('/api/boards/:boardId/games/:appid', requireAuth, (req, res) => {
   if (!board) return res.status(404).json({ error: 'Board not found' });
   const game = (board.games || {})[req.params.appid];
   if (!game) return res.status(404).json({ error: 'Game not found' });
-  if (game.archived) {
-    // Carte archivée → soft-delete (corbeille 30 j)
-    game.deletedAt = new Date().toISOString();
-    setUserBoards(req.user.id, userBoards);
-    console.log(`[soft-delete game] user=${req.user.id} board=${req.params.boardId} game=${req.params.appid}`);
-    return res.json({ ok: true, softDeleted: true, deletedAt: game.deletedAt });
-  }
-  // Non-archivée → suppression définitive
-  delete board.games[req.params.appid];
+  // Toute suppression de carte → soft-delete (corbeille 30 j), archivée ou non.
+  // (Avant : seules les cartes archivées passaient par la corbeille, les autres
+  // étaient détruites définitivement sans filet de sécurité — corrigé.)
+  game.deletedAt = new Date().toISOString();
   setUserBoards(req.user.id, userBoards);
-  res.json({ ok: true });
+  console.log(`[soft-delete game] user=${req.user.id} board=${req.params.boardId} game=${req.params.appid}`);
+  res.json({ ok: true, softDeleted: true, deletedAt: game.deletedAt });
 });
 
 // ── OG Preview proxy ─────────────────────────────────────────────────────────
