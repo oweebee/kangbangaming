@@ -213,6 +213,7 @@ export default function GameModal({ game, onClose, api, token, onPatchGame, onSo
               notes={game.notes || []}
               onSave={handleSaveNotes}
               onSoftDeleteNote={onSoftDeleteNote ? (noteId) => onSoftDeleteNote(game.appid, noteId) : undefined}
+              draftKey={`game_${game.appid}`}
               compact={false}
               token={token}
               currentUser={currentUser}

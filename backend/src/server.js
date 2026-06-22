@@ -78,6 +78,21 @@ function getUserBoards(userId) { return readBoards()[userId] || {}; }
 function setUserBoards(userId, userBoards) {
   const all = readBoards(); all[userId] = userBoards; writeBoards(all);
 }
+// Résout l'image "cartouche" d'un board pour l'affichage (accueil + en-tête de board ouvert).
+// Règles :
+//  - Si le board a sa propre headerImg (board créé depuis un jeu Steam choisi explicitement), on l'utilise.
+//  - Sinon, si le board a un gameIcon (idem, lié à un jeu), pas d'image de secours ici — le gameIcon
+//    sert déjà de fallback visuel côté front (HomeBoardCard).
+//  - Sinon, si le board contient EXACTEMENT une carte de type Steam avec une image, on l'utilise :
+//    ça correspond à un board "lié à un jeu Steam" dans l'esprit de l'utilisateur (un seul jeu dedans),
+//    sans réintroduire le bug d'origine (board perso/backlog avec plusieurs jeux → image trompeuse).
+//  - Sinon (0 ou 2+ cartes Steam, board perso/backlog) → pas d'image, l'emoji du board prend le relais.
+function resolveBoardHeaderImg(board) {
+  if (board.headerImg) return board.headerImg;
+  if (board.gameIcon) return null;
+  const steamCards = Object.values(board.games || {}).filter(g => !g.deletedAt && g.type !== 'custom' && g.header_img);
+  return steamCards.length === 1 ? steamCards[0].header_img : null;
+}
 function getUserSteamCreds(userId) {
   const user = readUsers().find(u => u.id === userId);
   return {
@@ -314,7 +329,7 @@ app.get('/api/deadlines', requireAuth, (req, res) => {
     const isOwn = ownerId === req.user.id;
     const boardName = board.name || '';
     const boardIcon = board.gameIcon || null;
-    const boardHeaderImg = board.headerImg || null;
+    const boardHeaderImg = resolveBoardHeaderImg(board);
     for (const [gameId, game] of Object.entries(board.games || {})) {
       const hasDates = !!(game.dueDate || game.startDate || game.endDate);
       const urgentOnly = !hasDates && !!game.urgent && !game.done && !game.archived;
@@ -377,7 +392,7 @@ app.get('/api/search', requireAuth, (req, res) => {
 
     const boardName = board.name || '';
     const boardIcon = board.gameIcon || null;
-    const boardHeaderImg = board.headerImg || null;
+    const boardHeaderImg = resolveBoardHeaderImg(board);
 
     if (boardName.toLowerCase().includes(q)) {
       results.push({ type: 'board', boardId, boardName, boardIcon, boardHeaderImg, matchedIn: 'board', ...extra });
@@ -561,7 +576,6 @@ app.get('/api/admin/boards', requireAdmin, (req, res) => {
   for (const [userId, userBoards] of Object.entries(allBoards)) {
     for (const [boardId, board] of Object.entries(userBoards)) {
       const gameCount = Object.keys(board.games || {}).length;
-      const firstGame = Object.values(board.games || {}).find(g => g.header_img);
       result.push({
         id: boardId,
         name: board.name,
@@ -570,7 +584,7 @@ app.get('/api/admin/boards', requireAdmin, (req, res) => {
         ownerId: userId,
         public: board.public || false,
         gameCount,
-        headerImg: board.headerImg || firstGame?.header_img || null,
+        headerImg: resolveBoardHeaderImg(board),
         createdAt: board.createdAt || null,
       });
     }
@@ -1627,8 +1641,7 @@ app.get('/api/public/boards', requireAuth, (req, res) => {
   for (const [userId, userBoards] of Object.entries(all)) {
     for (const [boardId, board] of Object.entries(userBoards || {})) {
       if (!board.public) continue;
-      const firstGame = Object.values(board.games || {}).find(g => g.header_img);
-      const headerImg = board.headerImg || firstGame?.header_img || null;
+      const headerImg = resolveBoardHeaderImg(board);
       result.push({
         id: boardId, name: board.name, emoji: board.emoji || '',
         gameIcon: board.gameIcon || null, headerImg,
@@ -1655,7 +1668,7 @@ app.get('/api/user/favorites', requireAuth, (req, res) => {
   for (const [userId, userBoards] of Object.entries(all)) {
     for (const [boardId, board] of Object.entries(userBoards || {})) {
       if (favIds.has(boardId) && board.public) {
-        const firstGame2 = Object.values(board.games || {}).find(g => g.header_img); const headerImg2 = board.headerImg || firstGame2?.header_img || null; result.push({ id: boardId, name: board.name, emoji: board.emoji || '', gameIcon: board.gameIcon || null, headerImg: headerImg2, ownerUsername: userMap.get(userId) || 'unknown', ownerId: userId, isFavorite: true });
+        result.push({ id: boardId, name: board.name, emoji: board.emoji || '', gameIcon: board.gameIcon || null, headerImg: resolveBoardHeaderImg(board), ownerUsername: userMap.get(userId) || 'unknown', ownerId: userId, isFavorite: true });
       }
     }
   }
@@ -1783,10 +1796,10 @@ app.get('/api/public/boards/:boardId/games', requireAuth, (req, res) => {
 app.post('/api/public/boards/:boardId/games', requireAuth, (req, res) => {
   const f = findPublicBoard(req.params.boardId);
   if (!f) return res.status(404).json({ error: 'Not found' });
-  const { appid, name, header_img, icon_img, column, type, emoji, taskType, dueDate, startDate, endDate, dueTime, startTime, endTime, urgent, assignees, notes, progress } = req.body;
+  const { appid, name, header_img, icon_img, column, type, emoji, color, taskType, dueDate, startDate, endDate, dueTime, startTime, endTime, urgent, assignees, notes, progress } = req.body;
   if (!appid || !column) return res.status(400).json({ error: 'Missing fields' });
   if (!f.board.games) f.board.games = {};
-  f.board.games[appid] = { appid, name, header_img: header_img || null, icon_img: icon_img || null, column, type: type || 'steam', emoji: emoji || null, taskType: taskType || null, dueDate: dueDate || null, startDate: startDate || null, endDate: endDate || null, dueTime: dueTime || null, startTime: startTime || null, endTime: endTime || null, urgent: urgent || false, assignees: assignees || [], notes: notes || [], progress: progress ?? null, archived: false, sortOrder: Date.now(), addedAt: new Date().toISOString() };
+  f.board.games[appid] = { appid, name, header_img: header_img || null, icon_img: icon_img || null, column, type: type || 'steam', emoji: emoji || null, color: color || null, taskType: taskType || null, dueDate: dueDate || null, startDate: startDate || null, endDate: endDate || null, dueTime: dueTime || null, startTime: startTime || null, endTime: endTime || null, urgent: urgent || false, assignees: assignees || [], notes: notes || [], progress: progress ?? null, archived: false, sortOrder: Date.now(), addedAt: new Date().toISOString() };
   f.userBoards[req.params.boardId] = f.board;
   f.all[f.userId] = f.userBoards;
   writeBoards(f.all);
@@ -1856,9 +1869,8 @@ app.get('/api/boards', requireAuth, (req, res) => {
   res.json(Object.entries(userBoards)
     .filter(([, b]) => !b.deletedAt)  // exclure les boards en corbeille
     .map(([id, b]) => {
-      // Only return the explicitly stored headerImg — do NOT fall back to game cards.
-      // The Steam encart must only appear on boards intentionally linked to a Steam game.
-      return { id, name: b.name, emoji: b.emoji || '🎮', gameIcon: b.gameIcon || null, headerImg: b.headerImg || null, columns: b.columns || [], public: b.public || false };
+      // headerImg explicite, sinon image de la carte Steam unique du board (cf. resolveBoardHeaderImg).
+      return { id, name: b.name, emoji: b.emoji || '🎮', gameIcon: b.gameIcon || null, headerImg: resolveBoardHeaderImg(b), columns: b.columns || [], public: b.public || false };
     }));
 });
 
@@ -1947,7 +1959,7 @@ app.get('/api/trash/boards', requireAuth, (req, res) => {
     const age = now - new Date(board.deletedAt).getTime();
     if (age > TRASH_TTL_MS) { delete userBoards[id]; changed = true; continue; }
     const daysLeft = Math.max(1, Math.ceil((TRASH_TTL_MS - age) / 86400000));
-    result.push({ id, name: board.name, emoji: board.emoji || '🎮', gameIcon: board.gameIcon || null, headerImg: board.headerImg || null, deletedAt: board.deletedAt, daysLeft, gameCount: Object.values(board.games || {}).filter(g => !g.deletedAt).length });
+    result.push({ id, name: board.name, emoji: board.emoji || '🎮', gameIcon: board.gameIcon || null, headerImg: resolveBoardHeaderImg(board), deletedAt: board.deletedAt, daysLeft, gameCount: Object.values(board.games || {}).filter(g => !g.deletedAt).length });
   }
   if (changed) setUserBoards(req.user.id, userBoards);
   res.json(result.sort((a, b) => new Date(b.deletedAt) - new Date(a.deletedAt)));
@@ -2039,13 +2051,13 @@ app.get('/api/boards/:boardId/games', requireAuth, (req, res) => {
 });
 
 app.post('/api/boards/:boardId/games', requireAuth, (req, res) => {
-  const { appid, name, header_img, column, icon_img, type, emoji, taskType, dueDate, startDate, endDate, dueTime, startTime, endTime, urgent, assignees, notes, progress } = req.body;
+  const { appid, name, header_img, column, icon_img, type, emoji, color, taskType, dueDate, startDate, endDate, dueTime, startTime, endTime, urgent, assignees, notes, progress } = req.body;
   if (!appid || !column) return res.status(400).json({ error: 'Missing fields' });
   const userBoards = getUserBoards(req.user.id);
   const board = userBoards[req.params.boardId];
   if (!board) return res.status(404).json({ error: 'Board not found' });
   if (!board.games) board.games = {};
-  board.games[appid] = { appid, name, header_img: header_img || null, icon_img: icon_img || null, column, type: type || 'steam', emoji: emoji || null, taskType: taskType || null, dueDate: dueDate || null, startDate: startDate || null, endDate: endDate || null, dueTime: dueTime || null, startTime: startTime || null, endTime: endTime || null, urgent: urgent || false, assignees: assignees || [], notes: notes || [], progress: progress ?? null, archived: false, sortOrder: Date.now(), addedAt: new Date().toISOString() };
+  board.games[appid] = { appid, name, header_img: header_img || null, icon_img: icon_img || null, column, type: type || 'steam', emoji: emoji || null, color: color || null, taskType: taskType || null, dueDate: dueDate || null, startDate: startDate || null, endDate: endDate || null, dueTime: dueTime || null, startTime: startTime || null, endTime: endTime || null, urgent: urgent || false, assignees: assignees || [], notes: notes || [], progress: progress ?? null, archived: false, sortOrder: Date.now(), addedAt: new Date().toISOString() };
   setUserBoards(req.user.id, userBoards);
   res.status(201).json(board.games[appid]);
 });

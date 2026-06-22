@@ -167,7 +167,7 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
     <ModalBackdrop onClose={onClose}>
       <div style={{
         background: 'var(--surface)', border: '1px solid var(--border)',
-        borderRadius: 14, width: '100%', maxWidth: 600,
+        borderRadius: 14, width: 600, maxWidth: '90vw',
         height: 640, maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden',
       }}>
         {/* Header */}

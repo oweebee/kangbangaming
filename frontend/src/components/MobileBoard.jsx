@@ -188,6 +188,12 @@ export default function MobileBoard({
         snapToIndex(activeIdxRef.current, true);
       }
       const d = dragState.current;
+      // Important : on coupe aussi le timer de long-press. Sans ça, un geste
+      // annulé (notification, appel, changement d'onglet) laisse le timer
+      // courir et il peut se déclencher APRÈS coup, ré-activant un drag
+      // fantôme : carte qui semble "écrasée" et listener de scroll qui reste
+      // bloqué pour de bon (plus aucun scroll possible jusqu'au reload).
+      clearTimeout(d.longPressTimer);
       if (d.scrollBlocker) {
         document.removeEventListener('touchmove', d.scrollBlocker);
         d.scrollBlocker = null;
@@ -226,12 +232,28 @@ export default function MobileBoard({
     const touch   = e.touches[0];
     const fromIdx = colGames.findIndex(g => g.appid === game.appid);
     const d       = dragState.current;
+    // Sécurité : un geste précédent mal terminé (ex: notification pendant le
+    // long-press) peut laisser un timer ou un blocker de scroll actifs.
+    // On les nettoie avant de démarrer un nouveau geste pour éviter qu'un
+    // ancien listener "document" reste accroché et bloque le scroll pour de bon.
+    clearTimeout(d.longPressTimer);
+    if (d.scrollBlocker) {
+      document.removeEventListener('touchmove', d.scrollBlocker);
+      d.scrollBlocker = null;
+    }
     // Stocker la position initiale pour le seuil de 5px
     d.pendingX = touch.clientX;
     d.pendingY = touch.clientY;
+    d.lastX    = touch.clientX;
+    d.lastY    = touch.clientY;
 
     // Long press timer: 400 ms
     d.longPressTimer = setTimeout(() => {
+      // Si le doigt a déjà bougé au-delà du seuil depuis le départ, c'est un
+      // scroll/swipe en cours (l'event qui aurait dû annuler ce timer a juste
+      // été retardé par un rendu lourd — beaucoup de cartes). On n'active pas
+      // le drag pour ne pas casser le scroll ni "écraser" une carte par erreur.
+      if (Math.abs(d.lastX - d.pendingX) > 5 || Math.abs(d.lastY - d.pendingY) > 5) return;
       d.active      = true;
       d.colId       = colId;
       d.appid       = game.appid;
@@ -301,8 +323,14 @@ export default function MobileBoard({
   const handleCardTouchMoveEarly = useCallback((e) => {
     const d = dragState.current;
     if (d.active) return;
-    const dx = Math.abs(e.touches[0].clientX - d.pendingX);
-    const dy = Math.abs(e.touches[0].clientY - d.pendingY);
+    const touch = e.touches[0];
+    // Toujours garder la dernière position connue à jour : sert de filet de
+    // sécurité au déclenchement du timer (voir handleCardTouchStart) si ce
+    // handler est traité en retard par le navigateur (rendu lourd).
+    d.lastX = touch.clientX;
+    d.lastY = touch.clientY;
+    const dx = Math.abs(touch.clientX - d.pendingX);
+    const dy = Math.abs(touch.clientY - d.pendingY);
     if (dx > 5 || dy > 5) clearTimeout(d.longPressTimer);
   }, []);
 

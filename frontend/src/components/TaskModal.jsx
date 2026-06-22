@@ -402,6 +402,7 @@ export default function TaskModal({ game, onClose, onEdit, appUsers = [], onPatc
               notes={game.notes || []}
               onSave={handleSaveNotes}
               onSoftDeleteNote={onSoftDeleteNote ? (noteId) => onSoftDeleteNote(game.appid, noteId) : undefined}
+              draftKey={`task_${game.appid}`}
               compact={false}
               token={token}
               currentUser={currentUser}

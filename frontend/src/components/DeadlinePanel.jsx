@@ -29,15 +29,15 @@ function categorize(task) {
   const today = now.getTime();
   const tomorrow = new Date(now); tomorrow.setDate(tomorrow.getDate() + 1);
   const tomorrowt = tomorrow.getTime();
-  const in3   = new Date(now); in3.setDate(in3.getDate() + 3);
-  const in3t  = in3.getTime();
+  const in7   = new Date(now); in7.setDate(in7.getDate() + 7);
+  const in7t  = in7.getTime();
 
   if (task.done) return null;
 
   function classifyFuture(refDate) {
     const t = refDate.getTime();
     if (t === tomorrowt) return 'tomorrow';
-    if (t <= in3t)       return 'upcoming';
+    if (t <= in7t)        return 'upcoming';
     return null;
   }
 
@@ -109,7 +109,7 @@ function Section({ cat, tasks, onOpenTask, hiddenDeadlineIds, showHiddenDeadline
     overdue:  { label: t('deadline.cat_warning'),  color: '#e05555', icon: null },
     active:   { label: t('deadline.cat_today'),    color: '#3db86a', icon: '📍' },
     tomorrow: { label: t('deadline.cat_tomorrow'), color: '#e09020', icon: '📅' },
-    upcoming: { label: t('deadline.cat_3days'),    color: '#c9a010', icon: '🕐' },
+    upcoming: { label: t('deadline.cat_7days'),    color: '#c9a010', icon: '🕐' },
   };
   const [collapsed, setCollapsed] = useState(false);
   const [order, setOrder] = useState(() => {

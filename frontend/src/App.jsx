@@ -608,10 +608,12 @@ export default function App() {
       ]);
       setColumns(cols);
       setGames(gms);
-      // Resolve headerImg from games if the board object didn't have it (e.g. stale cache)
-      const firstSteamGame = gms.find(g => g.header_img);
-      if (!board.headerImg && firstSteamGame?.header_img) {
-        setPublicBoardMode(prev => prev ? { ...prev, headerImg: firstSteamGame.header_img, gameIcon: prev.gameIcon || firstSteamGame.game_icon } : prev);
+      // Repli : si le board n'a pas sa propre image et contient EXACTEMENT une carte Steam,
+      // on affiche l'image de cette carte (board réellement "lié" à un seul jeu). Si plusieurs
+      // jeux différents sont présents (board perso/backlog), on ne montre rien (emoji affiché à la place).
+      const steamCards = gms.filter(g => !g.deletedAt && g.type !== 'custom' && g.header_img);
+      if (!board.headerImg && !board.gameIcon && steamCards.length === 1) {
+        setPublicBoardMode(prev => prev ? { ...prev, headerImg: steamCards[0].header_img, gameIcon: prev.gameIcon || steamCards[0].icon_img || null } : prev);
       }
     } catch {} finally { setLoading(false); }
   };
@@ -970,7 +972,7 @@ export default function App() {
     const boardApi = getBoardApi();
     await fetch(`${boardApi}/games`, {
       method: 'POST', headers: authHeaders(token),
-      body: JSON.stringify({ appid: game.appid, name: game.name, header_img: game.header_img, icon_img: game.icon_img, column: colId, type: game.type || 'steam', emoji: game.emoji || null, taskType: game.taskType || null, dueDate: game.dueDate || null, startDate: game.startDate || null, endDate: game.endDate || null, urgent: game.urgent ?? false, assignees: game.assignees ?? [], notes: game.notes ?? [], progress: game.progress ?? null }),
+      body: JSON.stringify({ appid: game.appid, name: game.name, header_img: game.header_img, icon_img: game.icon_img, column: colId, type: game.type || 'steam', emoji: game.emoji || null, color: game.color ?? null, taskType: game.taskType || null, dueDate: game.dueDate || null, startDate: game.startDate || null, endDate: game.endDate || null, urgent: game.urgent ?? false, assignees: game.assignees ?? [], notes: game.notes ?? [], progress: game.progress ?? null }),
     });
     if (publicBoardMode) {
       const res = await fetch(`${boardApi}/games`, { headers: authHeaders(token) });
@@ -1013,10 +1015,10 @@ export default function App() {
 
   const updateGame = async (updatedGame) => {
     const boardApi = getBoardApi();
-    const { appid, name, emoji, taskType, dueDate, startDate, endDate, urgent, assignees, notes, progress } = updatedGame;
+    const { appid, name, emoji, color, taskType, dueDate, startDate, endDate, urgent, assignees, notes, progress } = updatedGame;
     await fetch(`${boardApi}/games/${appid}`, {
       method: 'PATCH', headers: authHeaders(token),
-      body: JSON.stringify({ name, emoji, taskType: taskType ?? null, dueDate: dueDate ?? null, startDate: startDate ?? null, endDate: endDate ?? null, urgent: urgent ?? false, assignees: assignees ?? [], notes: notes ?? [], progress: progress ?? null }),
+      body: JSON.stringify({ name, emoji, color: color ?? null, taskType: taskType ?? null, dueDate: dueDate ?? null, startDate: startDate ?? null, endDate: endDate ?? null, urgent: urgent ?? false, assignees: assignees ?? [], notes: notes ?? [], progress: progress ?? null }),
     });
     setGames(prev => prev.map(g => g.appid === appid ? { ...g, ...updatedGame } : g));
     if (updatedGame.dueDate || updatedGame.startDate || updatedGame.endDate) setDeadlineRefreshKey(k => k + 1);
@@ -1119,8 +1121,12 @@ export default function App() {
   }, {});
   const knownColIds = new Set(columns.map(c => c.id));
   const activeBoard = boards.find(b => b.id === activeBoardId);
-  // Banner image: prefer board's stored headerImg, fallback to first Steam game header_img
-  const activeBoardHeaderImg = activeBoard?.headerImg || games.find(g => g.header_img)?.header_img || null;
+  // Banner image : headerImg propre au board, sinon image de la carte Steam UNIQUE du board
+  // (board réellement "lié" à un seul jeu — pas de repli si plusieurs jeux différents/backlog).
+  const activeBoardSteamCards = activeBoard && !activeBoard.headerImg && !activeBoard.gameIcon
+    ? games.filter(g => !g.deletedAt && g.type !== 'custom' && g.header_img)
+    : [];
+  const activeBoardHeaderImg = activeBoard?.headerImg || (activeBoardSteamCards.length === 1 ? activeBoardSteamCards[0].header_img : null) || null;
   // Extract Steam appid from banner URL
   const activeSteamAppId = activeBoardHeaderImg?.match(/apps\/(\d+)\//)?.[1] || null;
   // true when the active board was created from a Steam game (task board)
@@ -1836,7 +1842,7 @@ export default function App() {
                 <div style={{ width: 38, height: 38, borderRadius: '50%', background: `linear-gradient(90deg, #f5c518 50%, ${getBoardTypeColor(b)} 50%)`, padding: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <button
                     onClick={e => { e.stopPropagation(); if (emojiPickerFor === b.id) { setEmojiPickerFor(null); setEmojiPickerAnchor(null); } else { setEmojiPickerFor(b.id); setEmojiPickerAnchor(e.currentTarget); } }}
-                    style={{ background: 'var(--surface2)', border: 'none', borderRadius: '50%', width: 34, height: 34, fontSize: b.emoji ? 18 : 11, cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    style={{ background: '#000', border: 'none', borderRadius: '50%', width: 34, height: 34, fontSize: b.emoji ? 18 : 11, cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                   >{b.emoji || '+'}</button>
                 </div>
                 {emojiPickerFor === b.id && (
@@ -1898,7 +1904,7 @@ export default function App() {
                 <div style={{ width: 38, height: 38, borderRadius: '50%', background: getBoardTypeColor(b), padding: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <button
                     onClick={e => { e.stopPropagation(); if (emojiPickerFor === b.id) { setEmojiPickerFor(null); setEmojiPickerAnchor(null); } else { setEmojiPickerFor(b.id); setEmojiPickerAnchor(e.currentTarget); } }}
-                    style={{ background: 'var(--surface2)', border: 'none', borderRadius: '50%', width: 34, height: 34, fontSize: b.emoji ? 18 : 11, cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    style={{ background: '#000', border: 'none', borderRadius: '50%', width: 34, height: 34, fontSize: b.emoji ? 18 : 11, cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                   >{b.emoji || '+'}</button>
                 </div>
                 {emojiPickerFor === b.id && (
@@ -2107,6 +2113,7 @@ export default function App() {
           ) : showHome ? (
             <>
               <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', flex: 1 }}>Tableau de Board</span>
+              <button onClick={toggleCompact} title={t('nav.compact')} style={{ background: compactView ? 'rgba(192,87,10,0.15)' : 'rgba(255,255,255,.06)', border: compactView ? '1px solid var(--accent)' : '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', color: compactView ? 'var(--accent)' : 'var(--text-muted)', fontSize: 11, cursor: 'pointer', flexShrink: 0 }}>⊟</button>
               <button
                 onClick={() => { fetchBoards(); fetchFavorites(); fetchPersonalFavorites(); fetch(`${API}/public/boards`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : []).then(setHomePublicBoards).catch(() => {}); }}
                 title="Rafraîchir"
@@ -2212,9 +2219,10 @@ export default function App() {
             <>
               {/* Board icon — clickable if Steam game, same as personal board */}
               {(() => {
-                const steamAppId = publicBoardMode.headerImg?.match(/apps\/(\d+)\//)?.[1];
-                return publicBoardMode.headerImg ? (
-                  <img src={publicBoardMode.headerImg} alt=""
+                const cartoucheImg = publicBoardMode.headerImg || publicBoardMode.gameIcon;
+                const steamAppId = cartoucheImg?.match(/apps\/(\d+)\//)?.[1];
+                return cartoucheImg ? (
+                  <img src={cartoucheImg} alt=""
                     onClick={steamAppId ? () => window.open(`https://store.steampowered.com/app/${steamAppId}`, '_blank') : undefined}
                     title={steamAppId ? 'Voir sur Steam' : undefined}
                     style={{ height: 53, width: 'auto', maxWidth: 220, objectFit: 'contain', borderRadius: 6, flexShrink: 0, border: '1px solid var(--border)', cursor: steamAppId ? 'pointer' : 'default' }}
@@ -2245,6 +2253,7 @@ export default function App() {
             <>
               <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>Tableau de Board</span>
               <div style={{ flex: 1 }} />
+              <button onClick={toggleCompact} style={{ background: compactView ? 'rgba(192,87,10,0.15)' : 'var(--surface2)', border: compactView ? '1px solid var(--accent)' : '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: compactView ? 'var(--accent)' : 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0, fontWeight: compactView ? 700 : 400 }}>{t('nav.compact')}</button>
               <button
                 onClick={() => { fetchBoards(); fetchFavorites(); fetchPersonalFavorites(); fetch(`${API}/public/boards`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : []).then(setHomePublicBoards).catch(() => {}); }}
                 title="Rafraîchir"
@@ -2255,10 +2264,11 @@ export default function App() {
             <>
               {/* Board icon — clickable if Steam game */}
               {(() => {
-                const steamAppId = activeBoardHeaderImg?.match(/apps\/(\d+)\//)?.[1];
-                return activeBoardHeaderImg ? (
+                const cartoucheImg = activeBoardHeaderImg || activeBoard?.gameIcon;
+                const steamAppId = cartoucheImg?.match(/apps\/(\d+)\//)?.[1];
+                return cartoucheImg ? (
                   <img
-                    src={activeBoardHeaderImg} alt=""
+                    src={cartoucheImg} alt=""
                     onClick={steamAppId ? () => window.open(`https://store.steampowered.com/app/${steamAppId}`, '_blank') : undefined}
                     title={steamAppId ? 'Voir sur Steam' : undefined}
                     style={{ height: 53, width: 'auto', maxWidth: 220, objectFit: 'contain', borderRadius: 6, flexShrink: 0, border: '1px solid var(--border)', cursor: steamAppId ? 'pointer' : 'default' }}

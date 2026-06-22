@@ -34,18 +34,40 @@ function formatNoteDate(isoStr) {
   } catch { return ''; }
 }
 
+// Clé localStorage pour un brouillon de nouvelle note (un par carte/jeu/utilisateur)
+function newDraftStorageKey(draftKey, userId) {
+  return draftKey ? `notesDraft_${draftKey}_${userId ?? 'anon'}` : null;
+}
+// Clé localStorage pour un brouillon d'édition d'une note existante (une par note/utilisateur)
+function editDraftStorageKey(draftKey, noteId, userId) {
+  return draftKey ? `notesDraftEdit_${draftKey}_${noteId}_${userId ?? 'anon'}` : null;
+}
+function readDraft(key) {
+  if (!key) return '';
+  try { return localStorage.getItem(key) || ''; } catch { return ''; }
+}
+function writeDraft(key, val) {
+  if (!key) return;
+  try { val ? localStorage.setItem(key, val) : localStorage.removeItem(key); } catch { /* ignore (quota/private mode) */ }
+}
+
 // Props:
 //   notes       – array of {id, text, createdAt, editedAt, authorId?}
 //   onSave      – called with full updated notes array on any change
 //   compact     – compact styling (SearchModal)
 //   currentUser – { id, role } — used to control edit/delete permissions
 //   appUsers    – array of user objects (for avatar lookup)
-export default function NotesSection({ notes: externalNotes = [], onSave, onSoftDeleteNote, onDraftChange, compact = false, token, currentUser, appUsers = [] }) {
+//   draftKey    – identifiant unique (ex: `task_${appid}`) activant la sauvegarde de brouillon en
+//                 temps réel (localStorage) pour la nouvelle note ET l'édition d'une note existante.
+//                 Si absent (ex: SearchModal), aucune persistance localStorage n'est faite — comportement inchangé.
+export default function NotesSection({ notes: externalNotes = [], onSave, onSoftDeleteNote, onDraftChange, draftKey, compact = false, token, currentUser, appUsers = [] }) {
   const { t } = useLang();
   const [notes, setNotes]         = useState(externalNotes);
-  const [newNote, setNewNote]     = useState('');
+  const [newNote, setNewNote]     = useState(() => readDraft(newDraftStorageKey(draftKey, currentUser?.id)));
+  const [newDraftRestored, setNewDraftRestored] = useState(() => !!readDraft(newDraftStorageKey(draftKey, currentUser?.id)));
   const [editingId, setEditingId] = useState(null);
   const [editText, setEditText]   = useState('');
+  const [editDraftRestored, setEditDraftRestored] = useState(false);
 
   const isAdmin = currentUser?.role === 'admin';
   // Peut modifier/supprimer : admin OU auteur de la note
@@ -63,6 +85,8 @@ export default function NotesSection({ notes: externalNotes = [], onSave, onSoft
   const setNewNoteWithDraft = (val) => {
     setNewNote(val);
     onDraftChange?.(val);
+    writeDraft(newDraftStorageKey(draftKey, currentUser?.id), val);
+    if (!val) setNewDraftRestored(false); // texte vidé → plus rien à signaler
   };
 
   const addNote = () => {
@@ -74,6 +98,7 @@ export default function NotesSection({ notes: externalNotes = [], onSave, onSoft
       authorId: currentUser?.id ?? null,
     }]);
     setNewNoteWithDraft('');
+    setNewDraftRestored(false);
   };
 
   // Soft-delete : appelle l'endpoint dédié si disponible, sinon fallback via push
@@ -93,11 +118,34 @@ export default function NotesSection({ notes: externalNotes = [], onSave, onSoft
     }
   };
 
+  // Ouvre l'édition d'une note : récupère un éventuel brouillon non enregistré (localStorage)
+  // s'il diffère du texte actuel de la note (sinon on repart du texte tel quel).
+  const startEdit = (note) => {
+    const draft = readDraft(editDraftStorageKey(draftKey, note.id, currentUser?.id));
+    const restored = !!draft && draft !== note.text;
+    setEditingId(note.id);
+    setEditText(restored ? draft : note.text);
+    setEditDraftRestored(restored);
+  };
+
+  const setEditTextWithDraft = (val) => {
+    setEditText(val);
+    writeDraft(editDraftStorageKey(draftKey, editingId, currentUser?.id), val);
+  };
+
+  const cancelEdit = () => {
+    writeDraft(editDraftStorageKey(draftKey, editingId, currentUser?.id), '');
+    setEditingId(null);
+    setEditDraftRestored(false);
+  };
+
   const saveEdit = () => {
     const text = editText.trim();
-    if (!text) { setEditingId(null); return; }
+    writeDraft(editDraftStorageKey(draftKey, editingId, currentUser?.id), '');
+    if (!text) { setEditingId(null); setEditDraftRestored(false); return; }
     push(notes.map(n => n.id === editingId ? { ...n, text, editedAt: new Date().toISOString() } : n));
     setEditingId(null);
+    setEditDraftRestored(false);
   };
 
   // Afficher uniquement les notes actives (pas dans la corbeille), du plus récent au plus ancien
@@ -132,6 +180,11 @@ export default function NotesSection({ notes: externalNotes = [], onSave, onSoft
         placeholder={notes.length === 0 ? t('notes.ph_first') : t('notes.ph_more')}
         style={inputStyle}
       />
+      {newDraftRestored && newNote.trim() && (
+        <div style={{ fontSize: 11, color: 'var(--accent)', fontStyle: 'italic', marginTop: 4 }}>
+          {t('notes.draft_restored')}
+        </div>
+      )}
       <button
         onClick={addNote}
         disabled={!newNote.trim()}
@@ -168,15 +221,20 @@ export default function NotesSection({ notes: externalNotes = [], onSave, onSoft
               {editingId === note.id ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   <textarea autoFocus value={editText}
-                    onChange={e => setEditText(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) saveEdit(); if (e.key === 'Escape') setEditingId(null); }}
+                    onChange={e => setEditTextWithDraft(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) saveEdit(); if (e.key === 'Escape') cancelEdit(); }}
                     style={{ ...inputStyle, minHeight: 52 }}
                   />
+                  {editDraftRestored && (
+                    <div style={{ fontSize: 11, color: 'var(--accent)', fontStyle: 'italic' }}>
+                      {t('notes.draft_restored')}
+                    </div>
+                  )}
                   <div style={{ display: 'flex', gap: 6 }}>
                     <button onClick={saveEdit}
                       style={{ flex: 1, background: 'var(--accent)', border: 'none', borderRadius: 6, padding: '6px 0', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
                     >{t('notes.save')}</button>
-                    <button onClick={() => setEditingId(null)}
+                    <button onClick={cancelEdit}
                       style={{ background: 'var(--surface3)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 10px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}
                     >{t('notes.cancel')}</button>
                   </div>
@@ -204,7 +262,7 @@ export default function NotesSection({ notes: externalNotes = [], onSave, onSoft
                     {/* Boutons edit / delete — uniquement si autorisé */}
                     {modifiable && (<>
                       <button
-                        onClick={e => { e.stopPropagation(); setEditingId(note.id); setEditText(note.text); }}
+                        onClick={e => { e.stopPropagation(); startEdit(note); }}
                         style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', opacity: 0.55, padding: '2px 4px', lineHeight: 1, display: 'flex', alignItems: 'center', flexShrink: 0 }}
                         title={t('card.edit_title')}
                       >
