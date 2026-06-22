@@ -14,6 +14,7 @@ import AppInfoModal from './components/AppInfoModal.jsx';
 import GameStatsWidget from './components/GameStatsWidget.jsx';
 import GlobalSearch from './components/GlobalSearch.jsx';
 import SteamEncart from './components/SteamEncart.jsx';
+import BoardIcon from './components/BoardIcon.jsx';
 import GameInfoPanel, { GAME_INFO_PANEL_WIDTH } from './components/GameInfoPanel.jsx';
 import DeadlinePanel from './components/DeadlinePanel.jsx';
 import UpcomingPanel from './components/UpcomingPanel.jsx';
@@ -849,9 +850,15 @@ export default function App() {
   // Having games in a useMemo (vs useEffect) means the effect only re-fires when the *string value* changes.
   const activeSteamAppIdForFetch = useMemo(() => {
     const board = boards.find(b => b.id === activeBoardId);
+    // Repli sur l'unique carte Steam du board si ni le board ni le mode public n'ont de
+    // headerImg/gameIcon propre — même heuristique que activeBoardSteamCards/activeBoardHeaderImg
+    // plus bas dans le composant (board perso ET public, pas seulement public comme avant).
+    const hasOwnImg = !!(board?.headerImg || board?.gameIcon || publicBoardMode?.headerImg || publicBoardMode?.gameIcon);
+    const steamCards = !hasOwnImg ? games.filter(g => !g.deletedAt && g.type !== 'custom' && g.header_img) : [];
+    const singleSteamCardImg = steamCards.length === 1 ? steamCards[0].header_img : null;
     const headerImg = board?.headerImg
       || publicBoardMode?.headerImg
-      || (publicBoardMode ? games.find(g => g.header_img)?.header_img : null)
+      || singleSteamCardImg
       || null;
     return headerImg?.match(/apps\/(\d+)\//)?.[1]
       || publicBoardMode?.gameIcon?.match(/apps\/(\d+)\//)?.[1]
@@ -2092,11 +2099,7 @@ export default function App() {
           <button onClick={() => setShowDrawer(true)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 20, cursor: 'pointer', lineHeight: 1, flexShrink: 0 }}>☰</button>
           {publicBoardMode ? (
             <>
-              {(publicBoardMode.headerImg || publicBoardMode.gameIcon) ? (
-                <img src={publicBoardMode.headerImg || publicBoardMode.gameIcon} alt="" style={{ height: 30, width: 'auto', maxWidth: 100, objectFit: 'contain', borderRadius: 4, flexShrink: 0, border: '1px solid var(--border)' }} />
-              ) : (
-                <span style={{ fontSize: 20, flexShrink: 0 }}>{publicBoardMode.emoji || '🎮'}</span>
-              )}
+              <BoardIcon img={publicBoardMode.headerImg || publicBoardMode.gameIcon} emoji={publicBoardMode.emoji} size={30} maxWidth={100} fontSize={20} />
               <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{publicBoardMode.name}</span>
               <span style={{ fontSize: 10, fontWeight: 700, color: '#3db86a', border: '2px solid #3db86a', borderRadius: 4, padding: '1px 5px', flexShrink: 0 }}>{t('common.public')}</span>
               <button onClick={toggleCompact} title={t('nav.compact')} style={{ background: compactView ? 'rgba(192,87,10,0.15)' : 'rgba(255,255,255,.06)', border: compactView ? '1px solid var(--accent)' : '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', color: compactView ? 'var(--accent)' : 'var(--text-muted)', fontSize: 11, cursor: 'pointer', flexShrink: 0 }}>⊟</button>
@@ -2122,11 +2125,7 @@ export default function App() {
             </>
           ) : (
             <>
-              {(activeBoard?.headerImg || activeBoard?.gameIcon) ? (
-                <img src={activeBoard.headerImg || activeBoard.gameIcon} alt="" style={{ height: 30, width: 'auto', maxWidth: 100, objectFit: 'contain', borderRadius: 4, flexShrink: 0, border: '1px solid var(--border)' }} />
-              ) : activeBoard ? (
-                <span style={{ fontSize: 16, flexShrink: 0 }}>{activeBoard.emoji || '🎮'}</span>
-              ) : null}
+              {activeBoard && <BoardIcon img={activeBoardHeaderImg || activeBoard.gameIcon} emoji={activeBoard.emoji} size={30} maxWidth={100} fontSize={16} />}
               <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{activeBoard?.name || 'KangBanGaming'}</span>
               {activeBoard && (
                 <span style={{ fontSize: 10, fontWeight: 700, color: activeBoard.public ? '#3db86a' : '#f5a500', border: `2px solid ${activeBoard.public ? '#3db86a' : '#f5a500'}`, borderRadius: 4, padding: '1px 5px', flexShrink: 0 }}>
@@ -2217,20 +2216,8 @@ export default function App() {
         <header ref={headerRef} style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0, position: 'relative', zIndex: 24 }}>
           {publicBoardMode ? (
             <>
-              {/* Board icon — clickable if Steam game, same as personal board */}
-              {(() => {
-                const cartoucheImg = publicBoardMode.headerImg || publicBoardMode.gameIcon;
-                const steamAppId = cartoucheImg?.match(/apps\/(\d+)\//)?.[1];
-                return cartoucheImg ? (
-                  <img src={cartoucheImg} alt=""
-                    onClick={steamAppId ? () => window.open(`https://store.steampowered.com/app/${steamAppId}`, '_blank') : undefined}
-                    title={steamAppId ? 'Voir sur Steam' : undefined}
-                    style={{ height: 53, width: 'auto', maxWidth: 220, objectFit: 'contain', borderRadius: 6, flexShrink: 0, border: '1px solid var(--border)', cursor: steamAppId ? 'pointer' : 'default' }}
-                  />
-                ) : (
-                  <span style={{ fontSize: 36, flexShrink: 0 }}>{publicBoardMode.emoji || '🎮'}</span>
-                );
-              })()}
+              {/* Board icon — clickable if Steam game, same as personal board ; repli emoji auto si image cassée */}
+              <BoardIcon img={publicBoardMode.headerImg || publicBoardMode.gameIcon} emoji={publicBoardMode.emoji} />
               {/* Board name — big, same as personal board */}
               <span style={{ fontWeight: 700, fontSize: 24, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flexShrink: 1 }}>{publicBoardMode.name}</span>
               {/* "Board Public" badge — same style as Public badge on personal boards */}
@@ -2245,6 +2232,8 @@ export default function App() {
               <button onClick={toggleCompact} style={{ background: compactView ? 'rgba(192,87,10,0.15)' : 'var(--surface2)', border: compactView ? '1px solid var(--accent)' : '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: compactView ? 'var(--accent)' : 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0, fontWeight: compactView ? 700 : 400 }}>{t('nav.compact')}</button>
               <button onClick={refreshPublicBoard} style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 11px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ fontSize: 15, lineHeight: 1 }}>↻</span> {t('nav.refresh').replace('↻ ', '')}</button>
               <div style={{ flex: '1 1 0' }} />
+              {/* Encart infos Steam (joueurs, avis, prix, tags…) — visible uniquement si le board est lié à un jeu Steam */}
+              <SteamEncart gameInfo={gameInfo} />
               <input type="search" placeholder={t('nav.filter_ph')} value={search} onChange={e => setSearch(e.target.value)}
                 style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 10px', color: 'var(--text)', fontSize: 12, outline: 'none', maxWidth: 180 }} />
               <button onClick={closePublicBoard} style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>{t('nav.quit')}</button>
@@ -2262,21 +2251,8 @@ export default function App() {
             </>
           ) : (
             <>
-              {/* Board icon — clickable if Steam game */}
-              {(() => {
-                const cartoucheImg = activeBoardHeaderImg || activeBoard?.gameIcon;
-                const steamAppId = cartoucheImg?.match(/apps\/(\d+)\//)?.[1];
-                return cartoucheImg ? (
-                  <img
-                    src={cartoucheImg} alt=""
-                    onClick={steamAppId ? () => window.open(`https://store.steampowered.com/app/${steamAppId}`, '_blank') : undefined}
-                    title={steamAppId ? 'Voir sur Steam' : undefined}
-                    style={{ height: 53, width: 'auto', maxWidth: 220, objectFit: 'contain', borderRadius: 6, flexShrink: 0, border: '1px solid var(--border)', cursor: steamAppId ? 'pointer' : 'default' }}
-                  />
-                ) : activeBoard ? (
-                  <span style={{ fontSize: 36, flexShrink: 0 }}>{activeBoard.emoji || '🎮'}</span>
-                ) : null;
-              })()}
+              {/* Board icon — clickable if Steam game ; repli emoji auto si image cassée */}
+              {activeBoard && <BoardIcon img={activeBoardHeaderImg || activeBoard.gameIcon} emoji={activeBoard.emoji} />}
               <button onClick={() => { setActiveBoardId(null); setShowHome(true); }} title="Accueil" style={{ background: 'none', border: 'none', color: 'var(--text)', fontSize: 18, cursor: 'pointer', padding: '2px 5px', opacity: 0.75, fontWeight: 700 }}>←</button>
               {/* Board name — double-click to edit inline */}
               {editingBoardName ? (
@@ -2315,6 +2291,8 @@ export default function App() {
                 <button onClick={toggleCompact} style={{ background: compactView ? 'rgba(192,87,10,0.15)' : 'var(--surface2)', border: compactView ? '1px solid var(--accent)' : '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: compactView ? 'var(--accent)' : 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0, fontWeight: compactView ? 700 : 400 }}>{t('nav.compact')}</button>
               )}
               <div style={{ flex: '1 1 0' }} />
+              {/* Encart infos Steam (joueurs, avis, prix, tags…) — visible uniquement si le board est lié à un jeu Steam */}
+              <SteamEncart gameInfo={gameInfo} />
               {(activeBoardId || publicBoardMode) && archiveCount > 0 && (
                 <button
                   onClick={toggleShowArchived}

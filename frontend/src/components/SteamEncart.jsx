@@ -29,7 +29,7 @@ export default function SteamEncart({ gameInfo }) {
           <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#3db86a', boxShadow: '0 0 6px #3db86a88', display: 'inline-block', flexShrink: 0 }} />
           <div>
             <div style={{ fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>{gameInfo.playerCount.toLocaleString('fr-FR')}</div>
-            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.45)', lineHeight: 1 }}>en jeu</div>
+            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.45)', lineHeight: 1 }}>{t('ginfo.in_game')}</div>
           </div>
         </div>
       )}
@@ -39,13 +39,13 @@ export default function SteamEncart({ gameInfo }) {
         <div
           style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', background: reviewBg, borderRight: (gameInfo.metacritic !== null || gameInfo.price) ? '1px solid rgba(255,255,255,0.08)' : undefined, cursor: 'pointer' }}
           onClick={() => window.open(`https://store.steampowered.com/app/${gameInfo.appid}/#app_reviews_hash`, '_blank')}
-          title="Voir les avis Steam"
+          title={t('ginfo.see_reviews')}
         >
           <span style={{ fontSize: 14, lineHeight: 1 }}>{reviewEmoji}</span>
           <div>
             <div style={{ fontWeight: 700, color: reviewColor, lineHeight: 1.2 }}>{gameInfo.reviewScoreDesc}</div>
             <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.45)', lineHeight: 1 }}>
-              {gameInfo.positivePercent !== null ? `${gameInfo.positivePercent}% positif` : ''}
+              {gameInfo.positivePercent !== null ? t('ginfo.positive_pct', { percent: gameInfo.positivePercent }) : ''}
               {gameInfo.totalReviews ? ` · ${gameInfo.totalReviews.toLocaleString('fr-FR')}` : ''}
             </div>
           </div>
@@ -57,7 +57,7 @@ export default function SteamEncart({ gameInfo }) {
         <div
           style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRight: gameInfo.price ? '1px solid rgba(255,255,255,0.08)' : undefined, cursor: gameInfo.metacriticUrl ? 'pointer' : 'default' }}
           onClick={() => gameInfo.metacriticUrl && window.open(gameInfo.metacriticUrl, '_blank')}
-          title={gameInfo.metacriticUrl ? 'Voir sur Metacritic' : undefined}
+          title={gameInfo.metacriticUrl ? t('ginfo.see_metacritic') : undefined}
         >
           <div style={{ width: 26, height: 26, borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 13, color: '#000', background: gameInfo.metacritic >= 75 ? '#6c3' : gameInfo.metacritic >= 50 ? '#fc3' : '#f00', flexShrink: 0 }}>
             {gameInfo.metacritic}

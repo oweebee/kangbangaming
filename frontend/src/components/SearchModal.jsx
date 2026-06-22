@@ -258,8 +258,8 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
         {tab === 'custom' && (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
-          {/* ── Sous-onglets Fiche / Notes (édition seulement) ── */}
-          {isEditMode && (
+          {/* ── Sous-onglets Fiche / Notes — visibles aussi à la création pour permettre
+                 d'ajouter une première note dès la création de la carte/tâche ── */}
           <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', padding: '0 22px', flexShrink: 0 }}>
             {[
               { id: 'fiche', label: t('search.subtab_sheet') },
@@ -274,7 +274,6 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
               }}>{tab.label}</button>
             ))}
           </div>
-          )}
 
           {customSubTab === 'fiche' && (
           <div style={{ flex: 1, overflowY: 'auto', padding: '20px 22px 0', display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -288,7 +287,8 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
             <div style={{ display: 'flex', justifyContent: 'center' }}>
               <div style={{
                 background: 'var(--surface2)',
-                border: previewTt ? `1.5px solid ${previewTt.border}` : '1px solid var(--border)',
+                // Aperçu en temps réel : type de tâche > couleur perso choisie (boards personnalisés) > bordure neutre par défaut
+                border: previewTt ? `1.5px solid ${previewTt.border}` : !isTaskBoard ? `1.5px solid ${customColor}` : '1px solid var(--border)',
                 borderRadius: 9, width: 185, overflow: 'hidden',
               }}>
                 <div style={{ width: '100%', position: 'relative' }}>

@@ -415,6 +415,9 @@ fr: {
   'ginfo.news_count':      '{count} articles',
   'ginfo.no_news':         'Aucune actualité disponible',
   'ginfo.no_game':         'Aucun jeu Steam sélectionné',
+  'ginfo.see_reviews':     'Voir les avis Steam',
+  'ginfo.see_metacritic':  'Voir sur Metacritic',
+  'ginfo.positive_pct':    '{percent}% positif',
 
   // GameStatsWidget
   'stats.loading':         'Chargement…',
@@ -899,6 +902,9 @@ en: {
   'ginfo.news_count':      '{count} articles',
   'ginfo.no_news':         'No news available',
   'ginfo.no_game':         'No Steam game selected',
+  'ginfo.see_reviews':     'View Steam reviews',
+  'ginfo.see_metacritic':  'View on Metacritic',
+  'ginfo.positive_pct':    '{percent}% positive',
 
   'stats.loading':         'Loading…',
   'stats.never_played':    'Never played',
@@ -1369,6 +1375,9 @@ es: {
   'ginfo.news_count':      '{count} artículos',
   'ginfo.no_news':         'No hay noticias disponibles',
   'ginfo.no_game':         'Ningún juego Steam seleccionado',
+  'ginfo.see_reviews':     'Ver reseñas de Steam',
+  'ginfo.see_metacritic':  'Ver en Metacritic',
+  'ginfo.positive_pct':    '{percent}% positivo',
 
   'stats.loading':         'Cargando…',
   'stats.never_played':    'Nunca jugado',
@@ -1839,6 +1848,9 @@ de: {
   'ginfo.news_count':      '{count} Artikel',
   'ginfo.no_news':         'Keine Neuigkeiten verfügbar',
   'ginfo.no_game':         'Kein Steam-Spiel ausgewählt',
+  'ginfo.see_reviews':     'Steam-Bewertungen ansehen',
+  'ginfo.see_metacritic':  'Auf Metacritic ansehen',
+  'ginfo.positive_pct':    '{percent}% positiv',
 
   'stats.loading':         'Wird geladen…',
   'stats.never_played':    'Nie gespielt',
@@ -2309,6 +2321,9 @@ ru: {
   'ginfo.news_count':      '{count} статей',
   'ginfo.no_news':         'Нет доступных новостей',
   'ginfo.no_game':         'Игра Steam не выбрана',
+  'ginfo.see_reviews':     'Смотреть отзывы Steam',
+  'ginfo.see_metacritic':  'Смотреть на Metacritic',
+  'ginfo.positive_pct':    '{percent}% положительных',
 
   'stats.loading':         'Загрузка…',
   'stats.never_played':    'Никогда не играл',
@@ -2779,6 +2794,9 @@ zh: {
   'ginfo.news_count':      '{count} 篇文章',
   'ginfo.no_news':         '暂无新闻',
   'ginfo.no_game':         '未选择Steam游戏',
+  'ginfo.see_reviews':     '查看Steam评价',
+  'ginfo.see_metacritic':  '在Metacritic上查看',
+  'ginfo.positive_pct':    '{percent}% 好评',
 
   'stats.loading':         '加载中…',
   'stats.never_played':    '从未游玩',
