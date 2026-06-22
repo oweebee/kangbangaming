@@ -202,9 +202,13 @@ export default function NotesSection({ notes: externalNotes = [], onSave, onSoft
         }}
       >{t('notes.add_btn')}</button>
 
-      {/* ── Existing notes — newest first, scroll auto si trop de notes ── */}
+      {/* ── Existing notes — newest first. Pas de scroll interne dédié : la liste s'étire
+           naturellement et c'est le conteneur parent (déjà overflowY:auto dans les modales
+           qui utilisent NotesSection) qui gère le défilement, uniquement si l'ensemble du
+           panneau (zone de saisie + liste) dépasse la hauteur dispo. Évite une barre de
+           défilement imbriquée qui apparaîtrait avant que ce soit vraiment nécessaire. ── */}
       {notes.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: compact ? 320 : 260, overflowY: 'auto', paddingRight: 2 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingRight: 2 }}>
           {sorted.map(note => {
             // Priorité à currentUser pour ses propres notes (données Steam toujours dispo)
             const author = note.authorId

@@ -1813,8 +1813,11 @@ export default function App() {
         </button>
       </div>
 
-      {/* Boards list */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '6px 6px' }}>
+      {/* Boards list — épinglés affichés en priorité, avant "Mes boards" (séparateur plus bas).
+          flex:1 + minHeight garanti : cette zone est la première à se réduire et à afficher
+          sa propre barre de défilement quand la place manque (les sections fixes du dessous —
+          boards publics suivis, formulaire nouveau board — gardent leur taille naturelle). */}
+      <div style={{ flex: 1, minHeight: 140, overflowY: 'auto', padding: '6px 6px' }}>
         {/* ⭐ Épinglés */}
         {personalFavIds.length > 0 && sortedBoards.some(b => personalFavIds.includes(b.id)) && (
           <>
@@ -1954,13 +1957,16 @@ export default function App() {
         )}
       </div>
 
-      {/* Followed public boards */}
+      {/* Followed public boards — section secondaire à taille fixe (label toujours visible) ;
+          sa propre liste est plafonnée (maxHeight + scroll interne) pour ne jamais pouvoir
+          écraser "Mes boards" au-dessus si beaucoup de boards publics sont suivis. */}
       {favBoards.length > 0 && (
-        <div style={{ padding: '4px 6px 0', borderTop: '1px solid var(--border)' }}>
+        <div style={{ padding: '4px 6px 0', borderTop: '1px solid var(--border)', flexShrink: 0 }}>
           <div style={{ fontSize: 10, color: 'var(--text-muted)', padding: '4px 2px 4px 4px', letterSpacing: '0.06em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 4 }}>
             <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
             {t('board.followed_public')}
           </div>
+          <div style={{ maxHeight: '32vh', overflowY: 'auto' }}>
           {sortedFavBoards.filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).map(b => (
             <div key={b.id}
               draggable
@@ -1993,6 +1999,7 @@ export default function App() {
               <svg viewBox="0 0 24 24" width="10" height="10" fill="var(--accent)" stroke="var(--accent)" strokeWidth="1.5" style={{ flexShrink: 0, opacity: 0.7 }}><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
             </div>
           ))}
+          </div>
         </div>
       )}
 
@@ -2231,8 +2238,8 @@ export default function App() {
               )}
               <button onClick={toggleCompact} style={{ background: compactView ? 'rgba(192,87,10,0.15)' : 'var(--surface2)', border: compactView ? '1px solid var(--accent)' : '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: compactView ? 'var(--accent)' : 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0, fontWeight: compactView ? 700 : 400 }}>{t('nav.compact')}</button>
               <button onClick={refreshPublicBoard} style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 11px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ fontSize: 15, lineHeight: 1 }}>↻</span> {t('nav.refresh').replace('↻ ', '')}</button>
-              <div style={{ flex: '1 1 0' }} />
-              {/* Encart infos Steam (joueurs, avis, prix, tags…) — visible uniquement si le board est lié à un jeu Steam */}
+              {/* Encart infos Steam (joueurs, avis, prix, tags…) — visible uniquement si le board est lié à un jeu Steam ;
+                  le composant gère lui-même son centrage (spacers internes) + son masquage si pas assez de place */}
               <SteamEncart gameInfo={gameInfo} />
               <input type="search" placeholder={t('nav.filter_ph')} value={search} onChange={e => setSearch(e.target.value)}
                 style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 10px', color: 'var(--text)', fontSize: 12, outline: 'none', maxWidth: 180 }} />
@@ -2290,8 +2297,8 @@ export default function App() {
               {(activeBoardId || publicBoardMode) && (
                 <button onClick={toggleCompact} style={{ background: compactView ? 'rgba(192,87,10,0.15)' : 'var(--surface2)', border: compactView ? '1px solid var(--accent)' : '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: compactView ? 'var(--accent)' : 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0, fontWeight: compactView ? 700 : 400 }}>{t('nav.compact')}</button>
               )}
-              <div style={{ flex: '1 1 0' }} />
-              {/* Encart infos Steam (joueurs, avis, prix, tags…) — visible uniquement si le board est lié à un jeu Steam */}
+              {/* Encart infos Steam (joueurs, avis, prix, tags…) — visible uniquement si le board est lié à un jeu Steam ;
+                  le composant gère lui-même son centrage (spacers internes) + son masquage si pas assez de place */}
               <SteamEncart gameInfo={gameInfo} />
               {(activeBoardId || publicBoardMode) && archiveCount > 0 && (
                 <button

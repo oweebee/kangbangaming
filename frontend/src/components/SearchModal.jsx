@@ -168,7 +168,10 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
       <div style={{
         background: 'var(--surface)', border: '1px solid var(--border)',
         borderRadius: 14, width: 600, maxWidth: '90vw',
-        height: 640, maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden',
+        // Hauteur dictée par le contenu (pas de valeur fixe) : exploite la place dispo à
+        // l'écran, plafonnée à 90vh — barre de défilement interne seulement si le contenu
+        // dépasse réellement cette limite.
+        maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden',
       }}>
         {/* Header */}
         <div style={{ padding: '16px 20px 0', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
