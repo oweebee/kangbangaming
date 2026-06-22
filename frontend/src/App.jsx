@@ -1867,6 +1867,14 @@ export default function App() {
               </div>
             )}
             <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 14, fontWeight: 700, opacity: hiddenBoardIds.has(b.id) ? 0.45 : 1 }}>{b.name}</span>
+            {/* Désépingler (déjà épinglé dans cette section) */}
+            <button
+              onClick={e => { e.stopPropagation(); togglePersonalFavorite(b.id, true); }}
+              title={t('hbc.pinned')}
+              style={{ background: 'none', border: 'none', fontSize: 11, padding: 0, cursor: 'pointer', flexShrink: 0, lineHeight: 1 }}
+            >
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="#f5c518" stroke="#f5c518" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+            </button>
             {/* Public toggle */}
             <button
               onClick={e => { e.stopPropagation(); toggleBoardPublic(b.id, !b.public); }}
@@ -1936,6 +1944,14 @@ export default function App() {
               </div>
             )}
             <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 14, fontWeight: 700 }}>{b.name}</span>
+            {/* Épingler (pas encore épinglé, on est dans "Mes boards") */}
+            <button
+              onClick={e => { e.stopPropagation(); togglePersonalFavorite(b.id, false); }}
+              title={t('hbc.pin')}
+              style={{ background: 'none', border: 'none', fontSize: 11, padding: 0, cursor: 'pointer', flexShrink: 0, opacity: 0.4, lineHeight: 1 }}
+            >
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="var(--text-muted)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+            </button>
             <button
               onClick={e => { e.stopPropagation(); toggleBoardPublic(b.id, !b.public); }}
               title={b.public ? t('board.make_private_title') : t('board.make_public_title')}
