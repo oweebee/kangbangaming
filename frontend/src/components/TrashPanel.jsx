@@ -156,12 +156,19 @@ export default function TrashPanel({ token, isAdmin = false }) {
     </div>
   );
 
+  // Liste unifiée — boards, cartes et notes mélangés, triés du plus récent
+  // au plus ancien (deletedAt desc), sans distinction de catégorie.
+  const merged = [
+    ...boards.map(b => ({ ...b, _kind: 'board' })),
+    ...items.map(i => ({ ...i, _kind: i.type })), // 'game' | 'note'
+  ].sort((a, b) => new Date(b.deletedAt) - new Date(a.deletedAt));
+
   return (
     <div>
       {/* En-tête */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, gap: 8 }}>
         <div style={{ fontSize: 12, color: 'var(--text-muted)', flex: 1 }}>
-          {t('trash.count', { count: items.length + boards.length })}
+          {t('trash.count', { count: merged.length })}
         </div>
         <button onClick={load} title="Rafraîchir"
           style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 7, padding: '4px 9px', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 13, lineHeight: 1 }}>
@@ -173,82 +180,69 @@ export default function TrashPanel({ token, isAdmin = false }) {
         </button>
       </div>
 
-      {/* ── Boards supprimés ── */}
-      {boards.length > 0 && (
-        <div style={{ marginBottom: 14 }}>
-          <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.1em', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 8 }}>
-            Boards supprimés
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {boards.map(board => {
-              const actKey = `board_${board.id}`;
-              const busy   = acting.has(actKey);
-              const urgent = board.daysLeft <= 3;
-              return (
-                <div key={board.id} style={{
-                  background: 'var(--surface2)', border: '1px solid var(--border)',
-                  borderRadius: 10, overflow: 'hidden',
-                  borderLeft: `3px solid ${urgent ? '#d07070' : 'rgba(192,120,60,0.6)'}`,
-                  opacity: busy ? 0.55 : 1, transition: 'opacity .15s',
-                }}>
-                  {board.headerImg && (
-                    <div style={{ position: 'relative', height: 48, overflow: 'hidden' }}>
-                      <img src={board.headerImg} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.45 }} />
-                      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 20%, var(--surface2))' }} />
-                      <span style={{ position: 'absolute', top: 6, left: 9, fontSize: 9, fontWeight: 800, color: '#fff', textShadow: '0 1px 3px #000', letterSpacing: '0.1em', background: 'rgba(0,0,0,0.45)', borderRadius: 3, padding: '1px 5px' }}>
-                        CORBEILLE
-                      </span>
-                    </div>
-                  )}
-                  <div style={{ padding: '9px 13px 11px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                      {!board.headerImg && (
-                        <span style={{ fontSize: 22, lineHeight: 1, flexShrink: 0 }}>{board.emoji || '🎮'}</span>
-                      )}
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {board.name}
-                        </div>
-                        <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 1 }}>
-                          {board.gameCount} carte{board.gameCount !== 1 ? 's' : ''}
-                        </div>
+      {/* Liste unifiée, triée par date de suppression (récent → ancien) */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {merged.map(entry => {
+          // ══ Board supprimé ════════════════════════════════════════
+          if (entry._kind === 'board') {
+            const board  = entry;
+            const actKey = `board_${board.id}`;
+            const busy   = acting.has(actKey);
+            const urgent = board.daysLeft <= 3;
+            return (
+              <div key={`board_${board.id}`} style={{
+                background: 'var(--surface2)', border: '1px solid var(--border)',
+                borderRadius: 10, overflow: 'hidden',
+                borderLeft: `3px solid ${urgent ? '#d07070' : 'rgba(192,120,60,0.6)'}`,
+                opacity: busy ? 0.55 : 1, transition: 'opacity .15s',
+              }}>
+                {board.headerImg && (
+                  <div style={{ position: 'relative', height: 48, overflow: 'hidden' }}>
+                    <img src={board.headerImg} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.45 }} />
+                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 20%, var(--surface2))' }} />
+                    <span style={{ position: 'absolute', top: 6, left: 9, fontSize: 9, fontWeight: 800, color: '#fff', textShadow: '0 1px 3px #000', letterSpacing: '0.1em', background: 'rgba(0,0,0,0.45)', borderRadius: 3, padding: '1px 5px' }}>
+                      CORBEILLE · BOARD
+                    </span>
+                  </div>
+                )}
+                <div style={{ padding: '9px 13px 11px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                    {!board.headerImg && (
+                      <span style={{ fontSize: 22, lineHeight: 1, flexShrink: 0 }}>{board.emoji || '🎮'}</span>
+                    )}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {board.name}
                       </div>
-                      <span style={{ flexShrink: 0, fontSize: 10, fontWeight: urgent ? 700 : 400, color: urgent ? '#d07070' : 'var(--text-muted)' }}>
-                        {t('trash.days_left', { days: board.daysLeft })}
-                      </span>
+                      <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 1 }}>
+                        {board.gameCount} carte{board.gameCount !== 1 ? 's' : ''}
+                      </div>
                     </div>
-                    <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 8 }}>
-                      {t('trash.deleted_on')} {formatDate(board.deletedAt)}
-                    </div>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <button onClick={() => restoreBoard(board)} disabled={busy}
-                        style={{ flex: 1, background: 'rgba(61,184,106,0.1)', border: '1px solid rgba(61,184,106,0.4)', borderRadius: 6, padding: '5px 0', cursor: busy ? 'not-allowed' : 'pointer', color: '#3db86a', fontSize: 11, fontWeight: 600 }}>
-                        {t('trash.restore')}
-                      </button>
-                      <button onClick={() => permDeleteBoard(board)} disabled={busy}
-                        style={{ background: 'rgba(192,80,80,0.08)', border: '1px solid rgba(192,80,80,0.3)', borderRadius: 6, padding: '5px 10px', cursor: busy ? 'not-allowed' : 'pointer', color: '#d07070', fontSize: 11, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <TrashIcon size={10} />
-                      </button>
-                    </div>
+                    <span style={{ flexShrink: 0, fontSize: 10, fontWeight: urgent ? 700 : 400, color: urgent ? '#d07070' : 'var(--text-muted)' }}>
+                      {t('trash.days_left', { days: board.daysLeft })}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 8 }}>
+                    {t('trash.deleted_on')} {formatDate(board.deletedAt)}
+                  </div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button onClick={() => restoreBoard(board)} disabled={busy}
+                      style={{ flex: 1, background: 'rgba(61,184,106,0.1)', border: '1px solid rgba(61,184,106,0.4)', borderRadius: 6, padding: '5px 0', cursor: busy ? 'not-allowed' : 'pointer', color: '#3db86a', fontSize: 11, fontWeight: 600 }}>
+                      {t('trash.restore')}
+                    </button>
+                    <button onClick={() => permDeleteBoard(board)} disabled={busy}
+                      style={{ background: 'rgba(192,80,80,0.08)', border: '1px solid rgba(192,80,80,0.3)', borderRadius: 6, padding: '5px 10px', cursor: busy ? 'not-allowed' : 'pointer', color: '#d07070', fontSize: 11, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <TrashIcon size={10} />
+                    </button>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+              </div>
+            );
+          }
 
-      {/* ── Cartes & notes ── */}
-      {items.length > 0 && boards.length > 0 && (
-        <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.1em', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 8 }}>
-          Cartes & notes
-        </div>
-      )}
-
-      {/* Liste */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {items.map(item => {
-          const isGame = item.type === 'game';
+          // ══ Carte jeu ou note texte ═══════════════════════════════
+          const item   = entry;
+          const isGame = item._kind === 'game';
           const key    = isGame ? `game_${item.boardId}_${item.gameId}` : `note_${item.id}_${item.userId || ''}`;
           const actKey = isGame ? item.gameId : item.id;
           const busy   = acting.has(actKey);

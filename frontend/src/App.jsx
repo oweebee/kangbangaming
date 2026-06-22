@@ -922,7 +922,19 @@ export default function App() {
 
   const deleteBoard = async (boardId) => {
     if (!confirm(t('err.del_board'))) return;
-    await fetch(`${API}/boards/${boardId}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+    try {
+      const res = await fetch(`${API}/boards/${boardId}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) {
+        console.error('[deleteBoard] HTTP', res.status);
+        alert(`Erreur lors de la suppression du board (${res.status}). Le board n'a pas été supprimé, rechargez la page.`);
+        return;
+      }
+    } catch (e) {
+      console.error('[deleteBoard] network error', e);
+      alert(`Erreur réseau lors de la suppression du board. Le board n'a pas été supprimé.`);
+      return;
+    }
+    // Suppression confirmée côté serveur (board passé en corbeille) → on peut retirer de l'UI.
     const remaining = boards.filter(b => b.id !== boardId);
     setBoards(remaining);
     if (activeBoardId === boardId) { setActiveBoardId(remaining[0]?.id || null); setColumns(remaining[0]?.columns || []); setGames([]); }
@@ -978,21 +990,50 @@ export default function App() {
   const addGame = async (game, targetColId) => {
     const colId = targetColId || columns[0]?.id;
     const boardApi = getBoardApi();
-    await fetch(`${boardApi}/games`, {
-      method: 'POST', headers: authHeaders(token),
-      body: JSON.stringify({ appid: game.appid, name: game.name, header_img: game.header_img, icon_img: game.icon_img, column: colId, type: game.type || 'steam', emoji: game.emoji || null, color: game.color ?? null, taskType: game.taskType || null, dueDate: game.dueDate || null, startDate: game.startDate || null, endDate: game.endDate || null, urgent: game.urgent ?? false, assignees: game.assignees ?? [], notes: game.notes ?? [], progress: game.progress ?? null }),
-    });
+    try {
+      const res = await fetch(`${boardApi}/games`, {
+        method: 'POST', headers: authHeaders(token),
+        body: JSON.stringify({ appid: game.appid, name: game.name, header_img: game.header_img, icon_img: game.icon_img, column: colId, type: game.type || 'steam', emoji: game.emoji || null, color: game.color ?? null, taskType: game.taskType || null, dueDate: game.dueDate || null, startDate: game.startDate || null, endDate: game.endDate || null, urgent: game.urgent ?? false, assignees: game.assignees ?? [], notes: game.notes ?? [], progress: game.progress ?? null }),
+      });
+      if (!res.ok) {
+        console.error('[addGame] HTTP', res.status);
+        alert(`Erreur lors de l'ajout de la carte (${res.status}).`);
+        return;
+      }
+    } catch (e) {
+      console.error('[addGame] network error', e);
+      alert(`Erreur réseau lors de l'ajout de la carte.`);
+      return;
+    }
+    resyncGames();
+    if (game.dueDate || game.startDate || game.endDate) setDeadlineRefreshKey(k => k + 1);
+  };
+  // Resynchronise l'état local avec le serveur après un échec (mode perso ou public)
+  const resyncGames = () => {
     if (publicBoardMode) {
-      const res = await fetch(`${boardApi}/games`, { headers: authHeaders(token) });
-      if (res.ok) setGames(await res.json());
+      const boardApi = getBoardApi();
+      fetch(`${boardApi}/games`, { headers: authHeaders(token) }).then(res => res.ok && res.json()).then(data => data && setGames(data));
     } else {
       fetchGames(activeBoardId);
     }
-    if (game.dueDate || game.startDate || game.endDate) setDeadlineRefreshKey(k => k + 1);
   };
+
   const removeGame = async (appid) => {
     const boardApi = getBoardApi();
-    await fetch(`${boardApi}/games/${appid}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+    try {
+      const res = await fetch(`${boardApi}/games/${appid}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        console.error('[removeGame] HTTP', res.status, err);
+        alert(`Erreur lors de la suppression (${res.status}). La carte n'a pas été supprimée, rechargez la page.`);
+        return;
+      }
+    } catch (e) {
+      console.error('[removeGame] network error', e);
+      alert(`Erreur réseau lors de la suppression. La carte n'a pas été supprimée.`);
+      return;
+    }
+    // Suppression confirmée côté serveur (carte passée en corbeille) → on peut retirer de l'UI.
     setGames(prev => prev.filter(g => g.appid !== appid));
   };
 
@@ -1003,13 +1044,35 @@ export default function App() {
     // disparaît immédiatement ; le bouton reste dispo pour les réafficher manuellement.
     setShowArchived(false);
     const boardApi = getBoardApi();
-    fetch(`${boardApi}/games/${appid}`, { method: 'PATCH', headers: authHeaders(token), body: JSON.stringify({ archived: true }) });
+    try {
+      const res = await fetch(`${boardApi}/games/${appid}`, { method: 'PATCH', headers: authHeaders(token), body: JSON.stringify({ archived: true }) });
+      if (!res.ok) {
+        console.error('[archiveGame] HTTP', res.status);
+        alert(`Erreur lors de l'archivage (${res.status}). La page va se resynchroniser.`);
+        resyncGames();
+      }
+    } catch (e) {
+      console.error('[archiveGame] network error', e);
+      alert(`Erreur réseau lors de l'archivage. La page va se resynchroniser.`);
+      resyncGames();
+    }
   };
 
   const unarchiveGame = async (appid) => {
     setGames(prev => prev.map(g => g.appid === appid ? { ...g, archived: false } : g));
     const boardApi = getBoardApi();
-    fetch(`${boardApi}/games/${appid}`, { method: 'PATCH', headers: authHeaders(token), body: JSON.stringify({ archived: false }) });
+    try {
+      const res = await fetch(`${boardApi}/games/${appid}`, { method: 'PATCH', headers: authHeaders(token), body: JSON.stringify({ archived: false }) });
+      if (!res.ok) {
+        console.error('[unarchiveGame] HTTP', res.status);
+        alert(`Erreur lors de la restauration (${res.status}). La page va se resynchroniser.`);
+        resyncGames();
+      }
+    } catch (e) {
+      console.error('[unarchiveGame] network error', e);
+      alert(`Erreur réseau lors de la restauration. La page va se resynchroniser.`);
+      resyncGames();
+    }
   };
 
   const reorderGamesInColumn = useCallback(async (colId, orderedAppids) => {
