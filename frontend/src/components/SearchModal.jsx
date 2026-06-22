@@ -279,7 +279,7 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
           </div>
 
           {customSubTab === 'fiche' && (
-          <div style={{ flex: 1, overflowY: 'auto', padding: '20px 22px 0', display: 'flex', flexDirection: 'column', gap: 18 }}>
+          <div style={{ flex: 1, overflowY: 'auto', padding: '20px 22px 16px', display: 'flex', flexDirection: 'column', gap: 18 }}>
             {!isEditMode && (
               <p style={{ margin: 0, fontSize: 14, color: 'var(--text-muted)' }}>
                 {t('search.custom_desc')}

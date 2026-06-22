@@ -997,6 +997,11 @@ export default function App() {
 
   const archiveGame = async (appid) => {
     setGames(prev => prev.map(g => g.appid === appid ? { ...g, archived: true } : g));
+    // Dès qu'on archive, on repasse l'affichage des archivées à OFF par défaut :
+    // la carte qu'on vient d'archiver (et toutes les autres déjà archivées)
+    // disparaît immédiatement ; le bouton reste dispo pour les réafficher manuellement.
+    setShowArchived(false);
+    try { localStorage.setItem('showArchived', '0'); } catch {}
     const boardApi = getBoardApi();
     fetch(`${boardApi}/games/${appid}`, { method: 'PATCH', headers: authHeaders(token), body: JSON.stringify({ archived: true }) });
   };
@@ -1607,7 +1612,7 @@ export default function App() {
           {!homePublicCollapsed && (nonFollowedPublicBoards.length === 0 ? (
             <div style={{ color: 'var(--text-muted)', fontSize: 12, padding: '16px 0' }}>{t('board.no_public_long')}</div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: compactView ? '1fr' : 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
               {applySectionOrder(nonFollowedPublicBoards, homePublicOrder).filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).map(b => (
                 <div key={b.id}
                   draggable
@@ -1624,7 +1629,8 @@ export default function App() {
                     typeColor={getBoardTypeColor(b)}
                     isHidden={hiddenBoardIds.has(b.id)}
                     onHide={() => hideBoard(b.id)}
-                    onUnhide={() => unhideBoard(b.id)} />
+                    onUnhide={() => unhideBoard(b.id)}
+                    compact={compactView} />
                 </div>
               ))}
             </div>
@@ -1645,7 +1651,7 @@ export default function App() {
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#70b8ff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transition: 'transform .2s', transform: homeFollowedCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', flexShrink: 0, opacity: 0.7 }}><polyline points="6 9 12 15 18 9"/></svg>
               </div>
               {!homeFollowedCollapsed && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: compactView ? '1fr' : 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
                   {applySectionOrder(followedPublicBoards, homeFollowedOrder).filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).map(b => (
                     <div key={b.id}
                       draggable
@@ -1655,7 +1661,7 @@ export default function App() {
                       onDrop={e => { e.preventDefault(); handleHomeDrop('followed', b.id, setHomeFollowedOrder, 'homeFollowedOrder'); }}
                       style={{ opacity: homeDragId === b.id ? 0.4 : 1, outline: homeDragOver === `followed_${b.id}` && homeDragId !== b.id ? '2px dashed #70b8ff' : 'none', borderRadius: 12, cursor: 'grab', transition: 'opacity .15s, transform .15s, box-shadow .15s', transform: homeDragId === b.id ? 'rotate(2deg) scale(1.03)' : 'none', boxShadow: homeDragId === b.id ? '0 8px 28px rgba(0,0,0,0.55)' : 'none' }}
                     >
-                      <HomeBoardCard board={b} isPublic isFav onToggleFav={(cur) => toggleFavorite(b.id, b, cur)} onClick={() => openPublicBoard(b)} typeColor={getBoardTypeColor(b)} isHidden={hiddenBoardIds.has(b.id)} onHide={() => hideBoard(b.id)} onUnhide={() => unhideBoard(b.id)} />
+                      <HomeBoardCard board={b} isPublic isFav onToggleFav={(cur) => toggleFavorite(b.id, b, cur)} onClick={() => openPublicBoard(b)} typeColor={getBoardTypeColor(b)} isHidden={hiddenBoardIds.has(b.id)} onHide={() => hideBoard(b.id)} onUnhide={() => unhideBoard(b.id)} compact={compactView} />
                     </div>
                   ))}
                 </div>
@@ -1681,7 +1687,7 @@ export default function App() {
                     <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#f5c518" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transition: 'transform .2s', transform: homeFavCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', flexShrink: 0, opacity: 0.7 }}><polyline points="6 9 12 15 18 9"/></svg>
                   </div>
                   {!homeFavCollapsed && (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: compactView ? '1fr' : 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
                       {applySectionOrder(favBoards2, homeFavOrder).filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).map(b => (
                         <div key={b.id}
                           draggable
@@ -1691,7 +1697,7 @@ export default function App() {
                           onDrop={e => { e.preventDefault(); handleHomeDrop('fav', b.id, setHomeFavOrder, 'homeFavOrder'); }}
                           style={{ opacity: homeDragId === b.id ? 0.4 : 1, outline: homeDragOver === `fav_${b.id}` && homeDragId !== b.id ? '2px dashed #f5c518' : 'none', borderRadius: 12, cursor: 'grab', transition: 'opacity .15s, transform .15s, box-shadow .15s', transform: homeDragId === b.id ? 'rotate(2deg) scale(1.03)' : 'none', boxShadow: homeDragId === b.id ? '0 8px 28px rgba(0,0,0,0.55)' : 'none' }}
                         >
-                          <HomeBoardCard board={b} isFav onToggleFav={(cur) => togglePersonalFavorite(b.id, cur)} onClick={() => openBoard(b)} typeColor={getBoardTypeColor(b)} isHidden={hiddenBoardIds.has(b.id)} onHide={() => hideBoard(b.id)} onUnhide={() => unhideBoard(b.id)} />
+                          <HomeBoardCard board={b} isFav onToggleFav={(cur) => togglePersonalFavorite(b.id, cur)} onClick={() => openBoard(b)} typeColor={getBoardTypeColor(b)} isHidden={hiddenBoardIds.has(b.id)} onHide={() => hideBoard(b.id)} onUnhide={() => unhideBoard(b.id)} compact={compactView} />
                         </div>
                       ))}
                     </div>
@@ -1710,7 +1716,7 @@ export default function App() {
                 ) : otherBoards.length === 0 ? (
                   <div style={{ color: 'var(--text-muted)', fontSize: 12, padding: '8px 0' }}>{t('board.all_pinned')}</div>
                 ) : (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: compactView ? '1fr' : 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
                     {applySectionOrder(otherBoards, homeOtherOrder).filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).map(b => (
                       <div key={b.id}
                         draggable
@@ -1720,7 +1726,7 @@ export default function App() {
                         onDrop={e => { e.preventDefault(); handleHomeDrop('other', b.id, setHomeOtherOrder, 'homeOtherOrder'); }}
                         style={{ opacity: homeDragId === b.id ? 0.4 : 1, outline: homeDragOver === `other_${b.id}` && homeDragId !== b.id ? '2px dashed #f5a500' : 'none', borderRadius: 12, cursor: 'grab', transition: 'opacity .15s, transform .15s, box-shadow .15s', transform: homeDragId === b.id ? 'rotate(2deg) scale(1.03)' : 'none', boxShadow: homeDragId === b.id ? '0 8px 28px rgba(0,0,0,0.55)' : 'none' }}
                       >
-                        <HomeBoardCard board={b} isFav={false} onToggleFav={(cur) => togglePersonalFavorite(b.id, cur)} onClick={() => openBoard(b)} typeColor={getBoardTypeColor(b)} isHidden={hiddenBoardIds.has(b.id)} onHide={() => hideBoard(b.id)} onUnhide={() => unhideBoard(b.id)} />
+                        <HomeBoardCard board={b} isFav={false} onToggleFav={(cur) => togglePersonalFavorite(b.id, cur)} onClick={() => openBoard(b)} typeColor={getBoardTypeColor(b)} isHidden={hiddenBoardIds.has(b.id)} onHide={() => hideBoard(b.id)} onUnhide={() => unhideBoard(b.id)} compact={compactView} />
                       </div>
                     ))}
                   </div>
@@ -1813,19 +1819,19 @@ export default function App() {
         </button>
       </div>
 
-      {/* Boards list — épinglés affichés en priorité, avant "Mes boards" (séparateur plus bas).
-          flex:1 + minHeight garanti : cette zone est la première à se réduire et à afficher
-          sa propre barre de défilement quand la place manque (les sections fixes du dessous —
-          boards publics suivis, formulaire nouveau board — gardent leur taille naturelle). */}
-      <div style={{ flex: 1, minHeight: 140, overflowY: 'auto', padding: '6px 6px' }}>
-        {/* ⭐ Épinglés */}
-        {personalFavIds.length > 0 && sortedBoards.some(b => personalFavIds.includes(b.id)) && (
-          <>
-            <div style={{ fontSize: 9, fontWeight: 700, color: '#f5c518', textTransform: 'uppercase', letterSpacing: '0.08em', padding: '4px 6px 2px', opacity: 0.8, display: 'flex', alignItems: 'center', gap: 4 }}>
-              <svg viewBox="0 0 24 24" width="8" height="8" fill="#f5c518" stroke="#f5c518" strokeWidth="1.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-              {t('board.pinned_section')}
-            </div>
-            {sortedBoards.filter(b => personalFavIds.includes(b.id)).filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).map(b => (
+      {/* ⭐ Épinglés — section indépendante à taille fixe, affichée en premier (toujours en
+          haut) ; ne partage plus son scroll avec "Mes boards" (avant : les deux défilaient
+          ensemble en un seul bloc). Sa propre liste est plafonnée (maxHeight + scroll interne)
+          en tout dernier recours, seulement si "Mes boards" a déjà cédé toute la place qu'elle
+          peut céder. */}
+      {personalFavIds.length > 0 && sortedBoards.some(b => personalFavIds.includes(b.id)) && (
+        <div style={{ padding: '6px 6px 0', flexShrink: 0 }}>
+          <div style={{ fontSize: 9, fontWeight: 700, color: '#f5c518', textTransform: 'uppercase', letterSpacing: '0.08em', padding: '4px 6px 2px', opacity: 0.8, display: 'flex', alignItems: 'center', gap: 4 }}>
+            <svg viewBox="0 0 24 24" width="8" height="8" fill="#f5c518" stroke="#f5c518" strokeWidth="1.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            {t('board.pinned_section')}
+          </div>
+          <div style={{ maxHeight: '28vh', overflowY: 'auto' }}>
+          {sortedBoards.filter(b => personalFavIds.includes(b.id)).filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).map(b => (
           <div key={b.id}
             draggable
             onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; setBoardDragId(b.id); }}
@@ -1873,10 +1879,17 @@ export default function App() {
             ) : (<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="var(--text-muted)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>)}</button>
             <button onClick={e => { e.stopPropagation(); deleteBoard(b.id); }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 11, padding: 0, opacity: 0.4, cursor: 'pointer', flexShrink: 0 }}>✕</button>
           </div>
-            ))}
-          </>
-        )}
+          ))}
+          </div>
+        </div>
+      )}
 
+      {/* Mes boards — première zone à se réduire et à afficher sa propre barre de défilement
+          quand la place manque (priorité de scroll n°1). Les sections épinglés (au-dessus) et
+          boards publics suivis / formulaire nouveau board (en dessous) gardent leur taille
+          naturelle et ne défilent qu'en dernier recours, une fois cette zone déjà réduite à son
+          minimum. */}
+      <div style={{ flex: 1, minHeight: 140, overflowY: 'auto', padding: '6px 6px' }}>
         {/* Séparateur épinglés / autres */}
         {personalFavIds.length > 0 && sortedBoards.some(b => personalFavIds.includes(b.id)) && sortedBoards.some(b => !personalFavIds.includes(b.id)) && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 4px 2px', margin: '2px 0 4px' }}>

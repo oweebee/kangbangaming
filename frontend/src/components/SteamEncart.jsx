@@ -5,44 +5,50 @@
  *
  * Le cartouche se centre automatiquement dans l'espace disponible entre le
  * contenu de gauche (icône/nom/boutons) et celui de droite (filtre/boutons,
- * recherche globale) grâce à deux spacers flex égaux placés autour de lui.
+ * recherche globale) grâce à un unique wrapper flex:1 (justifyContent:center).
  * Si l'espace dispo est trop petit pour l'afficher sans qu'il chevauche un
- * autre élément du header, il est automatiquement masqué (mesure via un
- * clone invisible hors-flux + ResizeObserver sur le header — même principe
- * que la mesure de headerHeight dans App.jsx).
+ * autre élément du header, il est automatiquement masqué.
  *
- * Si gameInfo est absent (board pas lié à un jeu Steam), seul le 1er spacer
- * est rendu : comportement inchangé (poussait déjà tout le contenu de
- * droite vers la droite avant l'ajout du centrage).
+ * Mesure de la place disponible : on ne peut PAS déduire l'espace libre de
+ * header.scrollWidth/clientWidth directement, car le wrapper flex:1 absorbe
+ * tout le slack restant — scrollWidth sature alors toujours à clientWidth
+ * (aucun "overflow" réel à détecter), ce qui rend ce calcul faux à coup sûr
+ * (cartouche masqué en permanence, quel que soit l'espace réel dispo). On
+ * retire donc temporairement le wrapper du flux (display:none) le temps de
+ * la mesure : scrollWidth du header reflète alors la largeur réellement
+ * nécessaire au reste du header (icône, nom, boutons, recherche…), ce qui
+ * donne l'espace dispo correct. Ce toggle est fait de façon synchrone dans
+ * useLayoutEffect (avant le paint du navigateur) donc invisible à l'écran.
  */
 import { useState, useRef, useLayoutEffect } from 'react';
 import { useLang } from '../i18n.js';
 
-// Marge de sécurité (px) au-delà de la largeur naturelle du cartouche : couvre les
-// 2 "gap" supplémentaires introduits par les spacers quand le cartouche est affiché.
+// Marge de sécurité (px) au-delà de la largeur naturelle du cartouche.
 const FIT_SAFETY_MARGIN = 28;
 
 export default function SteamEncart({ gameInfo }) {
   const { t } = useLang();
   const [fits, setFits]   = useState(true);
-  const anchorRef  = useRef(null); // 1er spacer — toujours rendu, sert à remonter jusqu'au header (conteneur flex)
+  const wrapperRef = useRef(null); // wrapper flex:1 toujours rendu — slot centré du cartouche
   const measureRef = useRef(null); // clone invisible hors-flux, donne la largeur naturelle du cartouche en continu
 
   useLayoutEffect(() => {
     if (!gameInfo) return; // rien à afficher/mesurer
-    const header    = anchorRef.current?.parentElement;
+    const wrapper   = wrapperRef.current;
+    const header    = wrapper?.parentElement;
     const measureEl = measureRef.current;
-    if (!header || !measureEl) return;
+    if (!wrapper || !header || !measureEl) return;
 
     function recompute() {
       const naturalWidth = measureEl.offsetWidth;
-      setFits(prevFits => {
-        // Largeur déjà consommée par tout le reste du header (hors cartouche visible)
-        const currentContribution = prevFits ? naturalWidth : 0;
-        const otherWidth = header.scrollWidth - currentContribution;
-        const available  = header.clientWidth - otherWidth;
-        return available >= naturalWidth + FIT_SAFETY_MARGIN;
-      });
+      // Retrait temporaire du wrapper (hors-flux) pour mesurer la largeur réellement
+      // nécessaire au reste du header, sans que son flex-grow ne fausse la mesure.
+      const prevDisplay = wrapper.style.display;
+      wrapper.style.display = 'none';
+      const otherWidth = header.scrollWidth;
+      wrapper.style.display = prevDisplay;
+      const available = header.clientWidth - otherWidth;
+      setFits(available >= naturalWidth + FIT_SAFETY_MARGIN);
     }
 
     recompute();
@@ -169,9 +175,11 @@ export default function SteamEncart({ gameInfo }) {
           {cartouche}
         </div>
       )}
-      <div ref={anchorRef} style={{ flex: '1 1 0' }} />
-      {showCartouche && cartouche}
-      {showCartouche && <div style={{ flex: '1 1 0' }} />}
+      {/* Wrapper flex:1 toujours rendu — slot centré du cartouche. Vide (juste un espace
+          flexible), il reproduit le comportement d'origine quand gameInfo est absent. */}
+      <div ref={wrapperRef} style={{ display: 'flex', flex: '1 1 0', minWidth: 0, justifyContent: 'center' }}>
+        {showCartouche && cartouche}
+      </div>
     </>
   );
 }
