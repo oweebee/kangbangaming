@@ -188,7 +188,7 @@ function Section({ cat, tasks, onOpenTask, hiddenDeadlineIds, showHiddenDeadline
       </div>
 
       {!collapsed && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: 10 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: compact ? '1fr' : 'repeat(auto-fill, minmax(190px, 1fr))', gap: 10 }}>
           {sorted.map((task, i) => {
             const game = taskToGame(task);
             const key = taskKey(task);
