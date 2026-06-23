@@ -71,7 +71,7 @@ function LockIcon({ locked, size = 14 }) {
  *   onLockChange     — callback(bool)
  *   side             — 'left' | 'right' (contrôlé par le parent)
  *   onSideChange     — callback('left' | 'right')
- *   sidebarWidth     — largeur sidebar (défaut 278)
+ *   sidebarWidth     — largeur sidebar (défaut 283)
  *   topOffset        — hauteur du header (panneau démarre en-dessous)
  */
 export default function GameInfoPanel({
@@ -79,7 +79,7 @@ export default function GameInfoPanel({
   locked, onLockChange,
   side = 'left',
   onSideChange,
-  sidebarWidth = 278,
+  sidebarWidth = 283,
   topOffset = 0,
 }) {
   const { t } = useLang();
