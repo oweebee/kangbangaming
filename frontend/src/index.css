@@ -28,6 +28,15 @@ html, body, #root {
   font-size: 14px;
 }
 
+/* Verrou anti-scroll de page : l'app gère TOUT son défilement via des conteneurs
+   internes (overflowY:auto sur les panneaux). On bloque ici tout scroll du
+   document lui-même pour empêcher une barre de défilement globale parasite
+   (notamment un micro-débordement dû à l'arrondi du calcul de compensation
+   du zoom CSS dans zoom.js — sans impact car rien ne dépend du scroll body/html). */
+html, body {
+  overflow: hidden;
+}
+
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }

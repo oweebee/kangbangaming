@@ -384,14 +384,22 @@ export default function App() {
   const homeTouchTimerRef = useRef(null);
   const homeTouchDragRef  = useRef({ active: false, id: null, section: null, overId: null });
   // Resizable splitter between DeadlinePanel and boards columns
+  // (valeur validée : une entrée localStorage corrompue/NaN ferait disparaître
+  // toute la mise en page — on retombe sur le défaut si hors plage saine)
   const [homeSplitPct, setHomeSplitPct] = useState(() => {
-    try { return parseFloat(localStorage.getItem('homeSplitPct') || '35'); } catch { return 35; }
+    try {
+      const v = parseFloat(localStorage.getItem('homeSplitPct') || '35');
+      return (Number.isFinite(v) && v > 5 && v < 95) ? v : 35;
+    } catch { return 35; }
   });
   const homeSplitterDragging = useRef(false);
   const homeSplitterRef = useRef(null);
-  // Resizable splitter between boards and UpcomingPanel
+  // Resizable splitter between boards and UpcomingPanel (même garde-fou)
   const [homeUpcomingWidth, setHomeUpcomingWidth] = useState(() => {
-    try { return parseFloat(localStorage.getItem('homeUpcomingWidth') || '340'); } catch { return 340; }
+    try {
+      const v = parseFloat(localStorage.getItem('homeUpcomingWidth') || '340');
+      return (Number.isFinite(v) && v >= 220 && v <= 560) ? v : 340;
+    } catch { return 340; }
   });
   const homeUpcomingSplitterDragging = useRef(false);
   const homeUpcomingSplitterRef = useRef(null);
