@@ -23,8 +23,23 @@ function _applyZoom(value) {
   // containing block pour les éléments position:fixed — contrairement à
   // transform: scale() qui casserait le footer et les modales fixed.
   // Compatible Chromium desktop + WebView Android (même moteur de rendu).
+  //
+  // Compensation : "zoom" rétrécit AUSSI la taille de la boîte <html>
+  // elle-même (pas seulement son rendu visuel), donc en dessous de 100%
+  // l'app ne remplit plus la fenêtre (zone vide à droite/en bas). On
+  // agrandit html en amont (100/value %) pour qu'après application du
+  // zoom, le rendu final occupe à nouveau exactement 100% de la fenêtre.
   if (typeof document !== 'undefined' && document.documentElement) {
-    document.documentElement.style.zoom = `${value}%`;
+    const html = document.documentElement;
+    html.style.zoom = `${value}%`;
+    if (value === 100) {
+      html.style.width = '';
+      html.style.height = '';
+    } else {
+      const compensate = `${(100 / value) * 100}%`;
+      html.style.width = compensate;
+      html.style.height = compensate;
+    }
   }
 }
 
