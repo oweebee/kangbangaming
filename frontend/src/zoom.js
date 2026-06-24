@@ -24,22 +24,22 @@ function _applyZoom(value) {
   // transform: scale() qui casserait le footer et les modales fixed.
   // Compatible Chromium desktop + WebView Android (même moteur de rendu).
   //
-  // Compensation : "zoom" rétrécit AUSSI la taille de la boîte <html>
-  // elle-même (pas seulement son rendu visuel), donc en dessous de 100%
-  // l'app ne remplit plus la fenêtre (zone vide à droite/en bas). On
-  // agrandit html en amont (100/value %) pour qu'après application du
-  // zoom, le rendu final occupe à nouveau exactement 100% de la fenêtre.
+  // PAS de compensation de width/height : vérifié empiriquement (DevTools,
+  // getBoundingClientRect vs window.visualViewport) que <html> avec zoom
+  // seul (width/height:auto) remplit DÉJÀ exactement la fenêtre réelle à
+  // tous les niveaux de zoom — html/body/#root mesurent pile width/height
+  // du viewport. Une ancienne version compensait manuellement la taille
+  // (100/value % en width/height), ce qui faisait au contraire DÉBORDER
+  // <html> au-delà du viewport réel (ex. 3011px de large pour une fenêtre
+  // de 2560px à 85%) : c'était la cause des bugs de colonne manquante,
+  // de décalage à droite et de scroll de page parasite. On efface aussi
+  // tout style résiduel d'une session précédente qui aurait stocké ces
+  // valeurs (rétrocompatibilité).
   if (typeof document !== 'undefined' && document.documentElement) {
     const html = document.documentElement;
     html.style.zoom = `${value}%`;
-    if (value === 100) {
-      html.style.width = '';
-      html.style.height = '';
-    } else {
-      const compensate = `${(100 / value) * 100}%`;
-      html.style.width = compensate;
-      html.style.height = compensate;
-    }
+    html.style.width = '';
+    html.style.height = '';
   }
 }
 
