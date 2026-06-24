@@ -2176,16 +2176,16 @@ export default function App() {
           </div>
           {currentUser.role === 'admin' && <div style={{ fontSize: 9, color: '#f5a500', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>admin</div>}
         </div>
-        <button onClick={() => setShowProfile(true)} title={t('nav.my_profile')} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 5, padding: '4px 7px', color: 'var(--text-muted)', fontSize: 11, cursor: 'pointer', flexShrink: 0, fontWeight: 600 }}>{t('nav.profile')}</button>
+        <button onClick={() => setShowProfile(true)} title={t('nav.my_profile')} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 5, height: 24, padding: '0 7px', color: 'var(--text-muted)', fontSize: 11, cursor: 'pointer', flexShrink: 0, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box' }}>{t('nav.profile')}</button>
         {currentUser.role === 'admin' && (
-          <button onClick={() => setShowAdmin(true)} title={t('nav.admin_panel')} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 5, padding: '4px 7px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>⚙️</button>
+          <button onClick={() => setShowAdmin(true)} title={t('nav.admin_panel')} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 5, height: 24, padding: '0 7px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box' }}>⚙️</button>
         )}
-        <button onClick={() => setShowAppInfo(true)} title={t('nav.info')} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 5, padding: '4px 7px', color: 'var(--text-muted)', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+        <button onClick={() => setShowAppInfo(true)} title={t('nav.info')} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 5, height: 24, padding: '0 7px', color: 'var(--text-muted)', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box' }}>
           <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
           </svg>
         </button>
-        <button onClick={handleLogout} title={t('nav.logout')} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 5, padding: '4px 7px', color: 'var(--text-muted)', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+        <button onClick={handleLogout} title={t('nav.logout')} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 5, height: 24, padding: '0 7px', color: 'var(--text-muted)', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box' }}>
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M18.36 6.64a9 9 0 1 1-12.73 0"/>
             <line x1="12" y1="2" x2="12" y2="12"/>
