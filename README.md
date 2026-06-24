@@ -18,6 +18,7 @@ Organise ta backlog, suis tes heures de jeu, partage tes boards avec ta communau
 - **Wishlist Steam dans les Échéances** — les jeux de ta wishlist avec une date de sortie connue apparaissent automatiquement dans le panneau Échéances (badge ★ WISHLIST, clic → page Steam Store, masquables). Profil Steam public requis.
 - **Wishlist dans le profil** — liste compacte triée par date de sortie (plus proche en haut), avec miniature, nom et badge coloré (vert = sorti, orange = bientôt, gris = date lointaine ou inconnue)
 - **Multi-langue** — interface en français, anglais, espagnol, allemand, russe et chinois (détection auto)
+- **Zoom de l'interface** — curseur par paliers de 5% (80 → 100%) dans le profil, réduit l'échelle globale de l'app (comme Teams/Discord) pour afficher plus de contenu sur les écrans basse résolution ; réglage sauvegardé par compte
 - **Corbeille** — les cartes, notes **et boards** supprimés sont conservés 30 jours avant suppression définitive ; restauration en un clic depuis l'onglet "Corbeille" du profil. Les admins ont une vue globale de toutes les suppressions et peuvent purger. La suppression admin envoie aussi les boards en corbeille.
 - **Boards publics suivis** — les boards publics marqués comme "suivis" apparaissent dans une section dédiée sur l'accueil, séparée des autres boards publics, avec leur propre ordre drag & drop.
 - **Refresh accueil** — bouton ↻ dans la barre de navigation (desktop et mobile) pour rafraîchir tous les boards sans recharger la page.
@@ -233,7 +234,8 @@ Quand tu partages l'URL sur Discord, Twitter/X, iMessage, etc., une image de pre
 ├── frontend/
 │   ├── src/
 │   │   ├── App.jsx                # Composant principal + état global
-│   │   ├── i18n.js                # Traductions FR/EN
+│   │   ├── i18n.js                # Traductions FR/EN/ES/DE/RU/ZH
+│   │   ├── zoom.js                # Niveau de zoom interface (persisté par compte)
 │   │   ├── utils.js               # Helpers partagés
 │   │   └── components/
 │   │       ├── GameCard.jsx

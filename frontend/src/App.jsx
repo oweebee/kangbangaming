@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { initUserLang, useLang } from './i18n.js';
+import { initUserZoom } from './zoom.js';
 import KanbanBoard from './components/KanbanBoard.jsx';
 import NowPlayingBanner from './components/NowPlayingBanner.jsx';
 import MobileBoard from './components/MobileBoard.jsx';
@@ -490,6 +491,7 @@ export default function App() {
   useEffect(() => {
     // Détection langue navigateur pour l'état non-authentifié
     initUserLang(null);
+    initUserZoom(null);
 
     // Retour depuis Steam OpenID — token dans l'URL
     const params = new URLSearchParams(window.location.search);
@@ -504,6 +506,7 @@ export default function App() {
         setCurrentUser(steamUser);
         setToken(steamToken);
         initUserLang(steamUser.id);
+        initUserZoom(steamUser.id);
         window.history.replaceState({}, '', window.location.pathname);
         // Récupérer steamAvatar + steamPersonaName depuis /api/auth/me
         fetch('/api/auth/me', { headers: { Authorization: `Bearer ${steamToken}` } })
@@ -533,6 +536,7 @@ export default function App() {
     setCurrentUser(saved.user);
     setToken(saved.token);
     initUserLang(saved.user.id);
+    initUserZoom(saved.user.id);
     // Rafraîchir le rôle depuis le serveur (ex: si un admin a changé le rôle pendant la session)
     fetch('/api/auth/me', { headers: { Authorization: `Bearer ${saved.token}` } })
       .then(r => r.ok ? r.json() : null)
@@ -546,7 +550,7 @@ export default function App() {
       .catch(() => {});
   }, []);
 
-  const handleLogin = (user, tok) => { setCurrentUser(user); setToken(tok); initUserLang(user.id); };
+  const handleLogin = (user, tok) => { setCurrentUser(user); setToken(tok); initUserLang(user.id); initUserZoom(user.id); };
   const handleSteamSave = ({ steamAvatar, steamPersonaName }) => {
     setCurrentUser(prev => ({ ...prev, steamAvatar: steamAvatar || null, steamPersonaName: steamPersonaName || null }));
     // Persist to localStorage

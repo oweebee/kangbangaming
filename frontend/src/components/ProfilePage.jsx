@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
 import { useLang, LANG_META, SUPPORTED_LANGS } from '../i18n.js';
+import { useZoom } from '../zoom.js';
 import TrashPanel from './TrashPanel.jsx';
+import ZoomSlider from './ZoomSlider.jsx';
 
 const API = '/api';
 const TABS = ['profile', 'trash', 'wishlist'];
@@ -8,6 +10,7 @@ const N    = TABS.length;
 
 export default function ProfilePage({ token, currentUser, onClose, onSaveSteam }) {
   const { t, lang, setLang } = useLang();
+  const { zoom, setZoom } = useZoom();
   const [activeTab, setActiveTab] = useState('profile');
 
   // ── Slide track (même logique que SwipeTabs) ──────────────────────────────
@@ -320,6 +323,11 @@ export default function ProfilePage({ token, currentUser, onClose, onSaveSteam }
                 {steamMsg && hasSteam && !editingSteam && (
                   <div style={{ fontSize: 12, color: '#3db86a', padding: '8px 12px', background: 'rgba(61,184,106,0.1)', border: '1px solid rgba(61,184,106,0.3)', borderRadius: 7 }}>{steamMsg}</div>
                 )}
+              </div>
+
+              {/* ── Zoom interface ── */}
+              <div>
+                <ZoomSlider value={zoom} onChange={setZoom} />
               </div>
 
               {/* ── Stats KangBanGaming ── */}

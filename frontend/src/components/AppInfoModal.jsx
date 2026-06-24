@@ -127,6 +127,7 @@ function TabFeatures() {
     { icon: '🌐', title: 'Boards publics collaboratifs', desc: 'Tout utilisateur connecté peut ajouter colonnes et cartes sur un board public — pas seulement le propriétaire. Idéal pour les boards communautaires.' },
     { icon: '★', title: 'Wishlist Steam dans les échéances', desc: 'Les jeux de ta wishlist Steam avec une date de sortie connue apparaissent automatiquement dans le panneau Échéances (badge ★ WISHLIST). Clic → page Steam Store. Masquables individuellement. Profil Steam public requis.' },
     { icon: '📋', title: 'Onglet Wishlist dans le profil', desc: 'Retrouve tous tes jeux en wishlist Steam dans un onglet dédié de ton profil, avec avertissement si ton profil n\'est pas public.' },
+    { icon: '🔎', title: 'Zoom de l\'interface', desc: 'Dans ton profil (onglet Profil), un curseur par paliers de 5% (80 → 100%) réduit l\'échelle globale de l\'app — comme dans Teams ou Discord — pour afficher plus de contenu sur les écrans basse résolution. Réglage sauvegardé par compte.' },
   ];
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
