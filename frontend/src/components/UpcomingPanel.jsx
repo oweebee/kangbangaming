@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useLang } from '../i18n.js';
 import { genreColor, playerTags, ReviewBadge, DaysBadge, WishlistDot } from './SteamUI.jsx';
-import { daysUntil, formatDateShort } from '../utils.js';
+import { daysUntil, formatDateShort, authHeaders } from '../utils.js';
 
 const API = '/api';
 
@@ -13,7 +13,7 @@ function FeaturedCard({ token, wishlist = new Set() }) {
   const [items, setItems] = useState([]);
   const [idx, setIdx] = useState(0);
   const timerRef = useRef(null);
-  const h = { Authorization: `Bearer ${token}` };
+  const h = authHeaders(token);
 
   useEffect(() => {
     fetch(`${API}/steam/featured`, { headers: h })
@@ -107,7 +107,7 @@ export default function UpcomingPanel({ token }) {
   const [lastFetch, setLastFetch] = useState(null);
   const [wishlist, setWishlist] = useState(new Set());
 
-  const h = { Authorization: `Bearer ${token}` };
+  const h = authHeaders(token);
 
   const fetchUpcoming = useCallback(async (force = false) => {
     setLoading(true); setError('');

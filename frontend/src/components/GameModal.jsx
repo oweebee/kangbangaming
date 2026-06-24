@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import NotesSection from './NotesSection.jsx';
 import { StatusToggles, DatePicker } from './CardControls.jsx';
-import { formatPlaytime } from '../utils.js';
+import { formatPlaytime, authHeaders } from '../utils.js';
 import ModalBackdrop from './ModalBackdrop.jsx';
 import SwipeTabs from './SwipeTabs.jsx';
 import { useLang } from '../i18n.js';
@@ -45,7 +45,7 @@ export default function GameModal({ game, onClose, api, token, onPatchGame, onSo
     async function load() {
       try {
         const res = await fetch(`${api}/steam/achievements/${game.appid}`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          headers: token ? authHeaders(token) : {},
         });
         const data = await res.json();
         const achs = data.achievements || [];

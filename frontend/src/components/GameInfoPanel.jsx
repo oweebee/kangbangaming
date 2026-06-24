@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useLang } from '../i18n.js';
+import { formatDateLong, authHeaders } from '../utils.js';
 
 export const GAME_INFO_PANEL_WIDTH = 390;
 
 function fmtDate(ts) {
-  return new Date(ts * 1000).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+  return formatDateLong(ts * 1000);
 }
 
 function truncate(str = '', n = 260) {
@@ -93,7 +94,7 @@ export default function GameInfoPanel({
     if (!appId || !token) { setNews([]); return; }
     setNewsLoading(true);
     setNews([]);
-    fetch(`${api}/steam/news/${appId}`, { headers: { Authorization: `Bearer ${token}` } })
+    fetch(`${api}/steam/news/${appId}`, { headers: authHeaders(token) })
       .then(r => r.ok ? r.json() : { items: [] })
       .then(d => setNews(d.items || []))
       .catch(() => setNews([]))

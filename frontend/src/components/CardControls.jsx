@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useLang } from '../i18n.js';
+import { formatDateLong } from '../utils.js';
 
 // ── Composants partagés pour les contrôles de carte ──────────────────────────
 // StatusToggles  : boutons Terminée + Urgent côte à côte
@@ -9,8 +10,7 @@ import { useLang } from '../i18n.js';
 
 export function formatDateLabel(dateStr) {
   if (!dateStr) return '';
-  const d = new Date(dateStr + 'T00:00:00');
-  return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+  return formatDateLong(dateStr + 'T00:00:00');
 }
 
 const inputStyle = {

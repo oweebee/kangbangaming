@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useLang } from '../i18n.js';
+import { authHeaders } from '../utils.js';
 
 const API = '/api';
 
@@ -44,7 +45,7 @@ export default function GlobalSearch({ token, onGoToBoard, onOpenGame }) {
     setLoading(true);
     try {
       const res = await fetch(`${API}/search?q=${encodeURIComponent(q)}`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: authHeaders(token),
       });
       if (res.ok) setResults(await res.json());
     } catch { setResults([]); }

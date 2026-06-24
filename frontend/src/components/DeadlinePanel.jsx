@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import GameCard from './GameCard.jsx';
 import { useLang } from '../i18n.js';
 import { WishlistDot } from './SteamUI.jsx';
+import { authHeaders } from '../utils.js';
 
 const API = '/api';
 
@@ -353,7 +354,7 @@ export default function DeadlinePanel({ token, onOpenTask, refreshKey = 0, hidde
   useEffect(() => {
     if (!token) return;
     setLoading(true);
-    fetch(`${API}/deadlines`, { headers: { Authorization: `Bearer ${token}` } })
+    fetch(`${API}/deadlines`, { headers: authHeaders(token) })
       .then(r => r.ok ? r.json() : [])
       .then(data => {
         setApiCount(data.length);
@@ -367,7 +368,7 @@ export default function DeadlinePanel({ token, onOpenTask, refreshKey = 0, hidde
   // Wishlist Steam deadline items (profil public uniquement)
   useEffect(() => {
     if (!token) return;
-    fetch(`${API}/steam/wishlist/deadline`, { headers: { Authorization: `Bearer ${token}` } })
+    fetch(`${API}/steam/wishlist/deadline`, { headers: authHeaders(token) })
       .then(r => r.ok ? r.json() : [])
       .then(data => setWishlistItems(Array.isArray(data) ? data : []))
       .catch(() => setWishlistItems([]));

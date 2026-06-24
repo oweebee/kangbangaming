@@ -7,6 +7,7 @@ import { StatusToggles, DatePicker, AssigneeEditor } from './CardControls.jsx';
 import ModalBackdrop from './ModalBackdrop.jsx';
 import SwipeTabs from './SwipeTabs.jsx';
 import { useLang } from '../i18n.js';
+import { formatDateFull, formatDateShort } from '../utils.js';
 
 // ── Date helpers ──────────────────────────────────────────────────────────────
 
@@ -16,13 +17,11 @@ function parseLocalDate(str) {
 }
 
 function formatDate(d) {
-  if (!d) return '';
-  return d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' });
+  return formatDateFull(d);
 }
 
 function formatShortDate(d) {
-  if (!d) return '';
-  return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+  return formatDateShort(d);
 }
 
 function getDateInfo(game) {

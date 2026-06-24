@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { authHeaders } from '../utils.js';
 
 const API = '/api';
 
@@ -69,7 +70,7 @@ export default function LinkPreview({ url, token }) {
     setLoading(true);
     setError(false);
     fetch(`${API}/og-preview?url=${encodeURIComponent(url)}`, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: authHeaders(token),
     })
       .then(r => r.ok ? r.json() : null)
       .then(data => {

@@ -46,6 +46,11 @@ export function setLang(lang) {
   _subscribers.forEach(fn => fn(lang));
 }
 
+/** Lecture directe de la langue active — pour usage hors composants React (ex. utils.js) */
+export function getLang() {
+  return _lang;
+}
+
 /** Hook React — s'abonne aux changements de langue */
 export function useLang() {
   const [lang, setLangState] = useState(_lang);

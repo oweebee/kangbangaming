@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useLang } from '../i18n.js';
+import { authHeaders } from '../utils.js';
 
 function extractAppId(url) {
   if (!url) return null;
@@ -51,7 +52,7 @@ export default function GameStatsWidget({ api, token, board, rightOffset = 0 }) 
     if (!appid || !token) { setLoading(false); return; }
     setLoading(true);
     setStats(null);
-    fetch(`${api}/steam/gamestats/${appid}`, { headers: { Authorization: `Bearer ${token}` } })
+    fetch(`${api}/steam/gamestats/${appid}`, { headers: authHeaders(token) })
       .then(r => r.ok ? r.json() : null)
       .then(data => { setStats(data); setLoading(false); })
       .catch(() => setLoading(false));
@@ -60,7 +61,7 @@ export default function GameStatsWidget({ api, token, board, rightOffset = 0 }) 
   // Fetch player profile once (not game-specific)
   useEffect(() => {
     if (!token) return;
-    fetch(`${api}/steam/profile`, { headers: { Authorization: `Bearer ${token}` } })
+    fetch(`${api}/steam/profile`, { headers: authHeaders(token) })
       .then(r => r.ok ? r.json() : null)
       .then(data => setProfile(data))
       .catch(() => {});

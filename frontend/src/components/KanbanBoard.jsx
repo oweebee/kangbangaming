@@ -141,6 +141,31 @@ export default function KanbanBoard({ columns, byColumn, dragging, setDragging, 
   const [dragOverColId, setDragOverColId] = useState(null);
   const [dragInsert, setDragInsert] = useState(null); // { colId, beforeAppid: string|null }
 
+  // Centre les colonnes quand elles ne remplissent pas la largeur dispo (grands écrans,
+  // peu de colonnes) au lieu de les laisser collées à gauche avec un vide à droite.
+  // Reste en 'flex-start' dès que ça dépasse, pour ne pas casser le scroll horizontal.
+  const rowRef = useRef(null);
+  const [centerCols, setCenterCols] = useState(false);
+  const COL_MAX_WIDTH = 300; // doit rester synchro avec maxWidth des colonnes ci-dessous
+  const COL_GAP = 10;
+
+  useEffect(() => {
+    const el = rowRef.current;
+    if (!el || columns.length === 0) { setCenterCols(false); return; }
+    const check = () => {
+      const cs = getComputedStyle(el);
+      const padL = parseFloat(cs.paddingLeft) || 0;
+      const padR = parseFloat(cs.paddingRight) || 0;
+      const avail = el.clientWidth - padL - padR;
+      const natural = columns.length * COL_MAX_WIDTH + (columns.length - 1) * COL_GAP;
+      setCenterCols(natural < avail);
+    };
+    check();
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [columns.length, leftOffset, rightOffset]);
+
   const handleColDragStart = (colId) => setDraggingColId(colId);
   const handleColDragEnd   = () => { setDraggingColId(null); setDragOverColId(null); };
 
@@ -156,7 +181,7 @@ export default function KanbanBoard({ columns, byColumn, dragging, setDragging, 
   };
 
   return (
-    <div style={{ display: 'flex', flex: 1, gap: '10px', padding: '14px', paddingLeft: 14 + leftOffset, paddingRight: 14 + rightOffset, overflowX: 'auto', overflowY: 'hidden', transition: 'padding-left 0.32s cubic-bezier(0.4,0,0.2,1), padding-right 0.32s cubic-bezier(0.4,0,0.2,1)' }}>
+    <div ref={rowRef} style={{ display: 'flex', flex: 1, gap: '10px', padding: '14px', paddingLeft: 14 + leftOffset, paddingRight: 14 + rightOffset, overflowX: 'auto', overflowY: 'hidden', justifyContent: centerCols ? 'center' : 'flex-start', transition: 'padding-left 0.32s cubic-bezier(0.4,0,0.2,1), padding-right 0.32s cubic-bezier(0.4,0,0.2,1)' }}>
       {columns.length === 0 && (
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
           {t('col.empty_start')}

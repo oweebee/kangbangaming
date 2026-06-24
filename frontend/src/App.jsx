@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { initUserLang, useLang } from './i18n.js';
 import { initUserZoom } from './zoom.js';
+import { resolveSingleSteamCardImg, authHeaders } from './utils.js';
 import KanbanBoard from './components/KanbanBoard.jsx';
 import NowPlayingBanner from './components/NowPlayingBanner.jsx';
 import MobileBoard from './components/MobileBoard.jsx';
@@ -322,10 +323,6 @@ function getSavedAuth() {
     return token && user ? { token, user } : null;
   } catch { return null; }
 }
-function authHeaders(token) {
-  return { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
-}
-
 export default function App() {
   const isMobile = useMobile();
   const { t, lang } = useLang();
@@ -517,7 +514,7 @@ export default function App() {
         initUserZoom(steamUser.id);
         window.history.replaceState({}, '', window.location.pathname);
         // Récupérer steamAvatar + steamPersonaName depuis /api/auth/me
-        fetch('/api/auth/me', { headers: { Authorization: `Bearer ${steamToken}` } })
+        fetch('/api/auth/me', { headers: authHeaders(steamToken) })
           .then(r => r.ok ? r.json() : null)
           .then(fresh => {
             if (fresh) {
@@ -546,7 +543,7 @@ export default function App() {
     initUserLang(saved.user.id);
     initUserZoom(saved.user.id);
     // Rafraîchir le rôle depuis le serveur (ex: si un admin a changé le rôle pendant la session)
-    fetch('/api/auth/me', { headers: { Authorization: `Bearer ${saved.token}` } })
+    fetch('/api/auth/me', { headers: authHeaders(saved.token) })
       .then(r => r.ok ? r.json() : null)
       .then(fresh => {
         if (fresh && fresh.role !== saved.user.role) {
@@ -576,7 +573,7 @@ export default function App() {
   const fetchFavorites = useCallback(async () => {
     if (!token) return;
     try {
-      const res = await fetch(`${API}/user/favorites`, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch(`${API}/user/favorites`, { headers: authHeaders(token) });
       if (res.ok) setFavBoards(await res.json());
     } catch {}
   }, [token]);
@@ -584,20 +581,20 @@ export default function App() {
   const fetchPersonalFavorites = useCallback(async () => {
     if (!token) return;
     try {
-      const res = await fetch(`${API}/user/personal-favorites`, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch(`${API}/user/personal-favorites`, { headers: authHeaders(token) });
       if (res.ok) setPersonalFavIds(await res.json());
     } catch {}
   }, [token]);
 
   const togglePersonalFavorite = async (boardId, isFav) => {
     const method = isFav ? 'DELETE' : 'POST';
-    await fetch(`${API}/user/personal-favorites/${boardId}`, { method, headers: { Authorization: `Bearer ${token}` } });
+    await fetch(`${API}/user/personal-favorites/${boardId}`, { method, headers: authHeaders(token) });
     setPersonalFavIds(prev => isFav ? prev.filter(id => id !== boardId) : [...prev, boardId]);
   };
 
   const toggleFavorite = async (boardId, boardData, isFav) => {
     const method = isFav ? 'DELETE' : 'POST';
-    await fetch(`${API}/user/favorites/${boardId}`, { method, headers: { Authorization: `Bearer ${token}` } });
+    await fetch(`${API}/user/favorites/${boardId}`, { method, headers: authHeaders(token) });
     if (isFav) {
       setFavBoards(prev => prev.filter(b => b.id !== boardId));
     } else {
@@ -615,7 +612,7 @@ export default function App() {
     setGames([]); // clear immediately so stale personal board games don't leak into Steam info effect
     setLoading(true);
     try {
-      const h = { Authorization: `Bearer ${token}` };
+      const h = authHeaders(token);
       const [cols, gms] = await Promise.all([
         fetch(`${API}/public/boards/${board.id}/columns`, { headers: h }).then(r => r.json()),
         fetch(`${API}/public/boards/${board.id}/games`, { headers: h }).then(r => r.json()),
@@ -625,9 +622,9 @@ export default function App() {
       // Repli : si le board n'a pas sa propre image et contient EXACTEMENT une carte Steam,
       // on affiche l'image de cette carte (board réellement "lié" à un seul jeu). Si plusieurs
       // jeux différents sont présents (board perso/backlog), on ne montre rien (emoji affiché à la place).
-      const steamCards = gms.filter(g => !g.deletedAt && g.type !== 'custom' && g.header_img);
-      if (!board.headerImg && !board.gameIcon && steamCards.length === 1) {
-        setPublicBoardMode(prev => prev ? { ...prev, headerImg: steamCards[0].header_img, gameIcon: prev.gameIcon || steamCards[0].icon_img || null } : prev);
+      const singleSteamCard = resolveSingleSteamCardImg(gms);
+      if (!board.headerImg && !board.gameIcon && singleSteamCard) {
+        setPublicBoardMode(prev => prev ? { ...prev, headerImg: singleSteamCard.header_img, gameIcon: prev.gameIcon || singleSteamCard.icon_img || null } : prev);
       }
     } catch {} finally { setLoading(false); }
   };
@@ -643,7 +640,7 @@ export default function App() {
     if (!publicBoardMode) return;
     setLoading(true);
     try {
-      const h = { Authorization: `Bearer ${token}` };
+      const h = authHeaders(token);
       const [cols, gms] = await Promise.all([
         fetch(`${API}/public/boards/${publicBoardMode.id}/columns`, { headers: h }).then(r => r.json()),
         fetch(`${API}/public/boards/${publicBoardMode.id}/games`, { headers: h }).then(r => r.json()),
@@ -655,7 +652,7 @@ export default function App() {
 
   const fetchBoards = useCallback(async () => {
     if (!token) return;
-    const res = await fetch(`${API}/boards`, { headers: { Authorization: `Bearer ${token}` } });
+    const res = await fetch(`${API}/boards`, { headers: authHeaders(token) });
     if (res.status === 401) { handleLogout(); return; }
     const data = await res.json();
     setBoards(data);
@@ -667,7 +664,7 @@ export default function App() {
     if (!name || !activeBoardId || name === activeBoard?.name) return;
     await fetch(`${API}/boards/${activeBoardId}`, {
       method: 'PATCH',
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      headers: authHeaders(token),
       body: JSON.stringify({ name }),
     });
     setBoards(prev => prev.map(b => b.id === activeBoardId ? { ...b, name } : b));
@@ -676,7 +673,7 @@ export default function App() {
   const fetchGames = useCallback(async (boardId) => {
     if (!boardId || !token) return;
     setLoading(true);
-    try { const res = await fetch(`${API}/boards/${boardId}/games`, { headers: { Authorization: `Bearer ${token}` } }); setGames(await res.json()); }
+    try { const res = await fetch(`${API}/boards/${boardId}/games`, { headers: authHeaders(token) }); setGames(await res.json()); }
     catch { setGames([]); } finally { setLoading(false); }
   }, [token]);
 
@@ -711,7 +708,7 @@ export default function App() {
 
   useEffect(() => {
     if (!token) return;
-    fetch(`${API}/users/list`, { headers: { Authorization: `Bearer ${token}` } })
+    fetch(`${API}/users/list`, { headers: authHeaders(token) })
       .then(r => r.ok ? r.json() : []).then(setAppUsers).catch(() => {});
   }, [token]);
 
@@ -726,7 +723,7 @@ export default function App() {
   }, [token]);
   useEffect(() => {
     if (!showHome || !token) return;
-    fetch(`${API}/public/boards`, { headers: { Authorization: `Bearer ${token}` } })
+    fetch(`${API}/public/boards`, { headers: authHeaders(token) })
       .then(r => r.ok ? r.json() : []).then(setHomePublicBoards).catch(() => {});
   }, [showHome, token]);
   // ── Bouton retour Android / geste retour mobile ──────────────────────────
@@ -778,7 +775,7 @@ export default function App() {
     const fetchGenre = (appid) => {
       if (!appid || fetchedGenreIds.current.has(appid)) return;
       fetchedGenreIds.current.add(appid);
-      fetch(`${API}/steam/gameinfo/${appid}`, { headers: { Authorization: `Bearer ${token}` } })
+      fetch(`${API}/steam/gameinfo/${appid}`, { headers: authHeaders(token) })
         .then(r => r.json())
         .then(info => {
           const color = getSteamGenreColor(info.genres);
@@ -867,11 +864,10 @@ export default function App() {
     // headerImg/gameIcon propre — même heuristique que activeBoardSteamCards/activeBoardHeaderImg
     // plus bas dans le composant (board perso ET public, pas seulement public comme avant).
     const hasOwnImg = !!(board?.headerImg || board?.gameIcon || publicBoardMode?.headerImg || publicBoardMode?.gameIcon);
-    const steamCards = !hasOwnImg ? games.filter(g => !g.deletedAt && g.type !== 'custom' && g.header_img) : [];
-    const singleSteamCardImg = steamCards.length === 1 ? steamCards[0].header_img : null;
+    const singleSteamCard = !hasOwnImg ? resolveSingleSteamCardImg(games) : null;
     const headerImg = board?.headerImg
       || publicBoardMode?.headerImg
-      || singleSteamCardImg
+      || singleSteamCard?.header_img
       || null;
     return headerImg?.match(/apps\/(\d+)\//)?.[1]
       || publicBoardMode?.gameIcon?.match(/apps\/(\d+)\//)?.[1]
@@ -882,7 +878,7 @@ export default function App() {
   // Fetch Steam game info — only re-runs when the appId string actually changes
   useEffect(() => {
     if (!activeSteamAppIdForFetch || !token) { setGameInfo(null); return; }
-    fetch(`${API}/steam/gameinfo/${activeSteamAppIdForFetch}`, { headers: { Authorization: `Bearer ${token}` } })
+    fetch(`${API}/steam/gameinfo/${activeSteamAppIdForFetch}`, { headers: authHeaders(token) })
       .then(r => r.ok ? r.json() : null).then(setGameInfo).catch(() => setGameInfo(null));
   }, [activeSteamAppIdForFetch, token]);
 
@@ -891,7 +887,7 @@ export default function App() {
     if (!q.trim() || !token) { setBoardSearchResults([]); return; }
     setBoardSearchLoading(true);
     try {
-      const res = await fetch(`${API}/steam/search?q=${encodeURIComponent(q)}`, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch(`${API}/steam/search?q=${encodeURIComponent(q)}`, { headers: authHeaders(token) });
       setBoardSearchResults((await res.json()).slice(0, 6));
     } catch { setBoardSearchResults([]); } finally { setBoardSearchLoading(false); }
   }, [token]);
@@ -935,7 +931,7 @@ export default function App() {
   const deleteBoard = async (boardId) => {
     if (!confirm(t('err.del_board'))) return;
     try {
-      const res = await fetch(`${API}/boards/${boardId}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch(`${API}/boards/${boardId}`, { method: 'DELETE', headers: authHeaders(token) });
       if (!res.ok) {
         console.error('[deleteBoard] HTTP', res.status);
         alert(`Erreur lors de la suppression du board (${res.status}). Le board n'a pas été supprimé, rechargez la page.`);
@@ -986,7 +982,7 @@ export default function App() {
   const deleteColumn = async (colId) => {
     if (!confirm(t('col.del_confirm'))) return;
     const boardApi = getBoardApi();
-    await fetch(`${boardApi}/columns/${colId}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+    await fetch(`${boardApi}/columns/${colId}`, { method: 'DELETE', headers: authHeaders(token) });
     const updated = columns.filter(c => c.id !== colId);
     setColumns(updated);
     if (!publicBoardMode) {
@@ -1033,7 +1029,7 @@ export default function App() {
   const removeGame = async (appid) => {
     const boardApi = getBoardApi();
     try {
-      const res = await fetch(`${boardApi}/games/${appid}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch(`${boardApi}/games/${appid}`, { method: 'DELETE', headers: authHeaders(token) });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         console.error('[removeGame] HTTP', res.status, err);
@@ -1117,10 +1113,6 @@ export default function App() {
     if (fields.progress === 100 && !fields.hasOwnProperty('done')) fields = { ...fields, done: true };
     const boardApi = getBoardApi();
     const url = `${boardApi}/games/${appid}`;
-    if (fields.notes !== undefined) {
-      const trashed = fields.notes.filter(n => n.deletedAt);
-      console.log(`[patchGame] PATCH ${url} — notes: ${fields.notes.length} total, ${trashed.length} en corbeille`, trashed);
-    }
     try {
       const res = await fetch(url, {
         method: 'PATCH', headers: authHeaders(token),
@@ -1133,8 +1125,6 @@ export default function App() {
           alert(`Erreur lors de la sauvegarde des notes (${res.status}). Rechargez la page.`);
           return;
         }
-      } else if (fields.notes !== undefined) {
-        console.log('[patchGame] ✓ notes sauvegardées OK');
       }
     } catch (e) {
       console.error('[patchGame] network error', e);
@@ -1210,10 +1200,10 @@ export default function App() {
   const activeBoard = boards.find(b => b.id === activeBoardId);
   // Banner image : headerImg propre au board, sinon image de la carte Steam UNIQUE du board
   // (board réellement "lié" à un seul jeu — pas de repli si plusieurs jeux différents/backlog).
-  const activeBoardSteamCards = activeBoard && !activeBoard.headerImg && !activeBoard.gameIcon
-    ? games.filter(g => !g.deletedAt && g.type !== 'custom' && g.header_img)
-    : [];
-  const activeBoardHeaderImg = activeBoard?.headerImg || (activeBoardSteamCards.length === 1 ? activeBoardSteamCards[0].header_img : null) || null;
+  const activeBoardSingleSteamCard = activeBoard && !activeBoard.headerImg && !activeBoard.gameIcon
+    ? resolveSingleSteamCardImg(games)
+    : null;
+  const activeBoardHeaderImg = activeBoard?.headerImg || activeBoardSingleSteamCard?.header_img || null;
   // Extract Steam appid from banner URL
   const activeSteamAppId = activeBoardHeaderImg?.match(/apps\/(\d+)\//)?.[1] || null;
   // true when the active board was created from a Steam game (task board)
@@ -2241,7 +2231,7 @@ export default function App() {
               <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', flex: 1 }}>Tableau de Board</span>
               <button onClick={toggleCompact} title={t('nav.compact')} style={{ background: compactView ? 'rgba(192,87,10,0.15)' : 'rgba(255,255,255,.06)', border: compactView ? '1px solid var(--accent)' : '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', color: compactView ? 'var(--accent)' : 'var(--text-muted)', fontSize: 11, cursor: 'pointer', flexShrink: 0 }}>⊟</button>
               <button
-                onClick={() => { fetchBoards(); fetchFavorites(); fetchPersonalFavorites(); fetch(`${API}/public/boards`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : []).then(setHomePublicBoards).catch(() => {}); }}
+                onClick={() => { fetchBoards(); fetchFavorites(); fetchPersonalFavorites(); fetch(`${API}/public/boards`, { headers: authHeaders(token) }).then(r => r.ok ? r.json() : []).then(setHomePublicBoards).catch(() => {}); }}
                 title="Rafraîchir"
                 style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', color: 'var(--text-muted)', fontSize: 14, cursor: 'pointer', flexShrink: 0, lineHeight: 1 }}
               >↻</button>
@@ -2367,7 +2357,7 @@ export default function App() {
               <div style={{ flex: 1 }} />
               <button onClick={toggleCompact} style={{ background: compactView ? 'rgba(192,87,10,0.15)' : 'var(--surface2)', border: compactView ? '1px solid var(--accent)' : '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: compactView ? 'var(--accent)' : 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0, fontWeight: compactView ? 700 : 400 }}>{t('nav.compact')}</button>
               <button
-                onClick={() => { fetchBoards(); fetchFavorites(); fetchPersonalFavorites(); fetch(`${API}/public/boards`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : []).then(setHomePublicBoards).catch(() => {}); }}
+                onClick={() => { fetchBoards(); fetchFavorites(); fetchPersonalFavorites(); fetch(`${API}/public/boards`, { headers: authHeaders(token) }).then(r => r.ok ? r.json() : []).then(setHomePublicBoards).catch(() => {}); }}
                 title="Rafraîchir"
                 style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 11px', color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 5 }}
               >↻</button>

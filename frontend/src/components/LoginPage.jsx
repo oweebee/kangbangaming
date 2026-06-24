@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import React from 'react';
 import { useLang } from '../i18n.js';
+import ModalCard from './ModalCard.jsx';
 
 const GITHUB = 'https://github.com/oweebee/kangbangaming';
 const DISCORD_FALLBACK_URL  = 'https://discord.gg/9mXpM9wv';
@@ -52,7 +53,7 @@ export default function LoginPage({ onLogin, steamError = '', discordConfig = {}
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)', padding: 20 }}>
-      <div style={{ background: 'var(--surface1)', border: '1px solid var(--border)', borderRadius: 16, padding: '44px 36px 32px', width: '100%', maxWidth: 380, boxShadow: '0 8px 40px rgba(0,0,0,.5)' }}>
+      <ModalCard style={{ borderRadius: 16, padding: '44px 36px 32px', width: '100%', maxWidth: 380 }}>
 
         {/* Logo */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, marginBottom: 36 }}>
@@ -156,7 +157,7 @@ export default function LoginPage({ onLogin, steamError = '', discordConfig = {}
             </button>
           </form>
         )}
-      </div>
+      </ModalCard>
     </div>
   );
 }

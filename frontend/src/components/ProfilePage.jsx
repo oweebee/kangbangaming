@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
 import { useLang, LANG_META, SUPPORTED_LANGS } from '../i18n.js';
 import { useZoom } from '../zoom.js';
+import { formatDateLong, authHeaders } from '../utils.js';
 import TrashPanel from './TrashPanel.jsx';
 import ZoomSlider from './ZoomSlider.jsx';
+import ModalCard from './ModalCard.jsx';
 
 const API = '/api';
 const TABS = ['profile', 'trash', 'wishlist'];
@@ -103,7 +105,7 @@ export default function ProfilePage({ token, currentUser, onClose, onSaveSteam }
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch(`${API}/user/profile`, { headers: { Authorization: `Bearer ${token}` } });
+        const res = await fetch(`${API}/user/profile`, { headers: authHeaders(token) });
         if (!res.ok) {
           let msg = `Erreur ${res.status}`;
           try { const d = await res.json(); msg = d.error || msg; } catch {}
@@ -125,7 +127,7 @@ export default function ProfilePage({ token, currentUser, onClose, onSaveSteam }
     setSteamSaving(true); setSteamMsg('');
     const res = await fetch(`${API}/user/settings`, {
       method: 'PATCH',
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      headers: authHeaders(token),
       body: JSON.stringify({ steamId }),
     });
     setSteamSaving(false);
@@ -157,7 +159,7 @@ export default function ProfilePage({ token, currentUser, onClose, onSaveSteam }
     if (activeTab !== 'wishlist' || wishlist !== null || !hasSteam) return;
     setWishlistLoading(true);
     setWishlistError(false);
-    fetch(`${API}/steam/wishlist/deadline`, { headers: { Authorization: `Bearer ${token}` } })
+    fetch(`${API}/steam/wishlist/deadline`, { headers: authHeaders(token) })
       .then(r => r.ok ? r.json() : Promise.reject())
       .then(data => { setWishlist(data); setWishlistLoading(false); })
       .catch(() => { setWishlistError(true); setWishlistLoading(false); });
@@ -166,7 +168,7 @@ export default function ProfilePage({ token, currentUser, onClose, onSaveSteam }
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,.7)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div style={{ background: 'var(--surface1)', border: '1px solid var(--border)', borderRadius: 16, width: '100%', maxWidth: 480, height: '85vh', minHeight: 500, maxHeight: 920, display: 'flex', flexDirection: 'column', boxShadow: '0 8px 40px rgba(0,0,0,.6)', overflow: 'hidden' }}>
+      <ModalCard style={{ borderRadius: 16, width: '100%', maxWidth: 480, height: '85vh', minHeight: 500, maxHeight: 920, display: 'flex', flexDirection: 'column', boxShadow: '0 8px 40px rgba(0,0,0,.6)', overflow: 'hidden' }}>
 
         {/* Avatar header */}
         <div style={{ position: 'relative', background: 'linear-gradient(135deg, #0e1117 0%, #1a1f2e 100%)', padding: '32px 24px 20px', textAlign: 'center', flexShrink: 0 }}>
@@ -407,11 +409,7 @@ export default function ProfilePage({ token, currentUser, onClose, onSaveSteam }
                   if (da) return -1; if (db) return 1;
                   return (a.name || '').localeCompare(b.name || '');
                 });
-                const fmtDate = iso => {
-                  if (!iso) return null;
-                  try { return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }); }
-                  catch { return iso; }
-                };
+                const fmtDate = iso => iso ? (formatDateLong(iso) || iso) : null;
                 return (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                     {sorted.map(item => {
@@ -454,7 +452,7 @@ export default function ProfilePage({ token, currentUser, onClose, onSaveSteam }
           </div>{/* /track */}
         </div>{/* /container */}
 
-      </div>
+      </ModalCard>
     </div>
   );
 }

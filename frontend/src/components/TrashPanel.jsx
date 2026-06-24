@@ -1,13 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useLang } from '../i18n.js';
+import { formatDateLong, authHeaders } from '../utils.js';
 
 const API = '/api';
 
 function formatDate(isoStr) {
-  if (!isoStr) return '';
-  try {
-    return new Date(isoStr).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
-  } catch { return ''; }
+  return formatDateLong(isoStr);
 }
 
 // SVG corbeille propre (outline, style cohérent avec le reste de l'appli)
@@ -39,7 +37,7 @@ export default function TrashPanel({ token, isAdmin = false }) {
     setLoading(true);
     setFetchError(null);
     try {
-      const headers = { Authorization: `Bearer ${token}` };
+      const headers = authHeaders(token);
       const [itemsRes, boardsRes] = await Promise.all([
         fetch(baseUrl, { headers }),
         isAdmin ? Promise.resolve(null) : fetch(`${API}/trash/boards`, { headers }),
@@ -68,7 +66,7 @@ export default function TrashPanel({ token, isAdmin = false }) {
     const body = isAdmin
       ? { userId: item.userId, boardId: item.boardId, gameId: item.gameId }
       : { boardId: item.boardId, gameId: item.gameId };
-    act(item.gameId, () => fetch(url, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body) }));
+    act(item.gameId, () => fetch(url, { method: 'POST', headers: authHeaders(token), body: JSON.stringify(body) }));
   }
 
   async function permDeleteGame(item) {
@@ -77,7 +75,7 @@ export default function TrashPanel({ token, isAdmin = false }) {
     const body = isAdmin
       ? { userId: item.userId, boardId: item.boardId, gameId: item.gameId }
       : { boardId: item.boardId, gameId: item.gameId };
-    act(item.gameId, () => fetch(url, { method: 'DELETE', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body) }));
+    act(item.gameId, () => fetch(url, { method: 'DELETE', headers: authHeaders(token), body: JSON.stringify(body) }));
   }
 
   // ── Actions note texte ─────────────────────────────────────────────
@@ -86,7 +84,7 @@ export default function TrashPanel({ token, isAdmin = false }) {
     const body = isAdmin
       ? { userId: item.userId, boardId: item.boardId, gameId: item.gameId, noteId: item.id }
       : { boardId: item.boardId, gameId: item.gameId, noteId: item.id };
-    act(item.id, () => fetch(url, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body) }));
+    act(item.id, () => fetch(url, { method: 'POST', headers: authHeaders(token), body: JSON.stringify(body) }));
   }
 
   async function permDeleteNote(item) {
@@ -95,14 +93,14 @@ export default function TrashPanel({ token, isAdmin = false }) {
     const body = isAdmin
       ? { userId: item.userId, boardId: item.boardId, gameId: item.gameId, noteId: item.id }
       : { boardId: item.boardId, gameId: item.gameId, noteId: item.id };
-    act(item.id, () => fetch(url, { method: 'DELETE', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body) }));
+    act(item.id, () => fetch(url, { method: 'DELETE', headers: authHeaders(token), body: JSON.stringify(body) }));
   }
 
   // ── Actions board ──────────────────────────────────────────────────
   async function restoreBoard(board) {
     act(`board_${board.id}`, () => fetch(`${API}/trash/boards/restore`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      headers: authHeaders(token),
       body: JSON.stringify({ boardId: board.id }),
     }));
   }
@@ -111,7 +109,7 @@ export default function TrashPanel({ token, isAdmin = false }) {
     if (!window.confirm(t('trash.confirm_perm_delete'))) return;
     act(`board_${board.id}`, () => fetch(`${API}/trash/boards/item`, {
       method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      headers: authHeaders(token),
       body: JSON.stringify({ boardId: board.id }),
     }));
   }
@@ -119,7 +117,7 @@ export default function TrashPanel({ token, isAdmin = false }) {
   async function purgeAll() {
     if (!window.confirm(t('trash.confirm_purge'))) return;
     setPurging(true);
-    await fetch(baseUrl, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+    await fetch(baseUrl, { method: 'DELETE', headers: authHeaders(token) });
     setPurging(false);
     setItems([]);
     setBoards([]);

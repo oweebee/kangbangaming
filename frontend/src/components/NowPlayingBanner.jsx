@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { authHeaders } from '../utils.js';
 
 // Extrait l'appid Steam depuis une URL d'icône Steam
 // ex: https://cdn.akamai.steamstatic.com/steam/apps/12345/...
@@ -17,7 +18,7 @@ export default function NowPlayingBanner({ gameIconUrl, token }) {
     const fetchPlayers = async () => {
       try {
         const res = await fetch(`/api/steam/ingame/${appId}`, {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: authHeaders(token),
         });
         if (res.ok) setPlayers(await res.json());
       } catch { /* silencieux */ }

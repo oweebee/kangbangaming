@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import ModalBackdrop from './ModalBackdrop.jsx';
+import ModalCard from './ModalCard.jsx';
 import { GENRE_COLORS } from './SteamUI.jsx';
 import { useLang } from '../i18n.js';
 
@@ -216,10 +217,9 @@ export default function AppInfoModal({ onClose }) {
 
   return (
     <ModalBackdrop onClose={onClose} zIndex={1100}>
-      <div style={{
-        background: 'var(--surface1)', border: '1px solid var(--border)', borderRadius: 14,
+      <ModalCard style={{
         width: 580, height: '78vh', minHeight: 500, maxHeight: 920,
-        display: 'flex', flexDirection: 'column', boxShadow: '0 8px 40px rgba(0,0,0,.5)',
+        display: 'flex', flexDirection: 'column',
       }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px 0', flexShrink: 0 }}>
@@ -250,7 +250,7 @@ export default function AppInfoModal({ onClose }) {
           {tab === 'features' && <TabFeatures />}
           {tab === 'kanban'   && <TabKanban />}
         </div>
-      </div>
+      </ModalCard>
     </ModalBackdrop>
   );
 }

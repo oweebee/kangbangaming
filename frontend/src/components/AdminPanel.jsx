@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import ModalBackdrop from './ModalBackdrop.jsx';
+import ModalCard from './ModalCard.jsx';
 import { useLang } from '../i18n.js';
+import { authHeaders } from '../utils.js';
 
 const API = '/api';
 
@@ -54,7 +56,7 @@ export default function AdminPanel({ token, currentUser, onClose }) {
   const [boardsLoading, setBoardsLoading] = useState(false);
   const [boardsError, setBoardsError] = useState('');
 
-  const h = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+  const h = authHeaders(token);
 
   async function fetchUsers() {
     setLoading(true);
@@ -309,7 +311,7 @@ export default function AdminPanel({ token, currentUser, onClose }) {
 
   return (
     <ModalBackdrop onClose={onClose} zIndex={1000}>
-      <div style={{ background: 'var(--surface1)', border: '1px solid var(--border)', borderRadius: 14, width: '660px', height: '78vh', minHeight: 500, maxHeight: 920, display: 'flex', flexDirection: 'column', boxShadow: '0 8px 40px rgba(0,0,0,.5)' }}>
+      <ModalCard style={{ width: '660px', height: '78vh', minHeight: 500, maxHeight: 920, display: 'flex', flexDirection: 'column' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 20px 0', borderBottom: '1px solid var(--border)' }}>
           <h2 style={{ margin: '0 0 12px', fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>⚙️ Panneau Admin</h2>
@@ -509,7 +511,7 @@ export default function AdminPanel({ token, currentUser, onClose }) {
                     ))
           )}
         </div>
-      </div>
+      </ModalCard>
     </ModalBackdrop>
   );
 }

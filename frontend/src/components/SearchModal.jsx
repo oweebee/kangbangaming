@@ -5,6 +5,7 @@ import ProgressSlider from './ProgressSlider.jsx';
 import { StatusToggles, DatePicker, AssigneeEditor } from './CardControls.jsx';
 import ModalBackdrop from './ModalBackdrop.jsx';
 import { useLang } from '../i18n.js';
+import { authHeaders } from '../utils.js';
 
 const CARD_EMOJI_CATS = [
   { label: '🎮 Gaming', emojis: ['🎮','🕹️','👾','🎲','🃏','🧩','🎯','🏹','⚔️','🗡️','🛡️','🪃','🔫','💣','🧲','🪄','🎪','🎡','🎠','🎢'] },
@@ -80,13 +81,13 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
   const [notes,     setNotes]     = useState(initialGame?.notes     || []);
   const [notesDraft, setNotesDraft] = useState('');
   const [progress,  setProgress]  = useState(initialGame?.progress ?? null);
-  const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
+  const reqHeaders = token ? authHeaders(token) : {};
 
   const search = useCallback(async (q) => {
     if (!q.trim()) { setResults([]); return; }
     setLoading(true);
     try {
-      const res = await fetch(`${api}/steam/search?q=${encodeURIComponent(q)}`, { headers: authHeaders });
+      const res = await fetch(`${api}/steam/search?q=${encodeURIComponent(q)}`, { headers: reqHeaders });
       setResults(await res.json());
     } catch { setResults([]); }
     finally { setLoading(false); }
