@@ -218,7 +218,7 @@ export default function AppInfoModal({ onClose }) {
     <ModalBackdrop onClose={onClose} zIndex={1100}>
       <div style={{
         background: 'var(--surface1)', border: '1px solid var(--border)', borderRadius: 14,
-        width: 580, height: '78vh', minHeight: 500, maxHeight: 820,
+        width: 580, height: '78vh', minHeight: 500, maxHeight: 920,
         display: 'flex', flexDirection: 'column', boxShadow: '0 8px 40px rgba(0,0,0,.5)',
       }}>
         {/* Header */}

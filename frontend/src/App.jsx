@@ -1613,7 +1613,7 @@ export default function App() {
   );
 
   const homeView = (
-    <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+    <div style={{ flex: 1, display: 'flex', overflowX: 'auto', overflowY: 'hidden' }}>
 
       {/* ── Colonne gauche : Échéances ── */}
       <div style={{ width: `${homeSplitPct}%`, minWidth: 0, flexShrink: 0, overflowY: 'auto', padding: '28px 20px' }}>
@@ -1823,7 +1823,10 @@ export default function App() {
       </div>
 
       {/* ── Colonne droite : Sorties à venir ── */}
-      <div style={{ width: homeUpcomingWidth, flexShrink: 0, overflow: 'hidden' }}>
+      {/* maxWidth en % (et non en px/vw) : reste cohérent avec la compensation de zoom
+          (zoom.js) et empêche cette colonne d'être poussée hors champ par overflow
+          si homeUpcomingWidth (px stockable jusqu'à 560) dépasse la largeur dispo. */}
+      <div style={{ width: homeUpcomingWidth, maxWidth: '45%', flexShrink: 0, overflow: 'hidden' }}>
         <UpcomingPanel token={token} />
       </div>
 
@@ -1835,7 +1838,7 @@ export default function App() {
   const sidebarContent = (
     <>
       {/* Logo */}
-      <div style={{ padding: '14px 14px 12px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
+      <div style={{ padding: '14px 14px 12px', display: 'flex', alignItems: 'center', gap: 10 }}>
         <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', flexShrink: 0 }}>
           <svg viewBox="0 0 496 512" xmlns="http://www.w3.org/2000/svg" style={{ width: 35, height: 35, position: 'relative', zIndex: 1 }}>
             <defs>
@@ -2198,7 +2201,7 @@ export default function App() {
 
   if (isMobile) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
         {showDrawer && (
           <>
             <div onClick={() => setShowDrawer(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.6)', zIndex: 200 }} />
@@ -2302,7 +2305,7 @@ export default function App() {
   // ── Desktop layout ────────────────────────────────────────────────────────
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', height: '100%', overflow: 'hidden' }}>
       {/* Sidebar — z-index 22 so it appears above the GameInfoPanel (z-index 20) */}
       <aside style={{ width: 283, background: '#111', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', flexShrink: 0, position: 'relative', zIndex: 22 }}>
         {sidebarContent}
