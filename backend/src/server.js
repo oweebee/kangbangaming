@@ -987,18 +987,41 @@ const WISHLIST_DEADLINE_TTL = 5 * 60 * 1000; // 5 min
 const appReleaseDateCache   = new Map(); // appid → { date, fetchedAt }
 const APP_DATE_TTL = 24 * 60 * 60 * 1000; // 24h
 
+const STEAM_MONTHS = { jan:1, feb:2, mar:3, apr:4, may:5, jun:6, jul:7, aug:8, sep:9, oct:10, nov:11, dec:12 };
+
 function parseSteamDate(ts, str) {
   // ts = unix seconds (peut être 0), str = chaîne lisible Steam
-  if (ts && ts > 0) return new Date(ts * 1000).toISOString().split('T')[0];
+  // IMPORTANT : on n'utilise JAMAIS `new Date(str).toISOString()` pour une chaîne
+  // texte type "25 Jun, 2026" — ce format n'est pas ISO donc le moteur JS le
+  // parse en heure LOCALE du serveur, puis toISOString() le reconvertit en UTC :
+  // sur un serveur dont le fuseau est en avance sur UTC (ex: Europe), minuit
+  // local devient la veille en UTC → la date de sortie tombait un jour trop
+  // tôt et le jeu apparaissait "en retard" dans les échéances avant même sa
+  // sortie réelle, sans jamais passer par "Aujourd'hui" ni "Sous 7 jours".
+  // On calcule donc tout en UTC / par extraction manuelle des nombres, sans
+  // jamais laisser le fuseau horaire local influencer le jour calendaire.
+  if (ts && ts > 0) {
+    const d = new Date(ts * 1000);
+    const y = d.getUTCFullYear();
+    const mo = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const da = String(d.getUTCDate()).padStart(2, '0');
+    return `${y}-${mo}-${da}`;
+  }
   if (!str) return null;
-  if (/coming soon|tbd|tba|q[1-4]|\d{4}$/i.test(str.trim()) && !/\d{1,2}\s+\w/.test(str)) return null;
-  const direct = new Date(str);
-  if (!isNaN(direct.getTime())) return direct.toISOString().split('T')[0];
-  // "15 Jun, 2025" → "Jun 15, 2025"
-  const m = str.match(/^(\d{1,2})\s+(\w+),?\s+(\d{4})/);
+  const s = str.trim();
+  if (/coming soon|tbd|tba|q[1-4]|\d{4}$/i.test(s) && !/\d{1,2}\s+\w/.test(s)) return null;
+  // "25 Jun, 2026" / "25 Jun 2026"
+  let m = s.match(/^(\d{1,2})\s+([A-Za-zéûÉÛ]+)\.?,?\s+(\d{4})/);
+  let day, monStr, year;
+  if (m) { day = m[1]; monStr = m[2]; year = m[3]; }
+  if (!m) {
+    // "Jun 25, 2026" / "Jun 25 2026"
+    m = s.match(/^([A-Za-zéûÉÛ]+)\.?\s+(\d{1,2}),?\s+(\d{4})/);
+    if (m) { monStr = m[1]; day = m[2]; year = m[3]; }
+  }
   if (m) {
-    const d = new Date(`${m[2]} ${m[1]}, ${m[3]}`);
-    if (!isNaN(d.getTime())) return d.toISOString().split('T')[0];
+    const mon = STEAM_MONTHS[monStr.slice(0, 3).toLowerCase()];
+    if (mon) return `${year}-${String(mon).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
   }
   return null;
 }

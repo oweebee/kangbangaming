@@ -1219,7 +1219,7 @@ export default function App() {
     : null;
 
   // Sorted boards (respects drag order)
-  const sortedBoards = boardOrder.length > 0
+  const sortedBoardsRaw = boardOrder.length > 0
     ? [...boards].sort((a, b) => {
         const ai = boardOrder.indexOf(a.id);
         const bi = boardOrder.indexOf(b.id);
@@ -1229,6 +1229,13 @@ export default function App() {
         return ai - bi;
       })
     : boards;
+
+  // Un de mes boards passé en public ET que je suis (suivi) ne doit plus apparaître
+  // dans "Épinglés"/"Mes boards" : il vit désormais uniquement dans "Boards publics
+  // suivis" — même logique que l'épinglage, qui retire déjà un board de "Mes boards"
+  // pour l'afficher dans sa propre section.
+  const myFollowedPublicIds = new Set(favBoards.map(f => f.id));
+  const sortedBoards = sortedBoardsRaw.filter(b => !myFollowedPublicIds.has(b.id));
 
   // Public boards split: followed vs non-followed
   const followedPublicBoards = homePublicBoards.filter(b => favBoards.some(f => f.id === b.id));
@@ -1536,7 +1543,7 @@ export default function App() {
               <span style={{ fontSize: 10, color: 'var(--text-muted)', background: 'var(--surface2)', borderRadius: 99, padding: '1px 6px' }}>{otherBoards.length}</span>
               <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#f5a500" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transition: 'transform .2s', transform: homeOtherCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', flexShrink: 0, opacity: 0.7 }}><polyline points="6 9 12 15 18 9"/></svg>
             </div>
-            {!homeOtherCollapsed && (sortedBoards.length === 0
+            {!homeOtherCollapsed && (boards.length === 0
               ? <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>{t('board.create_start')}</div>
               : otherBoards.length === 0
                 ? <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>{t('board.all_pinned')}</div>
@@ -1776,7 +1783,7 @@ export default function App() {
                   <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--surface2)', borderRadius: 99, padding: '1px 7px' }}>{otherBoards.length}</span>
                   <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#f5a500" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transition: 'transform .2s', transform: homeOtherCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', flexShrink: 0, opacity: 0.7 }}><polyline points="6 9 12 15 18 9"/></svg>
                 </div>
-                {!homeOtherCollapsed && (sortedBoards.length === 0 ? (
+                {!homeOtherCollapsed && (boards.length === 0 ? (
                   <div style={{ color: 'var(--text-muted)', fontSize: 12, padding: '16px 0' }}>{t('board.create_start')}</div>
                 ) : otherBoards.length === 0 ? (
                   <div style={{ color: 'var(--text-muted)', fontSize: 12, padding: '8px 0' }}>{t('board.all_pinned')}</div>
