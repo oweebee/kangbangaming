@@ -20,6 +20,7 @@ import BoardIcon from './components/BoardIcon.jsx';
 import GameInfoPanel, { GAME_INFO_PANEL_WIDTH } from './components/GameInfoPanel.jsx';
 import DeadlinePanel from './components/DeadlinePanel.jsx';
 import UpcomingPanel from './components/UpcomingPanel.jsx';
+import LibraryNewsPanel from './components/LibraryNewsPanel.jsx';
 import MobileHomeSlider from './components/MobileHomeSlider.jsx';
 
 const DISCORD_FALLBACK_ICON = 'https://cdn.discordapp.com/icons/983316258302877747/ebcf20448ef8818f93e8f31afad9f8d9.webp?size=64';
@@ -356,7 +357,7 @@ export default function App() {
   // Toujours ouvrir sur deadlines — on switche sur boards seulement si deadlines est vide
   const [mobileHomeTab, setMobileHomeTab] = useState('deadlines');
   const setMobileHomeTabPersist = (tab) => { setMobileHomeTab(tab); };
-  const mobileHomeTabs = ['deadlines', 'boards', 'upcoming'];
+  const mobileHomeTabs = ['deadlines', 'boards', 'libnews', 'upcoming'];
   const [homePublicBoards, setHomePublicBoards] = useState([]);
   const [deadlineRefreshKey, setDeadlineRefreshKey] = useState(0);
   // Home section drag order (IDs) — persisted in localStorage
@@ -385,12 +386,21 @@ export default function App() {
   // toute la mise en page — on retombe sur le défaut si hors plage saine)
   const [homeSplitPct, setHomeSplitPct] = useState(() => {
     try {
-      const v = parseFloat(localStorage.getItem('homeSplitPct') || '35');
-      return (Number.isFinite(v) && v > 5 && v < 95) ? v : 35;
-    } catch { return 35; }
+      const v = parseFloat(localStorage.getItem('homeSplitPct') || '25');
+      return (Number.isFinite(v) && v > 5 && v < 95) ? v : 25;
+    } catch { return 25; }
   });
   const homeSplitterDragging = useRef(false);
   const homeSplitterRef = useRef(null);
+  // Resizable splitter between boards et la colonne News Bibliothèque (même garde-fou)
+  const [homeNewsWidth, setHomeNewsWidth] = useState(() => {
+    try {
+      const v = parseFloat(localStorage.getItem('homeNewsWidth') || '300');
+      return (Number.isFinite(v) && v >= 220 && v <= 480) ? v : 300;
+    } catch { return 300; }
+  });
+  const homeNewsSplitterDragging = useRef(false);
+  const homeNewsSplitterRef = useRef(null);
   // Resizable splitter between boards and UpcomingPanel (même garde-fou)
   const [homeUpcomingWidth, setHomeUpcomingWidth] = useState(() => {
     try {
@@ -1599,6 +1609,7 @@ export default function App() {
       tabLabels={[
         { id: 'deadlines', label: t('home.deadlines_tab') },
         { id: 'boards',    label: t('home.boards_tab')    },
+        { id: 'libnews',   label: t('home.libnews_tab')   },
         { id: 'upcoming',  label: t('home.upcoming_tab')  },
       ]}
     >
@@ -1610,7 +1621,11 @@ export default function App() {
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {boardsContent}
       </div>
-      {/* Panneau 2 : Upcoming */}
+      {/* Panneau 2 : News Bibliothèque */}
+      <div style={{ flex: 1, overflow: 'hidden' }}>
+        <LibraryNewsPanel token={token} />
+      </div>
+      {/* Panneau 3 : Upcoming */}
       <div style={{ flex: 1, overflow: 'hidden' }}>
         <UpcomingPanel token={token} />
       </div>
@@ -1645,7 +1660,7 @@ export default function App() {
       </div>
 
       {/* ── Colonne centrale : Boards ── */}
-      <div style={{ flex: 1, minWidth: 0, overflowY: 'auto', padding: '28px 28px' }}>
+      <div style={{ flex: 1, minWidth: 280, overflowY: 'auto', padding: '28px 28px' }}>
       <div style={{ maxWidth: 960, margin: '0 auto' }}>
         {/* Toggle boards masqués — apparaît si des boards sont masqués */}
         {hiddenBoardIds.size > 0 && (
@@ -1810,7 +1825,33 @@ export default function App() {
       </div>
       </div>
 
-      {/* ── Séparateur 2 : Boards / Sorties à venir ── */}
+      {/* ── Séparateur : Boards / News Bibliothèque ── */}
+      <div
+        ref={homeNewsSplitterRef}
+        {...useSplitter(homeNewsSplitterRef, homeNewsSplitterDragging, (client, rect) => {
+          // Largeur News = distance entre le curseur et la frontière fixe News/Upcoming
+          // (laquelle dépend de la largeur courante d'Upcoming + son propre séparateur).
+          const rightEdge = rect.right - homeUpcomingWidth - 6;
+          const clamped = Math.max(220, Math.min(480, rightEdge - client.clientX));
+          setHomeNewsWidth(clamped);
+          try { localStorage.setItem('homeNewsWidth', String(clamped)); } catch {}
+        })}
+        style={{ width: 6, flexShrink: 0, cursor: 'col-resize', background: 'var(--border)', position: 'relative', transition: 'background .15s', userSelect: 'none', touchAction: 'none' }}
+        onMouseEnter={e => e.currentTarget.style.background = 'var(--accent)'}
+        onMouseLeave={e => { if (!homeNewsSplitterDragging.current) e.currentTarget.style.background = 'var(--border)'; }}
+      >
+        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', display: 'flex', flexDirection: 'column', gap: 3, pointerEvents: 'none' }}>
+          {[0,1,2].map(i => <div key={i} style={{ width: 2, height: 2, borderRadius: '50%', background: 'var(--text-muted)', opacity: 0.5 }} />)}
+        </div>
+      </div>
+
+      {/* ── Colonne News Bibliothèque ── */}
+      {/* maxWidth en % : même garde-fou que pour Upcoming, voir commentaire ci-dessous. */}
+      <div style={{ width: homeNewsWidth, maxWidth: '30%', flexShrink: 0, overflow: 'hidden' }}>
+        <LibraryNewsPanel token={token} />
+      </div>
+
+      {/* ── Séparateur 2 : News Bibliothèque / Sorties à venir ── */}
       <div
         ref={homeUpcomingSplitterRef}
         {...useSplitter(homeUpcomingSplitterRef, homeUpcomingSplitterDragging, (client, rect) => {
@@ -2109,7 +2150,16 @@ export default function App() {
                 </div>
               )}
               <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 14, fontWeight: 700, opacity: hiddenBoardIds.has(b.id) ? 0.45 : 1 }}>{b.name}</span>
-              <svg viewBox="0 0 24 24" width="10" height="10" fill="var(--accent)" stroke="var(--accent)" strokeWidth="1.5" style={{ flexShrink: 0, opacity: 0.7 }}><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+              {/* Ne plus suivre — repasse le board dans "Mes boards" si on en est le créateur
+                  (sortedBoards le réintègre automatiquement dès qu'il sort de favBoards),
+                  ou disparaît simplement de cette section sinon. */}
+              <button
+                onClick={e => { e.stopPropagation(); toggleFavorite(b.id, b, true); }}
+                title={t('hbc.unfollow')}
+                style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', flexShrink: 0, lineHeight: 1 }}
+              >
+                <svg viewBox="0 0 24 24" width="10" height="10" fill="var(--accent)" stroke="var(--accent)" strokeWidth="1.5" style={{ opacity: 0.7 }}><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+              </button>
             </div>
           ))}
           </div>

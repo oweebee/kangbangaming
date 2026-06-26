@@ -1464,6 +1464,7 @@ async function getLibraryMap(userId) {
   try {
     const data = await steamFetch(`https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key=${creds.apiKey}&steamid=${creds.steamId}&include_appinfo=1&include_played_free_games=1&format=json`);
     const cache = new Map((data.response?.games || []).map(g => [g.appid, {
+      name: g.name || '',
       icon_url: g.img_icon_url ? `https://media.steampowered.com/steamcommunity/public/images/apps/${g.appid}/${g.img_icon_url}.jpg` : null,
       playtime_forever: g.playtime_forever || 0,
     }]));
@@ -1648,6 +1649,83 @@ app.get('/api/steam/news/:appid', requireAuth, async (req, res) => {
     const result = { appid: Number(appid), items };
     newsCaches.set(appid, { data: result, cacheAt: Date.now() });
     res.json(result);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Steam News — bibliothèque (agrégé, par utilisateur) ──────────────────────
+// Récupère les actualités des jeux possédés par l'utilisateur, triées du plus
+// récent au plus ancien. Mise en cache par user (30 min) pour éviter de
+// re-déclencher des dizaines/centaines d'appels Steam à chaque scroll — la
+// pagination (offset/limit) se fait sur la liste déjà calculée, sans
+// régénérer ce qui n'est pas affiché.
+const LIBRARY_NEWS_TTL = 30 * 60 * 1000; // 30 min
+const libraryNewsCaches = new Map(); // userId → { data, cacheAt }
+const LIBRARY_NEWS_MAX_GAMES = 200;   // cap perf : jeux les + joués en priorité
+const LIBRARY_NEWS_CHUNK     = 8;     // requêtes Steam en parallèle par lot
+const LIBRARY_NEWS_MAX_ITEMS = 300;   // cap mémoire de la liste agrégée
+
+async function fetchLibraryNewsBatch(appids) {
+  const out = [];
+  for (let i = 0; i < appids.length; i += LIBRARY_NEWS_CHUNK) {
+    const chunk = appids.slice(i, i + LIBRARY_NEWS_CHUNK);
+    const settled = await Promise.allSettled(chunk.map(id =>
+      steamFetch(`https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=${id}&count=5&maxlength=0&format=json`)
+        .then(data => ({ id, data }))
+    ));
+    for (const s of settled) if (s.status === 'fulfilled') out.push(s.value);
+  }
+  return out;
+}
+
+async function getLibraryNews(userId, force = false) {
+  const entry = libraryNewsCaches.get(userId);
+  if (!force && entry && Date.now() - entry.cacheAt < LIBRARY_NEWS_TTL) return entry.data;
+
+  const lib = await getLibraryMap(userId);
+  if (lib.size === 0) {
+    const data = [];
+    libraryNewsCaches.set(userId, { data, cacheAt: Date.now() });
+    return data;
+  }
+
+  // Priorité aux jeux les plus joués si la bibliothèque est grosse
+  const appids = [...lib.entries()]
+    .sort((a, b) => (b[1].playtime_forever || 0) - (a[1].playtime_forever || 0))
+    .slice(0, LIBRARY_NEWS_MAX_GAMES)
+    .map(([id]) => id);
+
+  const batches = await fetchLibraryNewsBatch(appids);
+  const items = [];
+  for (const { id, data } of batches) {
+    const libEntry = lib.get(id);
+    for (const n of (data.appnews?.newsitems || [])) {
+      items.push({
+        appid: id,
+        gameName: libEntry?.name || '',
+        headerImage: `https://cdn.cloudflare.steamstatic.com/steam/apps/${id}/header.jpg`,
+        gid: n.gid,
+        title: n.title,
+        url: n.url,
+        feedlabel: n.feedlabel || null,
+        date: n.date,
+      });
+    }
+  }
+  items.sort((a, b) => b.date - a.date);
+  const data = items.slice(0, LIBRARY_NEWS_MAX_ITEMS);
+  libraryNewsCaches.set(userId, { data, cacheAt: Date.now() });
+  return data;
+}
+
+app.get('/api/steam/library/news', requireAuth, async (req, res) => {
+  const creds = getUserSteamCreds(req.user.id);
+  if (!creds.apiKey || !creds.steamId) return res.status(400).json({ error: 'No Steam credentials configured' });
+  const offset = Math.max(0, parseInt(req.query.offset) || 0);
+  const limit  = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20));
+  try {
+    const all = await getLibraryNews(req.user.id, req.query.force === '1');
+    const items = all.slice(offset, offset + limit);
+    res.json({ items, total: all.length, hasMore: offset + limit < all.length });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 

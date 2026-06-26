@@ -282,6 +282,7 @@ fr: {
   'home.create_start':    'Crée un board pour commencer',
   'home.deadlines_tab':   '⚠ Échéances',
   'home.boards_tab':      '📋 Boards',
+  'home.libnews_tab':     '📰 News',
   'home.upcoming_tab':    '🎮 Sorties',
 
   // Board (extra UI strings)
@@ -469,6 +470,14 @@ fr: {
   'upcoming.load_error':   'Impossible de charger les sorties.',
   'upcoming.retry':        'Réessayer',
   'upcoming.empty':        'Aucune sortie majeure\ndans les 45 prochains jours',
+
+  // LibraryNewsPanel
+  'libnews.header':        'News Bibliothèque',
+  'libnews.force_reload':  'Forcer le rechargement',
+  'libnews.load_error':    'Impossible de charger les actualités.',
+  'libnews.retry':         'Réessayer',
+  'libnews.empty':         'Aucune actualité majeure\npour les jeux de ta bibliothèque',
+  'libnews.no_steam':      "Aucun compte Steam lié. Configurez votre Steam ID dans l'onglet Profil.",
 
   // PublicBoards
   'public.loading':        'Chargement…',
@@ -780,6 +789,7 @@ en: {
   'home.create_start':    'Create a board to get started',
   'home.deadlines_tab':   '⚠ Deadlines',
   'home.boards_tab':      '📋 Boards',
+  'home.libnews_tab':     '📰 News',
   'home.upcoming_tab':    '🎮 Releases',
 
   'board.dashboard':        'Board Dashboard',
@@ -953,6 +963,14 @@ en: {
   'upcoming.load_error':   'Could not load releases.',
   'upcoming.retry':        'Retry',
   'upcoming.empty':        'No major releases\nin the next 45 days',
+
+  // LibraryNewsPanel
+  'libnews.header':        'Library News',
+  'libnews.force_reload':  'Force reload',
+  'libnews.load_error':    'Could not load news.',
+  'libnews.retry':         'Retry',
+  'libnews.empty':         'No major announcements\nfor your library games',
+  'libnews.no_steam':      'No Steam account linked. Set up your Steam ID in the Profile tab.',
 
   'public.loading':        'Loading…',
   'public.no_boards':      'No public boards',
@@ -1255,6 +1273,7 @@ es: {
   'home.create_start':    'Crea un tablero para empezar',
   'home.deadlines_tab':   '⚠ Fechas límite',
   'home.boards_tab':      '📋 Tableros',
+  'home.libnews_tab':     '📰 Noticias',
   'home.upcoming_tab':    '🎮 Lanzamientos',
 
   'board.dashboard':        'Panel de tableros',
@@ -1428,6 +1447,14 @@ es: {
   'upcoming.load_error':   'No se pudieron cargar los lanzamientos.',
   'upcoming.retry':        'Reintentar',
   'upcoming.empty':        'Sin lanzamientos importantes\nen los próximos 45 días',
+
+  // LibraryNewsPanel
+  'libnews.header':        'Noticias de la Biblioteca',
+  'libnews.force_reload':  'Forzar recarga',
+  'libnews.load_error':    'No se pudieron cargar las noticias.',
+  'libnews.retry':         'Reintentar',
+  'libnews.empty':         'Sin anuncios importantes\npara los juegos de tu biblioteca',
+  'libnews.no_steam':      'Ninguna cuenta de Steam vinculada. Configura tu Steam ID en la pestaña Perfil.',
 
   'public.loading':        'Cargando…',
   'public.no_boards':      'Sin tableros públicos',
@@ -1730,6 +1757,7 @@ de: {
   'home.create_start':    'Erstelle ein Board, um zu beginnen',
   'home.deadlines_tab':   '⚠ Fristen',
   'home.boards_tab':      '📋 Boards',
+  'home.libnews_tab':     '📰 News',
   'home.upcoming_tab':    '🎮 Releases',
 
   'board.dashboard':        'Board-Übersicht',
@@ -1903,6 +1931,14 @@ de: {
   'upcoming.load_error':   'Releases konnten nicht geladen werden.',
   'upcoming.retry':        'Erneut versuchen',
   'upcoming.empty':        'Keine großen Releases\nin den nächsten 45 Tagen',
+
+  // LibraryNewsPanel
+  'libnews.header':        'Bibliothek-News',
+  'libnews.force_reload':  'Neu laden',
+  'libnews.load_error':    'News konnten nicht geladen werden.',
+  'libnews.retry':         'Erneut versuchen',
+  'libnews.empty':         'Keine wichtigen Ankündigungen\nfür deine Bibliotheksspiele',
+  'libnews.no_steam':      'Kein Steam-Konto verknüpft. Steam-ID im Profil-Tab einrichten.',
 
   'public.loading':        'Wird geladen…',
   'public.no_boards':      'Keine öffentlichen Boards',
@@ -2205,6 +2241,7 @@ ru: {
   'home.create_start':    'Создай доску для начала',
   'home.deadlines_tab':   '⚠ Дедлайны',
   'home.boards_tab':      '📋 Доски',
+  'home.libnews_tab':     '📰 Новости',
   'home.upcoming_tab':    '🎮 Релизы',
 
   'board.dashboard':        'Доски',
@@ -2378,6 +2415,14 @@ ru: {
   'upcoming.load_error':   'Не удалось загрузить релизы.',
   'upcoming.retry':        'Повторить',
   'upcoming.empty':        'Нет крупных релизов\nв ближайшие 45 дней',
+
+  // LibraryNewsPanel
+  'libnews.header':        'Новости библиотеки',
+  'libnews.force_reload':  'Принудительная перезагрузка',
+  'libnews.load_error':    'Не удалось загрузить новости.',
+  'libnews.retry':         'Повторить',
+  'libnews.empty':         'Нет крупных анонсов\nдля игр из твоей библиотеки',
+  'libnews.no_steam':      'Аккаунт Steam не привязан. Настройте Steam ID во вкладке Профиль.',
 
   'public.loading':        'Загрузка…',
   'public.no_boards':      'Нет публичных досок',
@@ -2680,6 +2725,7 @@ zh: {
   'home.create_start':    '创建一个看板以开始',
   'home.deadlines_tab':   '⚠ 截止日期',
   'home.boards_tab':      '📋 看板',
+  'home.libnews_tab':     '📰 资讯',
   'home.upcoming_tab':    '🎮 发售',
 
   'board.dashboard':        '看板总览',
@@ -2853,6 +2899,14 @@ zh: {
   'upcoming.load_error':   '无法加载发售信息。',
   'upcoming.retry':        '重试',
   'upcoming.empty':        '未来45天内\n没有重大发售',
+
+  // LibraryNewsPanel
+  'libnews.header':        '资料库资讯',
+  'libnews.force_reload':  '强制重新加载',
+  'libnews.load_error':    '无法加载资讯。',
+  'libnews.retry':         '重试',
+  'libnews.empty':         '你的资料库游戏\n暂无重大公告',
+  'libnews.no_steam':      '未关联 Steam 账号。请在资料标签中设置 Steam ID。',
 
   'public.loading':        '加载中…',
   'public.no_boards':      '暂无公开看板',

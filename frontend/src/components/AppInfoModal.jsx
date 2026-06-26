@@ -124,6 +124,7 @@ function TabFeatures() {
     { icon: '🔍', title: 'Recherche globale', desc: 'Icône 🔍 en haut de sidebar — cherche parmi tous tes jeux et toutes tes cartes.' },
     { icon: '⭐', title: 'Populaires & Recommandés', desc: 'Carrousel des jeux mis en avant sur Steam avec note, genres et description. Défilement toutes les 5 secondes.' },
     { icon: '📅', title: 'Sorties à venir', desc: 'Prochaines sorties Steam avec date et note Metacritic. Actualisation via ↺.' },
+    { icon: '📰', title: 'News Bibliothèque', desc: 'Colonne redimensionnable sur l\'accueil (ou onglet dédié sur mobile) qui liste les grosses annonces des jeux de ta bibliothèque Steam, triées de la plus récente à la plus ancienne. 20 actualités chargées au départ, le reste se charge au fil du scroll. Actualisation via ↺.' },
     { icon: '🗑️', title: 'Corbeille', desc: 'Les cartes archivées supprimées et les notes effacées sont conservées 30 jours dans la corbeille. Restauration en un clic depuis l\'onglet "Corbeille" de ton profil. Les admins ont une vue globale de toutes les suppressions.' },
     { icon: '🌐', title: 'Boards publics collaboratifs', desc: 'Tout utilisateur connecté peut ajouter colonnes et cartes sur un board public — pas seulement le propriétaire. Idéal pour les boards communautaires.' },
     { icon: '★', title: 'Wishlist Steam dans les échéances', desc: 'Les jeux de ta wishlist Steam avec une date de sortie connue apparaissent automatiquement dans le panneau Échéances (badge ★ WISHLIST). Clic → page Steam Store. Masquables individuellement. Profil Steam public requis.' },
