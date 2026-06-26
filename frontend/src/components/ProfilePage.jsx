@@ -209,7 +209,7 @@ export default function ProfilePage({ token, currentUser, onClose, onSaveSteam }
     if (activeTab !== 'wishlist' || wishlist !== null || !hasSteam) return;
     setWishlistLoading(true);
     setWishlistError(false);
-    fetch(`${API}/steam/wishlist/deadline`, { headers: authHeaders(token) })
+    fetch(`${API}/steam/wishlist/full`, { headers: authHeaders(token) })
       .then(r => r.ok ? r.json() : Promise.reject())
       .then(data => { setWishlist(data); setWishlistLoading(false); })
       .catch(() => { setWishlistError(true); setWishlistLoading(false); });
@@ -465,11 +465,9 @@ export default function ProfilePage({ token, currentUser, onClose, onSaveSteam }
                     {[
                       ['🗂️', profile.stats.boardCount, t('profile.stat_boards')],
                       ['🌐', profile.stats.publicBoardCount, t('profile.stat_public')],
-                      ['🎮', profile.stats.totalGames - profile.stats.customCards, t('profile.stat_games')],
+                      ['🎮', profile.stats.steamLibraryCount, t('profile.stat_games')],
                       ['✨', profile.stats.customCards, t('profile.stat_custom')],
-                      ['📋', profile.stats.totalColumns, t('profile.stat_columns')],
-                      ['📅', profile.createdAt ? new Date(profile.createdAt).toLocaleDateString() : '—', t('profile.stat_since')],
-                      ['✅', `${profile.stats.doneCount}${profile.stats.totalGames > 0 ? ` (${profile.stats.completionRate}%)` : ''}`, t('profile.stat_done')],
+                      ['💖', profile.stats.steamWishlistCount, t('profile.stat_wishlist')],
                       ['⏰', profile.stats.withDeadlineCount, t('profile.stat_deadlines')],
                       ['📝', profile.stats.notesCount, t('profile.stat_notes')],
                       ['⭐', profile.stats.followedBoardsCount, t('profile.stat_followed')],
@@ -515,7 +513,10 @@ export default function ProfilePage({ token, currentUser, onClose, onSaveSteam }
                 </div>
               )}
 
-              {hasSteam && !wishlistLoading && !wishlistError && wishlist !== null && wishlist.length === 0 && (
+              {/* Si le module est bloqué (profil privé), la notice ci-dessus explique déjà
+                  pourquoi la liste est vide — afficher "wishlist vide" serait trompeur car
+                  on ne sait pas si elle l'est réellement (cf. même logique que DeadlinePanel). */}
+              {hasSteam && !steamBlocked && !wishlistLoading && !wishlistError && wishlist !== null && wishlist.length === 0 && (
                 <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, marginTop: 40 }}>
                   {t('profile.wishlist_empty')}
                 </div>

@@ -461,7 +461,7 @@ app.get('/api/search', requireAuth, (req, res) => {
 
 // ── User profile + settings ───────────────────────────────────────────────────
 
-app.get('/api/user/profile', requireAuth, (req, res) => {
+app.get('/api/user/profile', requireAuth, async (req, res) => {
   try {
     const users = readUsers();
     const user = users.find(u => u.id === req.user.id);
@@ -471,15 +471,12 @@ app.get('/api/user/profile', requireAuth, (req, res) => {
     const boardList = Object.entries(userBoards);
     const boardCount = boardList.length;
     const publicBoardCount = boardList.filter(([, b]) => b.public).length;
-    let totalGames = 0, customCards = 0, totalColumns = 0, doneCount = 0, notesCount = 0, withDeadlineCount = 0;
+    let customCards = 0, notesCount = 0, withDeadlineCount = 0;
     let busiestBoardName = null, busiestBoardCount = 0;
     for (const [, board] of boardList) {
       const games = Object.values(board.games || {});
-      totalGames += games.length;
       customCards += games.filter(g => g.type === 'custom').length;
-      totalColumns += (board.columns || []).length;
       for (const g of games) {
-        if (g.done) doneCount++;
         if (g.dueDate || g.startDate) withDeadlineCount++;
         notesCount += (g.notes || []).filter(n => !n.deletedAt).length;
       }
@@ -487,7 +484,15 @@ app.get('/api/user/profile', requireAuth, (req, res) => {
     }
     const followedBoardsCount = (user.favorites || []).length;
     const accountAgeDays = user.createdAt ? Math.max(0, Math.floor((Date.now() - new Date(user.createdAt).getTime()) / 86400000)) : null;
-    const completionRate = totalGames > 0 ? Math.round((doneCount / totalGames) * 100) : 0;
+
+    // Comptes Steam réels (bibliothèque + wishlist) — on réutilise les caches
+    // déjà en place pour le matching InLibrary/WishlistDot plutôt que de
+    // redévelopper un appel Steam dédié (cf. getLibraryMap / getWishlistAppids
+    // plus bas dans ce fichier).
+    const [libraryMap, wishlistSet] = await Promise.all([
+      getLibraryMap(req.user.id),
+      getWishlistAppids(req.user.id),
+    ]);
 
     res.json({
       id: user.id,
@@ -501,8 +506,9 @@ app.get('/api/user/profile', requireAuth, (req, res) => {
       steamPublic: user.steamPublic === undefined ? null : user.steamPublic, // true/false/null (jamais déterminé)
       hasSteamApiKey: !!user.steamApiKey, // jamais la clé brute — juste l'état "configurée"
       stats: {
-        boardCount, publicBoardCount, totalGames, customCards, totalColumns,
-        doneCount, completionRate, notesCount, withDeadlineCount,
+        boardCount, publicBoardCount, customCards,
+        steamLibraryCount: libraryMap.size, steamWishlistCount: wishlistSet.size,
+        notesCount, withDeadlineCount,
         followedBoardsCount, busiestBoardName, busiestBoardCount, accountAgeDays,
       },
     });
@@ -1120,12 +1126,15 @@ async function fetchOneAppDate(appid) {
   } catch { return null; }
 }
 
-app.get('/api/steam/wishlist/deadline', requireAuth, async (req, res) => {
-  const creds = getUserSteamCreds(req.user.id);
-  if (!creds.steamId) return res.json([]);
+// Récupère la wishlist complète (TOUS les items, avec ou sans date de sortie
+// connue) — partagée entre /deadline (filtre ensuite sur release_date) et
+// /full (liste complète, sans filtre). Un seul fetch Steam alimente les deux.
+async function getWishlistItemsRaw(userId) {
+  const creds = getUserSteamCreds(userId);
+  if (!creds.steamId) return [];
   const now = Date.now();
-  const cached = wishlistDeadlineCache.get(req.user.id);
-  if (cached && now - cached.fetchedAt < WISHLIST_DEADLINE_TTL) return res.json(cached.items);
+  const cached = wishlistDeadlineCache.get(userId);
+  if (cached && now - cached.fetchedAt < WISHLIST_DEADLINE_TTL) return cached.items;
 
   let items = [];
 
@@ -1143,21 +1152,21 @@ app.get('/api/steam/wishlist/deadline', requireAuth, async (req, res) => {
     if (resp.ok) {
       const data = await resp.json().catch(() => null);
       if (data && typeof data === 'object' && Object.keys(data).length > 0) {
-        console.log(`[wishlist/deadline] wishlistdata OK – ${Object.keys(data).length} jeux pour user ${req.user.id}`);
+        console.log(`[wishlist] wishlistdata OK – ${Object.keys(data).length} jeux pour user ${userId}`);
         items = Object.entries(data).map(([appid, info]) => ({
           appid:        Number(appid),
           name:         info.name || `App ${appid}`,
           header_img:   `https://cdn.akamai.steamstatic.com/steam/apps/${appid}/header.jpg`,
           release_date: parseSteamDate(info.release_date, info.release_string),
-        })).filter(i => i.release_date !== null);
+        }));
       } else {
-        console.log(`[wishlist/deadline] wishlistdata vide/privé pour user ${req.user.id} – fallback API officielle`);
+        console.log(`[wishlist] wishlistdata vide/privé pour user ${userId} – fallback API officielle`);
       }
     } else {
-      console.log(`[wishlist/deadline] wishlistdata HTTP ${resp.status} – fallback API officielle`);
+      console.log(`[wishlist] wishlistdata HTTP ${resp.status} – fallback API officielle`);
     }
   } catch (e) {
-    console.log(`[wishlist/deadline] wishlistdata error: ${e.message} – fallback API officielle`);
+    console.log(`[wishlist] wishlistdata error: ${e.message} – fallback API officielle`);
   }
 
   // ── Stratégie 2 : API officielle + appdetails (fonctionne profil privé) ──
@@ -1168,7 +1177,7 @@ app.get('/api/steam/wishlist/deadline', requireAuth, async (req, res) => {
       if (wResp.ok) {
         const wData = await wResp.json();
         const appids = (wData?.response?.items || []).map(i => Number(i.appid)).filter(Boolean);
-        console.log(`[wishlist/deadline] API officielle – ${appids.length} appids pour user ${req.user.id}`);
+        console.log(`[wishlist] API officielle – ${appids.length} appids pour user ${userId}`);
 
         if (appids.length > 0) {
           // Résoudre les dates depuis le cache ou appdetails (3 appids en parallèle)
@@ -1176,7 +1185,7 @@ app.get('/api/steam/wishlist/deadline', requireAuth, async (req, res) => {
             const c = appReleaseDateCache.get(id);
             return !c || (now - c.fetchedAt) > APP_DATE_TTL;
           });
-          console.log(`[wishlist/deadline] ${appids.length} appids, ${uncached.length} sans cache – fetch appdetails`);
+          console.log(`[wishlist] ${appids.length} appids, ${uncached.length} sans cache – fetch appdetails`);
 
           for (let i = 0; i < uncached.length; i += 3) {
             const batch = uncached.slice(i, i + 3);
@@ -1200,16 +1209,30 @@ app.get('/api/steam/wishlist/deadline', requireAuth, async (req, res) => {
               header_img:   c?.header_img || `https://cdn.akamai.steamstatic.com/steam/apps/${appid}/header.jpg`,
               release_date: c?.date || null,
             };
-          }).filter(i => i.release_date !== null);
-          console.log(`[wishlist/deadline] fallback → ${items.length} items avec date de sortie`);
+          });
+          console.log(`[wishlist] fallback → ${items.length} items résolus`);
         }
       }
     } catch (e) {
-      console.log(`[wishlist/deadline] fallback API error: ${e.message}`);
+      console.log(`[wishlist] fallback API error: ${e.message}`);
     }
   }
 
-  wishlistDeadlineCache.set(req.user.id, { items, fetchedAt: now });
+  wishlistDeadlineCache.set(userId, { items, fetchedAt: now });
+  return items;
+}
+
+app.get('/api/steam/wishlist/deadline', requireAuth, async (req, res) => {
+  const items = await getWishlistItemsRaw(req.user.id);
+  res.json(items.filter(i => i.release_date !== null));
+});
+
+// Liste complète de la wishlist (tous les jeux, avec ou sans date de sortie
+// connue) — utilisée par l'onglet Wishlist du profil. Contrairement à
+// /deadline ci-dessus, rien n'est filtré ici : n'afficher que les jeux déjà
+// sortis est le rôle du panneau Échéances ("Attention") de l'accueil.
+app.get('/api/steam/wishlist/full', requireAuth, async (req, res) => {
+  const items = await getWishlistItemsRaw(req.user.id);
   res.json(items);
 });
 

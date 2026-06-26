@@ -474,18 +474,23 @@ export default function DeadlinePanel({ token, currentUser, onOpenTask, refreshK
       {loading ? (
         <div style={{ color: 'var(--text-muted)', fontSize: 11, textAlign: 'center', padding: '20px 0' }}>{t('deadline.loading')}</div>
       ) : total === 0 ? (
-        <div style={{ textAlign: 'center', padding: '28px 8px', color: 'var(--text-muted)' }}>
-          <div style={{ fontSize: 26, marginBottom: 10 }}>✅</div>
-          <div style={{ fontSize: 12, fontWeight: 600 }}>{t('deadline.empty')}</div>
-          {apiCount !== null && apiCount > 0 && (
-            <div style={{ fontSize: 10, marginTop: 6, color: '#c9a010', background: 'rgba(200,160,0,0.08)', border: '1px solid rgba(200,160,0,0.25)', borderRadius: 6, padding: '5px 10px' }}>
-              {t('deadline.count_hint', { apiCount })}
-            </div>
-          )}
-          {(apiCount === 0) && (
-            <div style={{ fontSize: 11, marginTop: 4, opacity: 0.6 }}>{t('deadline.add_hint')}</div>
-          )}
-        </div>
+        // Si l'accès Steam est bloqué, le bandeau SteamAccessNotice ci-dessus explique déjà
+        // pourquoi le module est vide — afficher en plus "✅ Rien à faire" serait contradictoire
+        // (on ne peut pas garantir l'absence d'échéances wishlist masquées par Steam).
+        steamBlocked ? null : (
+          <div style={{ textAlign: 'center', padding: '28px 8px', color: 'var(--text-muted)' }}>
+            <div style={{ fontSize: 26, marginBottom: 10 }}>✅</div>
+            <div style={{ fontSize: 12, fontWeight: 600 }}>{t('deadline.empty')}</div>
+            {apiCount !== null && apiCount > 0 && (
+              <div style={{ fontSize: 10, marginTop: 6, color: '#c9a010', background: 'rgba(200,160,0,0.08)', border: '1px solid rgba(200,160,0,0.25)', borderRadius: 6, padding: '5px 10px' }}>
+                {t('deadline.count_hint', { apiCount })}
+              </div>
+            )}
+            {(apiCount === 0) && (
+              <div style={{ fontSize: 11, marginTop: 4, opacity: 0.6 }}>{t('deadline.add_hint')}</div>
+            )}
+          </div>
+        )
       ) : (
         <>
           <Section cat="overdue"  tasks={categorized.overdue}   onOpenTask={onOpenTask} hiddenDeadlineIds={hiddenDeadlineIds} showHiddenDeadlines={showHiddenDeadlines} onHideDeadline={onHideDeadline} onUnhideDeadline={onUnhideDeadline} compact={compact} />
