@@ -17,8 +17,12 @@ function SteamNote() {
         <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
       </svg>
       <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.6 }}>
-        L'app utilise une seule clé API Steam partagée par tous les comptes — pas une clé personnelle. Pour une expérience complète (bibliothèque, News, succès, wishlist, bannière "En jeu"), ton profil Steam doit donc être <span style={{ color: '#66c0f4', fontWeight: 700 }}>public</span> (au moins le réglage "Détails du jeu").{' '}
+        L'app utilise par défaut une seule clé API Steam partagée par tous les comptes — pas une clé personnelle. Pour une expérience complète (bibliothèque, News, succès, wishlist, bannière "En jeu"), ton profil Steam doit donc être <span style={{ color: '#66c0f4', fontWeight: 700 }}>public</span> (au moins le réglage "Détails du jeu").{' '}
         <a href="https://help.steampowered.com/fr/faqs/view/588C-C67D-0251-C276" target="_blank" rel="noreferrer" style={{ color: '#66c0f4' }}>Comment rendre son profil public →</a>
+        <div style={{ marginTop: 6 }}>
+          Profil privé ? Renseigne plutôt <span style={{ color: '#66c0f4', fontWeight: 700 }}>ta propre clé API Steam</span> dans ton profil (onglet Profil) — elle débloque ces mêmes fonctions même sans profil public.{' '}
+          <a href="https://steamcommunity.com/dev/apikey" target="_blank" rel="noreferrer" style={{ color: '#66c0f4' }}>Générer ma clé →</a> (nécessite l'authentificateur mobile Steam Guard).
+        </div>
       </div>
     </div>
   );
@@ -131,6 +135,7 @@ function TabFeatures() {
     { icon: '🌐', title: 'Boards publics collaboratifs', desc: 'Tout utilisateur connecté peut ajouter colonnes et cartes sur un board public — pas seulement le propriétaire. Idéal pour les boards communautaires.' },
     { icon: '★', title: 'Wishlist Steam dans les échéances', desc: 'Les jeux de ta wishlist Steam avec une date de sortie connue apparaissent automatiquement dans le panneau Échéances (badge ★ WISHLIST). Clic → page Steam Store. Masquables individuellement. Profil Steam public requis.' },
     { icon: '📋', title: 'Onglet Wishlist dans le profil', desc: 'Retrouve tous tes jeux en wishlist Steam dans un onglet dédié de ton profil, avec avertissement si ton profil n\'est pas public.' },
+    { icon: '🔑', title: 'Clé API Steam personnelle', desc: 'Profil privé ? Dans ton profil (onglet Profil), renseigne ta propre clé API Steam (steamcommunity.com/dev/apikey, nécessite l\'authentificateur mobile Steam Guard) pour débloquer bibliothèque, succès, wishlist et news même sans profil public. Jamais réaffichée en clair une fois enregistrée — juste un indicateur "configurée".' },
     { icon: '🔎', title: 'Zoom de l\'interface', desc: 'Dans ton profil (onglet Profil), un curseur par paliers de 5% (80 → 100%) réduit l\'échelle globale de l\'app — comme dans Teams ou Discord — pour afficher plus de contenu sur les écrans basse résolution. Réglage sauvegardé par compte.' },
   ];
   return (

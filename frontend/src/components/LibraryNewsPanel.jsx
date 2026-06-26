@@ -169,12 +169,12 @@ export default function LibraryNewsPanel({ token, personaName }) {
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                    <span style={{ fontSize: 9, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.03em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
+                    <span style={{ flex: 1, fontSize: 9, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.03em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
                       {item.gameName}
                     </span>
-                    {/* Tag Bibliothèque (bleu) / Wishlist (or, même teinte que WishlistDot de SteamUI.jsx) */}
+                    {/* Tag Bibliothèque (bleu) / Wishlist (or, même teinte que WishlistDot de SteamUI.jsx) — aligné à droite */}
                     <span style={{
-                      flexShrink: 0, fontSize: 8, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.02em',
+                      flexShrink: 0, marginLeft: 'auto', fontSize: 8, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.02em',
                       padding: '1px 5px', borderRadius: 4,
                       color: item.inLibrary ? 'var(--accent)' : '#f5c518',
                       background: item.inLibrary ? 'rgba(102,192,244,0.15)' : 'rgba(245,197,24,0.15)',

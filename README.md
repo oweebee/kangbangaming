@@ -10,6 +10,7 @@ Organise ta backlog, suis tes heures de jeu, partage tes boards avec ta communau
 - **Kanban board** — colonnes personnalisables, drag & drop, vue compacte (desktop et mobile)
 - **Intégration Steam** — bannières, stats joueurs en temps réel, succès, actualités, Metacritic, prix
 - **Connexion Steam** — authentification via Steam OpenID, compte créé automatiquement
+- **Clé API Steam personnelle** — alternative au profil public : chaque membre peut renseigner sa propre clé API Steam dans son profil pour débloquer bibliothèque, succès, wishlist et news même avec un profil privé (voir [Confidentialité du profil Steam](#confidentialité-du-profil-steam))
 - **Bannière "En jeu"** — affiche les membres de ta communauté actuellement en train de jouer
 - **Panneau infos jeu** — glisse depuis la sidebar, verrouillable, déplaçable gauche/droite
 - **Boards publics collaboratifs** — partage un lien sans compte ; tout utilisateur connecté peut ajouter colonnes et cartes (pas seulement le propriétaire)
@@ -17,7 +18,7 @@ Organise ta backlog, suis tes heures de jeu, partage tes boards avec ta communau
 - **Notes sur les cartes** — disponibles sur toutes les cartes (Steam et tâches), avec aperçu automatique des liens collés (style Discord)
 - **Recherche globale** — icône toujours visible dans la barre de navigation, cherche parmi tous les jeux et toutes les cartes de tous tes boards
 - **Panneau Échéances** — vue synthétique des dates limites et alertes urgentes ; colonnes adaptatives (1 → 2 → 3 selon la largeur du panneau redimensionnable)
-- **Wishlist Steam dans les Échéances** — les jeux de ta wishlist avec une date de sortie connue apparaissent automatiquement dans le panneau Échéances (badge ★ WISHLIST, clic → page Steam Store, masquables). Profil Steam public requis.
+- **Wishlist Steam dans les Échéances** — les jeux de ta wishlist avec une date de sortie connue apparaissent automatiquement dans le panneau Échéances (badge ★ WISHLIST, clic → page Steam Store, masquables). Profil Steam public requis (voir [Confidentialité du profil Steam](#confidentialité-du-profil-steam)).
 - **Wishlist dans le profil** — liste compacte triée par date de sortie (plus proche en haut), avec miniature, nom et badge coloré (vert = sorti, orange = bientôt, gris = date lointaine ou inconnue)
 - **Multi-langue** — interface en français, anglais, espagnol, allemand, russe et chinois (détection auto)
 - **Zoom de l'interface** — curseur par paliers de 5% (80 → 100%) dans le profil, réduit l'échelle globale de l'app (comme Teams/Discord) pour afficher plus de contenu sur les écrans basse résolution ; réglage sauvegardé par compte
@@ -165,9 +166,18 @@ L'admin peut créer des comptes manuellement depuis **Panel Admin → + Créer**
 
 ### Confidentialité du profil Steam
 
-L'app utilise **une seule clé API Steam globale** (`STEAM_API_KEY`, voir [Variables d'environnement](#variables-denvironnement)) pour tous les comptes — pas une clé personnelle par utilisateur. Or l'API Steam ne lève les restrictions de confidentialité que pour le compte **propriétaire** de la clé utilisée ([doc Valve](https://developer.valvesoftware.com/wiki/Steam_Web_API)).
+L'app utilise par défaut **une seule clé API Steam globale** (`STEAM_API_KEY`, voir [Variables d'environnement](#variables-denvironnement)) pour tous les comptes — pas une clé personnelle par utilisateur. Or l'API Steam ne lève les restrictions de confidentialité que pour le compte **propriétaire** de la clé utilisée ([doc Valve](https://developer.valvesoftware.com/wiki/Steam_Web_API)).
 
 Concrètement : pour que la bibliothèque, la News Bibliothèque, les succès, la wishlist et la bannière "En jeu" fonctionnent, chaque membre doit avoir un profil Steam **public** (ou au minimum le réglage *Détails du jeu* sur *Public* — Steam → Profil → Modifier le profil → Confidentialité). Sans ça, ces fonctions renvoient simplement une liste vide pour ce compte ; ça ne plante rien. La connexion (pseudo, avatar, statut en ligne) fonctionne toujours, profil public ou non.
+
+#### Alternative : clé API Steam personnelle
+
+Pour les membres qui ne veulent pas rendre leur profil public, l'app permet de renseigner **sa propre clé API Steam** dans le profil (onglet Profil → section "Clé API Steam personnelle"). Quand une clé personnelle est configurée, elle est utilisée en priorité sur la clé globale pour ce compte — et comme elle appartient au membre lui-même, elle lève les restrictions de confidentialité même avec un profil privé ou ami uniquement.
+
+- Génération de la clé : [steamcommunity.com/dev/apikey](https://steamcommunity.com/dev/apikey)
+- Prérequis Steam : l'**authentificateur mobile Steam Guard** doit être activé sur le compte pour pouvoir générer une clé.
+- La clé est stockée par utilisateur (`steamApiKey` dans `users.json`), jamais renvoyée en clair par l'API (seul un indicateur `hasSteamApiKey` est exposé au frontend) et testée auprès de Steam avant d'être sauvegardée (rejetée si invalide).
+- Modifier ou retirer la clé invalide automatiquement les caches Steam (bibliothèque, wishlist, news, échéances) de ce compte pour refléter immédiatement la nouvelle source de données.
 
 ---
 
@@ -276,6 +286,8 @@ Quand tu partages l'URL sur Discord, Twitter/X, iMessage, etc., une image de pre
 ## Sécurité
 
 - `STEAM_API_KEY` n'est **jamais** exposée au frontend — tous les appels Steam passent par le backend
+- Idem pour la clé API Steam personnelle d'un utilisateur (`steamApiKey`) : sauvegardée côté serveur uniquement, jamais renvoyée en clair par l'API (juste un indicateur booléen `hasSteamApiKey`)
+- Exception : l'**export de sauvegarde admin** (`GET /api/admin/export`, Panel Admin → Paramètres) inclut `users.json` tel quel — donc `steamApiKey` et `passwordHash` en clair/hashés inclus. C'est volontaire : sans ça, une restauration (`POST /api/admin/restore`) ferait perdre les clés perso et mots de passe de tous les comptes. Réservé aux admins (`requireAdmin`) ; le fichier `.json` téléchargé doit être traité comme sensible
 - Les mots de passe sont hashés avec `bcrypt`
 - Les comptes Steam-only n'ont pas de `passwordHash` — les endpoints protègent contre toute tentative de connexion par mot de passe
 - Les routes protégées requièrent un token JWT valide en header `Authorization: Bearer <token>`

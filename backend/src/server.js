@@ -96,7 +96,10 @@ function resolveBoardHeaderImg(board) {
 function getUserSteamCreds(userId) {
   const user = readUsers().find(u => u.id === userId);
   return {
-    apiKey: GLOBAL_STEAM_API_KEY || user?.steamApiKey,
+    // Priorité à la clé personnelle de l'utilisateur : seule la clé du
+    // propriétaire du compte lève les restrictions de confidentialité Steam
+    // (profil privé/amis uniquement). La clé globale reste le repli par défaut.
+    apiKey: user?.steamApiKey || GLOBAL_STEAM_API_KEY,
     steamId: user?.steamId || null,
   };
 }
@@ -476,6 +479,7 @@ app.get('/api/user/profile', requireAuth, (req, res) => {
       steamAvatar: user.steamAvatar || null,
       steamPersonaName: user.steamPersonaName || null,
       steamAuth: user.steamAuth || false,
+      hasSteamApiKey: !!user.steamApiKey, // jamais la clé brute — juste l'état "configurée"
       stats: { boardCount, publicBoardCount, totalGames, customCards, totalColumns },
     });
   } catch (err) {
@@ -487,8 +491,14 @@ app.get('/api/user/profile', requireAuth, (req, res) => {
 app.get('/api/user/settings', requireAuth, (req, res) => {
   const user = readUsers().find(u => u.id === req.user.id);
   if (!user) return res.status(404).json({ error: 'Not found' });
-  res.json({ steamId: user.steamId || '', hasSteamId: !!user.steamId, steamAvatar: user.steamAvatar || null, steamPersonaName: user.steamPersonaName || null });
+  res.json({
+    steamId: user.steamId || '', hasSteamId: !!user.steamId,
+    steamAvatar: user.steamAvatar || null, steamPersonaName: user.steamPersonaName || null,
+    hasSteamApiKey: !!user.steamApiKey, // jamais la clé brute, même pour son propriétaire — juste un indicateur
+  });
 });
+
+const STEAM_API_KEY_RE = /^[0-9A-F]{32}$/i;
 
 app.patch('/api/user/settings', requireAuth, async (req, res) => {
   try {
@@ -498,17 +508,49 @@ app.patch('/api/user/settings', requireAuth, async (req, res) => {
     if (req.body.steamId !== undefined) {
       const newSteamId = req.body.steamId.trim();
       users[idx].steamId = newSteamId;
-      if (newSteamId && GLOBAL_STEAM_API_KEY) {
+      const lookupKey = users[idx].steamApiKey || GLOBAL_STEAM_API_KEY;
+      if (newSteamId && lookupKey) {
         try {
-          const data = await steamFetch(`https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=${GLOBAL_STEAM_API_KEY}&steamids=${newSteamId}`);
+          const data = await steamFetch(`https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=${lookupKey}&steamids=${newSteamId}`);
           const player = data.response?.players?.[0];
           if (player) { users[idx].steamAvatar = player.avatarmedium || player.avatar || null; users[idx].steamPersonaName = player.personaname || null; }
         } catch { /* not critical */ }
       } else { users[idx].steamAvatar = null; users[idx].steamPersonaName = null; }
     }
+    // ── Clé API Steam personnelle (optionnelle) ───────────────────────────────
+    // Alternative au profil public : si l'utilisateur fournit SA PROPRE clé,
+    // getUserSteamCreds() lui donne priorité sur la clé globale, ce qui lève les
+    // restrictions de confidentialité Steam pour son propre compte uniquement.
+    if (req.body.steamApiKey !== undefined) {
+      const newKey = (req.body.steamApiKey || '').trim();
+      if (newKey) {
+        if (!STEAM_API_KEY_RE.test(newKey)) {
+          return res.status(400).json({ error: 'Clé API Steam invalide (32 caractères hexadécimaux attendus).' });
+        }
+        // Test rapide auprès de Steam pour valider la clé avant de la sauvegarder
+        try {
+          const testId = users[idx].steamId || '76561197960435530'; // fallback : profil Valve, toujours public
+          await steamFetch(`https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=${newKey}&steamids=${testId}`);
+        } catch {
+          return res.status(400).json({ error: 'Clé API Steam refusée par Steam — vérifie qu\'elle est correcte et active.' });
+        }
+        users[idx].steamApiKey = newKey;
+      } else {
+        delete users[idx].steamApiKey;
+      }
+      // La source des données Steam change (clé perso ↔ clé globale) → caches de ce compte invalidés
+      libraryCaches.delete(req.user.id);
+      wishlistCache.delete(req.user.id);
+      libraryNewsCaches.delete(req.user.id);
+      wishlistDeadlineCache.delete(req.user.id);
+    }
     writeUsers(users);
     libraryCaches.delete(req.user.id);
-    res.json({ ok: true, steamAvatar: users[idx].steamAvatar || null, steamPersonaName: users[idx].steamPersonaName || null });
+    res.json({
+      ok: true,
+      steamAvatar: users[idx].steamAvatar || null, steamPersonaName: users[idx].steamPersonaName || null,
+      hasSteamApiKey: !!users[idx].steamApiKey,
+    });
   } catch (err) {
     console.error('[PATCH /user/settings]', err);
     res.status(500).json({ error: err.message || 'Server error' });

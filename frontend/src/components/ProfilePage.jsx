@@ -97,6 +97,13 @@ export default function ProfilePage({ token, currentUser, onClose, onSaveSteam }
   const [steamSaving, setSteamSaving] = useState(false);
   const [steamMsg, setSteamMsg] = useState('');
 
+  // ── Steam : clé API personnelle (optionnelle, alternative au profil public) ──
+  const [hasApiKey, setHasApiKey] = useState(false);
+  const [apiKeyInput, setApiKeyInput] = useState('');
+  const [editingApiKey, setEditingApiKey] = useState(false);
+  const [apiKeySaving, setApiKeySaving] = useState(false);
+  const [apiKeyMsg, setApiKeyMsg] = useState('');
+
   // ── Steam wishlist ──────────────────────────────────────────────────────────
   const [wishlist, setWishlist]         = useState(null); // null = not yet fetched
   const [wishlistLoading, setWishlistLoading] = useState(false);
@@ -115,6 +122,7 @@ export default function ProfilePage({ token, currentUser, onClose, onSaveSteam }
         setProfile(data);
         setSteamId(data.steamId || '');
         setSavedSteamId(data.steamId || '');
+        setHasApiKey(!!data.hasSteamApiKey);
         if (data.steamAvatar) setSteamPreview({ avatar: data.steamAvatar, personaName: data.steamPersonaName });
       } catch (e) { setError(e.message); }
       finally { setLoading(false); }
@@ -149,6 +157,46 @@ export default function ProfilePage({ token, currentUser, onClose, onSaveSteam }
       let errMsg = t('common.error');
       try { const d = await res.json(); errMsg = d.error || errMsg; } catch {}
       setSteamMsg(errMsg);
+    }
+  }
+
+  async function handleSaveApiKey(e) {
+    e.preventDefault();
+    setApiKeySaving(true); setApiKeyMsg('');
+    const res = await fetch(`${API}/user/settings`, {
+      method: 'PATCH',
+      headers: authHeaders(token),
+      body: JSON.stringify({ steamApiKey: apiKeyInput }),
+    });
+    setApiKeySaving(false);
+    if (res.ok) {
+      const data = await res.json();
+      setHasApiKey(!!data.hasSteamApiKey);
+      setEditingApiKey(false);
+      setApiKeyInput('');
+      setApiKeyMsg(data.hasSteamApiKey ? t('profile.apikey_saved') : t('profile.apikey_removed'));
+      setTimeout(() => setApiKeyMsg(''), 3000);
+    } else {
+      let errMsg = t('common.error');
+      try { const d = await res.json(); errMsg = d.error || errMsg; } catch {}
+      setApiKeyMsg(errMsg);
+    }
+  }
+
+  async function handleRemoveApiKey() {
+    setApiKeySaving(true); setApiKeyMsg('');
+    const res = await fetch(`${API}/user/settings`, {
+      method: 'PATCH',
+      headers: authHeaders(token),
+      body: JSON.stringify({ steamApiKey: '' }),
+    });
+    setApiKeySaving(false);
+    if (res.ok) {
+      setHasApiKey(false);
+      setEditingApiKey(false);
+      setApiKeyInput('');
+      setApiKeyMsg(t('profile.apikey_removed'));
+      setTimeout(() => setApiKeyMsg(''), 3000);
     }
   }
 
@@ -324,6 +372,75 @@ export default function ProfilePage({ token, currentUser, onClose, onSaveSteam }
 
                 {steamMsg && hasSteam && !editingSteam && (
                   <div style={{ fontSize: 12, color: '#3db86a', padding: '8px 12px', background: 'rgba(61,184,106,0.1)', border: '1px solid rgba(61,184,106,0.3)', borderRadius: 7 }}>{steamMsg}</div>
+                )}
+              </div>
+
+              {/* ── Clé API Steam personnelle (optionnel) ── */}
+              {/* Alternative au profil public : voir profile.steam_warn ci-dessus. Quand cette clé est
+                  configurée, getUserSteamCreds() (backend) lui donne priorité sur la clé globale de l'app
+                  pour CE compte uniquement, ce qui lève les restrictions de confidentialité Steam. */}
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
+                  🔑 {t('profile.apikey_section')}
+                </div>
+
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: 10 }}>
+                  {t('profile.apikey_intro')}
+                </div>
+
+                {hasApiKey && !editingApiKey && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'var(--surface2)', border: '1px solid rgba(61,184,106,0.35)', borderRadius: 10, padding: '12px 14px' }}>
+                    <span style={{ fontSize: 18, flexShrink: 0 }}>🔑</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)' }}>{t('profile.apikey_configured')}</div>
+                      <div style={{ fontSize: 10, color: 'rgba(61,184,106,0.8)', marginTop: 1 }}>✓ {t('profile.apikey_active')}</div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                      <button onClick={() => { setApiKeyInput(''); setEditingApiKey(true); setApiKeyMsg(''); }}
+                        style={{ background: 'var(--surface3)', border: '1px solid var(--border)', borderRadius: 7, padding: '6px 12px', color: 'var(--text-muted)', fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>
+                        ✏ {t('common.edit')}
+                      </button>
+                      <button onClick={handleRemoveApiKey} disabled={apiKeySaving}
+                        style={{ background: 'var(--surface3)', border: '1px solid rgba(220,80,80,0.35)', borderRadius: 7, padding: '6px 12px', color: '#e88', fontSize: 11, cursor: apiKeySaving ? 'not-allowed' : 'pointer', fontWeight: 600 }}>
+                        {t('profile.apikey_remove')}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {(!hasApiKey || editingApiKey) && (
+                  <form onSubmit={handleSaveApiKey} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <div style={{ background: 'rgba(71,167,245,0.08)', border: '1px solid rgba(71,167,245,0.3)', borderRadius: 9, padding: '10px 12px', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                      <span style={{ fontSize: 14, flexShrink: 0 }}>ℹ️</span>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+                        {t('profile.apikey_guard_note')}
+                      </div>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: 11, color: 'var(--text-muted)', marginBottom: 5, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        {t('profile.apikey_label')} — <a href="https://steamcommunity.com/dev/apikey" target="_blank" rel="noreferrer" style={{ color: 'var(--accent)', fontWeight: 400 }}>{t('profile.apikey_get_link')} ↗</a>
+                      </label>
+                      <input autoFocus value={apiKeyInput} onChange={e => setApiKeyInput(e.target.value)} placeholder={t('profile.apikey_placeholder')}
+                        style={{ width: '100%', boxSizing: 'border-box', padding: '9px 12px', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', fontSize: 13, outline: 'none', fontFamily: 'monospace' }} />
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <button type="submit" disabled={apiKeySaving || !apiKeyInput.trim()}
+                        style={{ padding: '8px 18px', background: 'var(--accent)', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, fontSize: 13, cursor: (apiKeySaving || !apiKeyInput.trim()) ? 'not-allowed' : 'pointer', opacity: (apiKeySaving || !apiKeyInput.trim()) ? 0.6 : 1 }}>
+                        {apiKeySaving ? t('profile.apikey_saving') : t('profile.apikey_save')}
+                      </button>
+                      {(editingApiKey || hasApiKey) && (
+                        <button type="button" onClick={() => { setApiKeyInput(''); setEditingApiKey(false); setApiKeyMsg(''); }}
+                          style={{ padding: '8px 14px', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer' }}>
+                          {t('common.cancel')}
+                        </button>
+                      )}
+                      {apiKeyMsg && <span style={{ fontSize: 12, color: apiKeyMsg.startsWith('✓') ? '#3db86a' : '#f88' }}>{apiKeyMsg}</span>}
+                    </div>
+                  </form>
+                )}
+
+                {apiKeyMsg && hasApiKey && !editingApiKey && (
+                  <div style={{ fontSize: 12, color: '#3db86a', marginTop: 8, padding: '8px 12px', background: 'rgba(61,184,106,0.1)', border: '1px solid rgba(61,184,106,0.3)', borderRadius: 7 }}>{apiKeyMsg}</div>
                 )}
               </div>
 
