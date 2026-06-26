@@ -950,32 +950,41 @@ app.post('/api/admin/preregister', requireAdmin, async (req, res) => {
 const wishlistCache = new Map(); // userId → { appids: Set, fetchedAt }
 const WISHLIST_TTL = 15 * 60 * 1000; // 15 min
 
-app.get('/api/steam/wishlist', requireAuth, async (req, res) => {
-  const creds = getUserSteamCreds(req.user.id);
-  if (!creds.steamId || !creds.apiKey) return res.json([]);
+// Extrait de l'ancien handler /api/steam/wishlist pour être réutilisable
+// (ex: fusion avec les news bibliothèque). Comportement inchangé : API
+// officielle Steam d'abord (fonctionne même avec profil privé, car clé API
+// + steamid du propriétaire), fallback page store publique si vide.
+async function getWishlistAppids(userId) {
+  const creds = getUserSteamCreds(userId);
+  if (!creds.steamId || !creds.apiKey) return new Set();
   const now = Date.now();
-  const cached = wishlistCache.get(req.user.id);
-  if (cached && now - cached.fetchedAt < WISHLIST_TTL) return res.json([...cached.appids]);
+  const cached = wishlistCache.get(userId);
+  if (cached && now - cached.fetchedAt < WISHLIST_TTL) return cached.appids;
   try {
-    // API officielle Steam (fonctionne même avec profil privé)
     const url = `https://api.steampowered.com/IWishlistService/GetWishlist/v1/?key=${creds.apiKey}&steamid=${creds.steamId}`;
     const resp = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
     const data = await resp.json();
     const items = data?.response?.items || [];
-    const appids = items.map(i => Number(i.appid));
+    let appids = items.map(i => Number(i.appid));
     if (appids.length === 0) {
       // Fallback : page store publique
       try {
         const r2 = await fetch(`https://store.steampowered.com/wishlist/profiles/${creds.steamId}/wishlistdata/?p=0`, { headers: { 'User-Agent': 'Mozilla/5.0' } });
         const d2 = await r2.json();
-        const ids2 = Object.keys(d2 || {}).map(Number).filter(Boolean);
-        wishlistCache.set(req.user.id, { appids: new Set(ids2), fetchedAt: now });
-        return res.json(ids2);
+        appids = Object.keys(d2 || {}).map(Number).filter(Boolean);
       } catch {}
     }
-    wishlistCache.set(req.user.id, { appids: new Set(appids), fetchedAt: now });
-    res.json(appids);
-  } catch { res.json([]); }
+    const set = new Set(appids);
+    wishlistCache.set(userId, { appids: set, fetchedAt: now });
+    return set;
+  } catch {
+    return cached?.appids || new Set();
+  }
+}
+
+app.get('/api/steam/wishlist', requireAuth, async (req, res) => {
+  const appids = await getWishlistAppids(req.user.id);
+  res.json([...appids]);
 });
 
 
@@ -1672,38 +1681,42 @@ app.get('/api/steam/news/:appid', requireAuth, async (req, res) => {
 // régénérer ce qui n'est pas affiché.
 const LIBRARY_NEWS_TTL = 30 * 60 * 1000; // 30 min
 const libraryNewsCaches = new Map(); // userId → { data, cacheAt }
-const LIBRARY_NEWS_MAX_GAMES = 200;   // cap perf : jeux les + joués en priorité
-const LIBRARY_NEWS_CHUNK     = 8;     // requêtes Steam en parallèle par lot
-const LIBRARY_NEWS_MAX_ITEMS = 300;   // cap mémoire de la liste agrégée
+const LIBRARY_NEWS_MAX_GAMES    = 200; // cap perf : jeux les + joués en priorité
+const LIBRARY_NEWS_MAX_WISHLIST = 80;  // cap perf : jeux wishlist (ordre = priorité Steam)
+const LIBRARY_NEWS_CHUNK        = 8;   // requêtes Steam en parallèle par lot
+const LIBRARY_NEWS_MAX_ITEMS    = 300; // cap mémoire de la liste agrégée
 
-// Cache des genres par appid — partagé entre TOUS les utilisateurs (le genre
-// d'un jeu ne dépend pas de qui regarde), contrairement aux autres caches de
-// cette section qui sont par userId. Évite de re-demander l'API Store à
-// chaque fois que la news d'un même jeu apparaît pour un autre utilisateur.
-const appGenreCache = new Map(); // appid → { genres, fetchedAt }
-const APP_GENRE_TTL = 24 * 60 * 60 * 1000; // 24h (un genre ne change quasi jamais)
+// Cache des infos (genres + nom) par appid — partagé entre TOUS les
+// utilisateurs (ça ne dépend pas de qui regarde), contrairement aux autres
+// caches de cette section qui sont par userId. Évite de re-demander l'API
+// Store à chaque fois qu'un même jeu apparaît pour un autre utilisateur.
+// Le nom n'est utile que pour les jeux wishlist (pas de libEntry.name).
+const appGenreCache = new Map(); // appid → { genres, name, fetchedAt }
+const APP_GENRE_TTL = 24 * 60 * 60 * 1000; // 24h (un genre/nom ne change quasi jamais)
 
-async function getGenresForAppids(appids) {
+async function getAppInfoForAppids(appids) {
   const now = Date.now();
   const out = new Map();
   const uncached = [];
   for (const id of appids) {
     const c = appGenreCache.get(id);
-    if (c && now - c.fetchedAt < APP_GENRE_TTL) out.set(id, c.genres);
+    if (c && now - c.fetchedAt < APP_GENRE_TTL) out.set(id, c);
     else uncached.push(id);
   }
   for (let i = 0; i < uncached.length; i += LIBRARY_NEWS_CHUNK) {
     const chunk = uncached.slice(i, i + LIBRARY_NEWS_CHUNK);
     const settled = await Promise.allSettled(chunk.map(async id => {
-      const r = await fetch(`https://store.steampowered.com/api/appdetails?appids=${id}&filters=genres&cc=FR&l=english`, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+      const r = await fetch(`https://store.steampowered.com/api/appdetails?appids=${id}&filters=basic,genres&cc=FR&l=english`, { headers: { 'User-Agent': 'Mozilla/5.0' } });
       const data = await r.json();
-      const genres = (data?.[id]?.data?.genres || []).map(g => g.description).slice(0, 3);
-      return { id, genres };
+      const info = data?.[id]?.data;
+      const genres = (info?.genres || []).map(g => g.description).slice(0, 3);
+      return { id, genres, name: info?.name || null };
     }));
     for (const s of settled) {
       if (s.status === 'fulfilled') {
-        appGenreCache.set(s.value.id, { genres: s.value.genres, fetchedAt: now });
-        out.set(s.value.id, s.value.genres);
+        const entry = { genres: s.value.genres, name: s.value.name, fetchedAt: now };
+        appGenreCache.set(s.value.id, entry);
+        out.set(s.value.id, entry);
       }
     }
   }
@@ -1728,17 +1741,26 @@ async function getLibraryNews(userId, force = false) {
   if (!force && entry && Date.now() - entry.cacheAt < LIBRARY_NEWS_TTL) return entry.data;
 
   const lib = await getLibraryMap(userId);
-  if (lib.size === 0) {
+  // Jeux wishlist pas encore en bibliothèque : leurs news sont intégrées au
+  // même flux, de façon identique et sans distinction visuelle (demande
+  // utilisateur), via le même fetcher/news-API et le même enrichissement genre.
+  const wishlistIds = await getWishlistAppids(userId).catch(() => new Set());
+  const wishlistOnlyIds = [...wishlistIds].filter(id => !lib.has(id));
+
+  if (lib.size === 0 && wishlistOnlyIds.length === 0) {
     const data = [];
     libraryNewsCaches.set(userId, { data, cacheAt: Date.now() });
     return data;
   }
 
-  // Priorité aux jeux les plus joués si la bibliothèque est grosse
-  const appids = [...lib.entries()]
+  // Priorité aux jeux les plus joués si la bibliothèque est grosse, puis la
+  // wishlist (ordre déjà priorisé par l'API Steam, on cap juste le volume).
+  const libAppids = [...lib.entries()]
     .sort((a, b) => (b[1].playtime_forever || 0) - (a[1].playtime_forever || 0))
     .slice(0, LIBRARY_NEWS_MAX_GAMES)
     .map(([id]) => id);
+  const wishlistAppids = wishlistOnlyIds.slice(0, LIBRARY_NEWS_MAX_WISHLIST);
+  const appids = [...libAppids, ...wishlistAppids];
 
   const batches = await fetchLibraryNewsBatch(appids);
   const items = [];
@@ -1747,7 +1769,7 @@ async function getLibraryNews(userId, force = false) {
     for (const n of (data.appnews?.newsitems || [])) {
       items.push({
         appid: id,
-        gameName: libEntry?.name || '',
+        gameName: libEntry?.name || '', // complété ci-dessous pour les jeux wishlist (pas de libEntry)
         headerImage: `https://cdn.cloudflare.steamstatic.com/steam/apps/${id}/header.jpg`,
         gid: n.gid,
         title: n.title,
@@ -1759,12 +1781,17 @@ async function getLibraryNews(userId, force = false) {
     }
   }
 
-  // Couleur de carte par genre (comme "Sorties à venir") — un seul appel par
-  // appid distinct, résultat mis en cache 24h donc quasi gratuit ensuite.
+  // Couleur de carte par genre (comme "Sorties à venir") + nom pour les jeux
+  // wishlist sans libEntry — un seul appel par appid distinct, résultat mis
+  // en cache 24h donc quasi gratuit ensuite.
   const distinctIds = [...new Set(items.map(it => it.appid))];
   try {
-    const genreMap = await getGenresForAppids(distinctIds);
-    for (const it of items) it.genres = genreMap.get(it.appid) || [];
+    const infoMap = await getAppInfoForAppids(distinctIds);
+    for (const it of items) {
+      const info = infoMap.get(it.appid);
+      it.genres = info?.genres || [];
+      if (!it.gameName) it.gameName = info?.name || '';
+    }
   } catch {
     for (const it of items) it.genres = it.genres || [];
   }

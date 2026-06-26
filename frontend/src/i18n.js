@@ -480,6 +480,7 @@ fr: {
 
   // LibraryNewsPanel
   'libnews.header':        'News Bibliothèque',
+  'libnews.header_named':  'News suivi de {name}',
   'libnews.force_reload':  'Forcer le rechargement',
   'libnews.load_error':    'Impossible de charger les actualités.',
   'libnews.retry':         'Réessayer',
@@ -973,6 +974,7 @@ en: {
 
   // LibraryNewsPanel
   'libnews.header':        'Library News',
+  'libnews.header_named':  'News for {name}',
   'libnews.force_reload':  'Force reload',
   'libnews.load_error':    'Could not load news.',
   'libnews.retry':         'Retry',
@@ -1457,6 +1459,7 @@ es: {
 
   // LibraryNewsPanel
   'libnews.header':        'Noticias de la Biblioteca',
+  'libnews.header_named':  'Noticias de {name}',
   'libnews.force_reload':  'Forzar recarga',
   'libnews.load_error':    'No se pudieron cargar las noticias.',
   'libnews.retry':         'Reintentar',
@@ -1941,6 +1944,7 @@ de: {
 
   // LibraryNewsPanel
   'libnews.header':        'Bibliothek-News',
+  'libnews.header_named':  'News von {name}',
   'libnews.force_reload':  'Neu laden',
   'libnews.load_error':    'News konnten nicht geladen werden.',
   'libnews.retry':         'Erneut versuchen',
@@ -2425,6 +2429,7 @@ ru: {
 
   // LibraryNewsPanel
   'libnews.header':        'Новости библиотеки',
+  'libnews.header_named':  'Новости: {name}',
   'libnews.force_reload':  'Принудительная перезагрузка',
   'libnews.load_error':    'Не удалось загрузить новости.',
   'libnews.retry':         'Повторить',
@@ -2909,6 +2914,7 @@ zh: {
 
   // LibraryNewsPanel
   'libnews.header':        '资料库资讯',
+  'libnews.header_named':  '{name} 的资讯',
   'libnews.force_reload':  '强制重新加载',
   'libnews.load_error':    '无法加载资讯。',
   'libnews.retry':         '重试',

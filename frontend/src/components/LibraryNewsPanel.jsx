@@ -7,7 +7,7 @@ const API = '/api';
 const PAGE_SIZE = 20;
 const SCROLL_THRESHOLD = 120; // px avant le bas pour déclencher le chargement suivant
 
-export default function LibraryNewsPanel({ token }) {
+export default function LibraryNewsPanel({ token, personaName }) {
   const { t } = useLang();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -72,7 +72,7 @@ export default function LibraryNewsPanel({ token }) {
           <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="var(--accent)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M4 4h12v12H4z"/><path d="M16 8h4v10a2 2 0 0 1-2 2H6"/><line x1="7" y1="7" x2="13" y2="7"/><line x1="7" y1="10" x2="13" y2="10"/><line x1="7" y1="13" x2="10" y2="13"/>
           </svg>
-          {t('libnews.header')}
+          {personaName ? t('libnews.header_named', { name: personaName }) : t('libnews.header')}
           {!loading && !noSteam && items.length > 0 && (
             <span style={{ fontSize: 10, color: 'var(--text-muted)', background: 'var(--surface2)', borderRadius: 99, padding: '1px 6px', fontWeight: 600 }}>
               {items.length}
@@ -101,7 +101,7 @@ export default function LibraryNewsPanel({ token }) {
             {[1,2,3,4,5].map(i => (
               <div key={i} style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid var(--border)', opacity: 0.3 + i * 0.05 }}>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
-                  <div style={{ width: 44, height: 28, borderRadius: 4, background: 'var(--surface2)', flexShrink: 0 }} />
+                  <div style={{ width: 55, height: 35, borderRadius: 4, background: 'var(--surface2)', flexShrink: 0 }} />
                   <div style={{ flex: 1 }}>
                     <div style={{ height: 8, background: 'var(--surface2)', borderRadius: 3, marginBottom: 5, width: '35%' }} />
                     <div style={{ height: 10, background: 'var(--surface2)', borderRadius: 3, width: '75%' }} />
@@ -164,14 +164,15 @@ export default function LibraryNewsPanel({ token }) {
               onMouseLeave={e => e.currentTarget.style.background = cardBg}
             >
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                <div style={{ width: 44, height: 28, borderRadius: 4, overflow: 'hidden', flexShrink: 0, background: 'var(--surface2)' }}>
+                <div style={{ width: 55, height: 35, borderRadius: 4, overflow: 'hidden', flexShrink: 0, background: 'var(--surface2)' }}>
                   <img src={item.headerImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none'; }} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 9, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.03em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {item.gameName}
                   </div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text)', whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.3 }}>
+                  {/* Même taille que le titre des boards (HomeBoardCard, App.jsx) : fontSize 13 */}
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.3 }}>
                     {item.title}
                   </div>
                 </div>
@@ -180,7 +181,8 @@ export default function LibraryNewsPanel({ token }) {
                 </div>
               </div>
               {item.summary && (
-                <div style={{ fontSize: 10.5, color: 'var(--text-muted)', lineHeight: 1.4, marginTop: 5, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                // Même taille que le descriptif des cartes "Sorties à venir" (UpcomingPanel) : fontSize 11
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.4, marginTop: 5, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                   {item.summary}
                 </div>
               )}

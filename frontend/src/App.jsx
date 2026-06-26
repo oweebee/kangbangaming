@@ -1623,7 +1623,7 @@ export default function App() {
       </div>
       {/* Panneau 2 : News Bibliothèque */}
       <div style={{ flex: 1, overflow: 'hidden' }}>
-        <LibraryNewsPanel token={token} />
+        <LibraryNewsPanel token={token} personaName={currentUser?.steamPersonaName} />
       </div>
       {/* Panneau 3 : Upcoming */}
       <div style={{ flex: 1, overflow: 'hidden' }}>
@@ -1848,7 +1848,7 @@ export default function App() {
       {/* ── Colonne News Bibliothèque ── */}
       {/* maxWidth en % : même garde-fou que pour Upcoming, voir commentaire ci-dessous. */}
       <div style={{ width: homeNewsWidth, maxWidth: '30%', flexShrink: 0, overflow: 'hidden' }}>
-        <LibraryNewsPanel token={token} />
+        <LibraryNewsPanel token={token} personaName={currentUser?.steamPersonaName} />
       </div>
 
       {/* ── Séparateur 2 : News Bibliothèque / Sorties à venir ── */}

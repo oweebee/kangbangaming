@@ -13,7 +13,9 @@ Organise ta backlog, suis tes heures de jeu, partage tes boards avec ta communau
 - **Bannière "En jeu"** — affiche les membres de ta communauté actuellement en train de jouer
 - **Panneau infos jeu** — glisse depuis la sidebar, verrouillable, déplaçable gauche/droite
 - **Boards publics collaboratifs** — partage un lien sans compte ; tout utilisateur connecté peut ajouter colonnes et cartes (pas seulement le propriétaire)
-- **Tâches personnalisées** — cartes non-Steam avec types, assignation, notes, échéances
+- **Tâches personnalisées** — cartes non-Steam avec types, assignation, échéances, progression (%) avec passage automatique en "Terminé" à 100%
+- **Notes sur les cartes** — disponibles sur toutes les cartes (Steam et tâches), avec aperçu automatique des liens collés (style Discord)
+- **Recherche globale** — icône toujours visible dans la barre de navigation, cherche parmi tous les jeux et toutes les cartes de tous tes boards
 - **Panneau Échéances** — vue synthétique des dates limites et alertes urgentes ; colonnes adaptatives (1 → 2 → 3 selon la largeur du panneau redimensionnable)
 - **Wishlist Steam dans les Échéances** — les jeux de ta wishlist avec une date de sortie connue apparaissent automatiquement dans le panneau Échéances (badge ★ WISHLIST, clic → page Steam Store, masquables). Profil Steam public requis.
 - **Wishlist dans le profil** — liste compacte triée par date de sortie (plus proche en haut), avec miniature, nom et badge coloré (vert = sorti, orange = bientôt, gris = date lointaine ou inconnue)
@@ -21,7 +23,7 @@ Organise ta backlog, suis tes heures de jeu, partage tes boards avec ta communau
 - **Zoom de l'interface** — curseur par paliers de 5% (80 → 100%) dans le profil, réduit l'échelle globale de l'app (comme Teams/Discord) pour afficher plus de contenu sur les écrans basse résolution ; réglage sauvegardé par compte
 - **Corbeille** — les cartes, notes **et boards** supprimés sont conservés 30 jours avant suppression définitive ; restauration en un clic depuis l'onglet "Corbeille" du profil. Les admins ont une vue globale de toutes les suppressions et peuvent purger. La suppression admin envoie aussi les boards en corbeille.
 - **Boards publics suivis** — les boards publics marqués comme "suivis" apparaissent dans une section dédiée sur l'accueil, séparée des autres boards publics, avec leur propre ordre drag & drop.
-- **News Bibliothèque** — 4ᵉ colonne redimensionnable de l'accueil (répartition par défaut 25 % Échéances / 35 % Boards / 20 % News / 20 % Populaire et recommandé, toutes ajustables par glisser-déposer jusqu'à une largeur minimale d'environ une carte). Liste, pour chaque utilisateur, les grosses annonces des jeux de sa bibliothèque Steam triées de la plus récente à la plus ancienne ; chargement initial de 20 actualités, le reste se charge progressivement au scroll (pas de pré-génération de contenu non affiché). Même visuel que "Populaire et recommandé" / "Sorties à venir". Disponible aussi en onglet dédié sur mobile.
+- **News Bibliothèque** (titre personnalisé « News suivi de *pseudo Steam* ») — 4ᵉ colonne redimensionnable de l'accueil (répartition par défaut 25 % Échéances / 35 % Boards / 20 % News / 20 % Populaire et recommandé, toutes ajustables par glisser-déposer jusqu'à une largeur minimale d'environ une carte). Cartes avec couleur de bordure selon le genre du jeu, image et début du texte de la news (titre qui revient à la ligne plutôt que d'être tronqué). Regroupe, de façon identique et sans distinction, les annonces des jeux de la bibliothèque Steam **et** de la wishlist (jeux pas encore possédés), triées de la plus récente à la plus ancienne ; chargement initial de 20 actualités, le reste se charge progressivement au scroll (pas de pré-génération de contenu non affiché). Même visuel que "Populaire et recommandé" / "Sorties à venir". Disponible aussi en onglet dédié sur mobile. Profil Steam public requis (voir [Confidentialité du profil Steam](#confidentialité-du-profil-steam)).
 - **Refresh accueil** — bouton ↻ dans la barre de navigation (desktop et mobile) pour rafraîchir tous les boards sans recharger la page.
 - **Admin** — gestion des utilisateurs, création de comptes, config Discord, approbation
 - **Mobile** — interface adaptée, onglets swipables, vue compacte, slider home, drag tactile sur les boards de l'accueil
@@ -160,6 +162,12 @@ Le compte `admin` est créé automatiquement au premier démarrage avec le mot d
 ### Création de comptes depuis le panel admin
 
 L'admin peut créer des comptes manuellement depuis **Panel Admin → + Créer**. Les comptes créés sont immédiatement actifs et peuvent inclure un Steam ID optionnel.
+
+### Confidentialité du profil Steam
+
+L'app utilise **une seule clé API Steam globale** (`STEAM_API_KEY`, voir [Variables d'environnement](#variables-denvironnement)) pour tous les comptes — pas une clé personnelle par utilisateur. Or l'API Steam ne lève les restrictions de confidentialité que pour le compte **propriétaire** de la clé utilisée ([doc Valve](https://developer.valvesoftware.com/wiki/Steam_Web_API)).
+
+Concrètement : pour que la bibliothèque, la News Bibliothèque, les succès, la wishlist et la bannière "En jeu" fonctionnent, chaque membre doit avoir un profil Steam **public** (ou au minimum le réglage *Détails du jeu* sur *Public* — Steam → Profil → Modifier le profil → Confidentialité). Sans ça, ces fonctions renvoient simplement une liste vide pour ce compte ; ça ne plante rien. La connexion (pseudo, avatar, statut en ligne) fonctionne toujours, profil public ou non.
 
 ---
 

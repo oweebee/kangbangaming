@@ -17,7 +17,7 @@ function SteamNote() {
         <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
       </svg>
       <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.6 }}>
-        Pour une expérience complète (succès, wishlist dans les échéances, bannière "En jeu"), ton profil Steam doit être <span style={{ color: '#66c0f4', fontWeight: 700 }}>public</span>.{' '}
+        L'app utilise une seule clé API Steam partagée par tous les comptes — pas une clé personnelle. Pour une expérience complète (bibliothèque, News, succès, wishlist, bannière "En jeu"), ton profil Steam doit donc être <span style={{ color: '#66c0f4', fontWeight: 700 }}>public</span> (au moins le réglage "Détails du jeu").{' '}
         <a href="https://help.steampowered.com/fr/faqs/view/588C-C67D-0251-C276" target="_blank" rel="noreferrer" style={{ color: '#66c0f4' }}>Comment rendre son profil public →</a>
       </div>
     </div>
@@ -120,11 +120,13 @@ function TabFeatures() {
     { icon: '🎮', title: 'Panneau infos jeu', desc: 'Clique sur une carte pour ouvrir le panneau latéral : description, genres, avis, prix, succès. Redimensionnable, ancrable à gauche ou droite.' },
     { icon: '⚠️', title: 'Urgent & Terminé', desc: 'Sur une carte, ⚠ = urgent (rouge), ✓ = terminé (vert). Visible de tous sur les boards publics.' },
     { icon: '👤', title: 'Assignation', desc: 'Assigne des membres à une carte via l\'icône 👤. Les avatars s\'affichent sur la carte.' },
+    { icon: '📊', title: 'Tâches personnalisées', desc: 'Les cartes non-Steam ont un type, une assignation, une échéance et une progression (%). Passage automatique en "Terminé" à 100%.' },
+    { icon: '📝', title: 'Notes sur les cartes', desc: 'Ajoute des notes sur n\'importe quelle carte (Steam ou tâche). Les liens collés affichent un aperçu automatique, comme sur Discord.' },
     { icon: '🎵', title: 'Bannière "En jeu"', desc: 'Quand un board est lié à un jeu, une bannière apparaît si des membres jouent en ce moment. Nécessite un profil Steam public.' },
     { icon: '🔍', title: 'Recherche globale', desc: 'Icône 🔍 en haut de sidebar — cherche parmi tous tes jeux et toutes tes cartes.' },
     { icon: '⭐', title: 'Populaires & Recommandés', desc: 'Carrousel des jeux mis en avant sur Steam avec note, genres et description. Défilement toutes les 5 secondes.' },
     { icon: '📅', title: 'Sorties à venir', desc: 'Prochaines sorties Steam avec date et note Metacritic. Actualisation via ↺.' },
-    { icon: '📰', title: 'News Bibliothèque', desc: 'Colonne redimensionnable sur l\'accueil (ou onglet dédié sur mobile) qui liste les grosses annonces des jeux de ta bibliothèque Steam, triées de la plus récente à la plus ancienne. 20 actualités chargées au départ, le reste se charge au fil du scroll. Actualisation via ↺.' },
+    { icon: '📰', title: 'News suivi de [pseudo]', desc: 'Colonne redimensionnable sur l\'accueil (ou onglet dédié sur mobile), titrée avec ton pseudo Steam. Cartes avec couleur selon le genre du jeu, regroupant sans distinction les annonces de ta bibliothèque Steam et de ta wishlist, triées de la plus récente à la plus ancienne. 20 actualités chargées au départ, le reste au fil du scroll. Actualisation via ↺.' },
     { icon: '🗑️', title: 'Corbeille', desc: 'Les cartes archivées supprimées et les notes effacées sont conservées 30 jours dans la corbeille. Restauration en un clic depuis l\'onglet "Corbeille" de ton profil. Les admins ont une vue globale de toutes les suppressions.' },
     { icon: '🌐', title: 'Boards publics collaboratifs', desc: 'Tout utilisateur connecté peut ajouter colonnes et cartes sur un board public — pas seulement le propriétaire. Idéal pour les boards communautaires.' },
     { icon: '★', title: 'Wishlist Steam dans les échéances', desc: 'Les jeux de ta wishlist Steam avec une date de sortie connue apparaissent automatiquement dans le panneau Échéances (badge ★ WISHLIST). Clic → page Steam Store. Masquables individuellement. Profil Steam public requis.' },
