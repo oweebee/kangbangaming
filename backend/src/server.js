@@ -1584,6 +1584,18 @@ function stripMarkup(str = '') {
     .trim();
 }
 
+// Tronque un texte déjà nettoyé (stripMarkup) à la dernière limite de mot avant
+// `max` caractères, pour éviter de couper un mot en plein milieu dans les
+// aperçus de news (cartes bibliothèque).
+function truncateText(str, max) {
+  if (!str) return '';
+  const flat = str.replace(/\s*\n\s*/g, ' ').trim();
+  if (flat.length <= max) return flat;
+  const cut = flat.slice(0, max);
+  const lastSpace = cut.lastIndexOf(' ');
+  return (lastSpace > max * 0.6 ? cut.slice(0, lastSpace) : cut).trimEnd() + '…';
+}
+
 function extractImage(raw = '') {
   // [img src="{STEAM_CLAN_IMAGE}/path.jpg"][/img]  ← format réel Steam
   const bbSrcMatch = raw.match(/\[img\s+src="((?:\{STEAM_CLAN_IMAGE\}|https?:\/\/)[^"]+)"\]/i);
@@ -1664,6 +1676,40 @@ const LIBRARY_NEWS_MAX_GAMES = 200;   // cap perf : jeux les + joués en priorit
 const LIBRARY_NEWS_CHUNK     = 8;     // requêtes Steam en parallèle par lot
 const LIBRARY_NEWS_MAX_ITEMS = 300;   // cap mémoire de la liste agrégée
 
+// Cache des genres par appid — partagé entre TOUS les utilisateurs (le genre
+// d'un jeu ne dépend pas de qui regarde), contrairement aux autres caches de
+// cette section qui sont par userId. Évite de re-demander l'API Store à
+// chaque fois que la news d'un même jeu apparaît pour un autre utilisateur.
+const appGenreCache = new Map(); // appid → { genres, fetchedAt }
+const APP_GENRE_TTL = 24 * 60 * 60 * 1000; // 24h (un genre ne change quasi jamais)
+
+async function getGenresForAppids(appids) {
+  const now = Date.now();
+  const out = new Map();
+  const uncached = [];
+  for (const id of appids) {
+    const c = appGenreCache.get(id);
+    if (c && now - c.fetchedAt < APP_GENRE_TTL) out.set(id, c.genres);
+    else uncached.push(id);
+  }
+  for (let i = 0; i < uncached.length; i += LIBRARY_NEWS_CHUNK) {
+    const chunk = uncached.slice(i, i + LIBRARY_NEWS_CHUNK);
+    const settled = await Promise.allSettled(chunk.map(async id => {
+      const r = await fetch(`https://store.steampowered.com/api/appdetails?appids=${id}&filters=genres&cc=FR&l=english`, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+      const data = await r.json();
+      const genres = (data?.[id]?.data?.genres || []).map(g => g.description).slice(0, 3);
+      return { id, genres };
+    }));
+    for (const s of settled) {
+      if (s.status === 'fulfilled') {
+        appGenreCache.set(s.value.id, { genres: s.value.genres, fetchedAt: now });
+        out.set(s.value.id, s.value.genres);
+      }
+    }
+  }
+  return out;
+}
+
 async function fetchLibraryNewsBatch(appids) {
   const out = [];
   for (let i = 0; i < appids.length; i += LIBRARY_NEWS_CHUNK) {
@@ -1705,12 +1751,24 @@ async function getLibraryNews(userId, force = false) {
         headerImage: `https://cdn.cloudflare.steamstatic.com/steam/apps/${id}/header.jpg`,
         gid: n.gid,
         title: n.title,
+        summary: truncateText(stripMarkup(n.contents || ''), 200),
         url: n.url,
         feedlabel: n.feedlabel || null,
         date: n.date,
       });
     }
   }
+
+  // Couleur de carte par genre (comme "Sorties à venir") — un seul appel par
+  // appid distinct, résultat mis en cache 24h donc quasi gratuit ensuite.
+  const distinctIds = [...new Set(items.map(it => it.appid))];
+  try {
+    const genreMap = await getGenresForAppids(distinctIds);
+    for (const it of items) it.genres = genreMap.get(it.appid) || [];
+  } catch {
+    for (const it of items) it.genres = it.genres || [];
+  }
+
   items.sort((a, b) => b.date - a.date);
   const data = items.slice(0, LIBRARY_NEWS_MAX_ITEMS);
   libraryNewsCaches.set(userId, { data, cacheAt: Date.now() });

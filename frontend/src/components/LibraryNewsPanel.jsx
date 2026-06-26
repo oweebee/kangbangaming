@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useLang } from '../i18n.js';
 import { authHeaders, formatDateShort } from '../utils.js';
+import { genreColor } from './SteamUI.jsx';
 
 const API = '/api';
 const PAGE_SIZE = 20;
@@ -96,14 +97,17 @@ export default function LibraryNewsPanel({ token }) {
       {/* Body */}
       <div onScroll={onScroll} style={{ flex: 1, overflowY: 'auto', padding: '4px 0' }}>
         {loading && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '8px 12px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '8px 10px' }}>
             {[1,2,3,4,5].map(i => (
-              <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center', opacity: 0.3 + i * 0.05 }}>
-                <div style={{ width: 44, height: 28, borderRadius: 4, background: 'var(--surface2)', flexShrink: 0 }} />
-                <div style={{ flex: 1 }}>
-                  <div style={{ height: 8, background: 'var(--surface2)', borderRadius: 3, marginBottom: 5, width: '35%' }} />
-                  <div style={{ height: 10, background: 'var(--surface2)', borderRadius: 3, width: '75%' }} />
+              <div key={i} style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid var(--border)', opacity: 0.3 + i * 0.05 }}>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
+                  <div style={{ width: 44, height: 28, borderRadius: 4, background: 'var(--surface2)', flexShrink: 0 }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ height: 8, background: 'var(--surface2)', borderRadius: 3, marginBottom: 5, width: '35%' }} />
+                    <div style={{ height: 10, background: 'var(--surface2)', borderRadius: 3, width: '75%' }} />
+                  </div>
                 </div>
+                <div style={{ height: 8, background: 'var(--surface2)', borderRadius: 3, width: '90%' }} />
               </div>
             ))}
           </div>
@@ -134,37 +138,55 @@ export default function LibraryNewsPanel({ token }) {
           </div>
         )}
 
-        {!loading && !noSteam && !error && items.map(item => (
-          <a
-            key={`${item.appid}-${item.gid}`}
-            href={item.url}
-            target="_blank"
-            rel="noreferrer"
-            style={{
-              display: 'flex', alignItems: 'center', gap: 8,
-              padding: '5px 10px',
-              textDecoration: 'none',
-              transition: 'background .12s',
-            }}
-            onMouseEnter={e => e.currentTarget.style.background = 'var(--surface2)'}
-            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-          >
-            <div style={{ width: 44, height: 28, borderRadius: 4, overflow: 'hidden', flexShrink: 0, background: 'var(--surface2)' }}>
-              <img src={item.headerImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none'; }} />
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 9, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.03em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {item.gameName}
+        {!loading && !noSteam && !error && items.map(item => {
+          // Couleur de bordure selon le genre du jeu — même logique/fonction
+          // partagée que les cartes de "Sorties à venir" (SteamUI.jsx).
+          const gc = genreColor(item.genres);
+          const cardBg = `linear-gradient(var(--surface), var(--surface)) padding-box, linear-gradient(135deg, ${gc}, ${gc}55) border-box`;
+          const cardBgHover = `linear-gradient(var(--surface2), var(--surface2)) padding-box, linear-gradient(135deg, ${gc}, ${gc}55) border-box`;
+          return (
+            <a
+              key={`${item.appid}-${item.gid}`}
+              href={item.url}
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                display: 'block',
+                margin: '0 10px 8px',
+                padding: '8px 10px',
+                borderRadius: 8,
+                border: '2px solid transparent',
+                background: cardBg,
+                textDecoration: 'none',
+                transition: 'background .12s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = cardBgHover}
+              onMouseLeave={e => e.currentTarget.style.background = cardBg}
+            >
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                <div style={{ width: 44, height: 28, borderRadius: 4, overflow: 'hidden', flexShrink: 0, background: 'var(--surface2)' }}>
+                  <img src={item.headerImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none'; }} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 9, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.03em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {item.gameName}
+                  </div>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text)', whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.3 }}>
+                    {item.title}
+                  </div>
+                </div>
+                <div style={{ fontSize: 9, color: 'var(--text-muted)', flexShrink: 0, whiteSpace: 'nowrap', paddingTop: 1 }}>
+                  {formatDateShort(new Date(item.date * 1000))}
+                </div>
               </div>
-              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {item.title}
-              </div>
-            </div>
-            <div style={{ fontSize: 9, color: 'var(--text-muted)', flexShrink: 0, whiteSpace: 'nowrap' }}>
-              {formatDateShort(new Date(item.date * 1000))}
-            </div>
-          </a>
-        ))}
+              {item.summary && (
+                <div style={{ fontSize: 10.5, color: 'var(--text-muted)', lineHeight: 1.4, marginTop: 5, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                  {item.summary}
+                </div>
+              )}
+            </a>
+          );
+        })}
 
         {loadingMore && (
           <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 0' }}>
