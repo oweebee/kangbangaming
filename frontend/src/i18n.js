@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 // ── Langues supportées ──────────────────────────────────────────────────────
 export const SUPPORTED_LANGS = ['fr', 'en', 'es', 'de', 'ru', 'zh'];
@@ -60,14 +60,21 @@ export function useLang() {
     return () => _subscribers.delete(handler);
   }, []);
 
-  function t(key, vars = {}) {
+  // t est mémorisé (useCallback) avec [lang] comme seule dépendance : sa
+  // référence ne change que si la langue change réellement. Sans ça, t était
+  // recréée à CHAQUE render de CHAQUE composant utilisant useLang(), ce qui
+  // cassait tout composant la mettant dans un tableau de dépendances
+  // (useCallback/useEffect) — boucle infinie render → effet → fetch →
+  // setState → render → nouvelle référence t → effet → ... (cause du
+  // clignotement du panneau News Bibliothèque).
+  const t = useCallback((key, vars = {}) => {
     const dict = TRANSLATIONS[lang] || TRANSLATIONS.fr;
     let str = dict[key] ?? TRANSLATIONS.fr[key] ?? key;
     for (const [k, v] of Object.entries(vars)) {
       str = str.replace(new RegExp(`\\{${k}\\}`, 'g'), String(v));
     }
     return str;
-  }
+  }, [lang]);
 
   return { lang, t, setLang, supported: SUPPORTED_LANGS, meta: LANG_META };
 }
