@@ -1742,8 +1742,9 @@ async function getLibraryNews(userId, force = false) {
 
   const lib = await getLibraryMap(userId);
   // Jeux wishlist pas encore en bibliothèque : leurs news sont intégrées au
-  // même flux, de façon identique et sans distinction visuelle (demande
-  // utilisateur), via le même fetcher/news-API et le même enrichissement genre.
+  // même flux, au même niveau de priorité (demande utilisateur), via le même
+  // fetcher/news-API et le même enrichissement genre. Seule distinction
+  // visuelle : le tag Bibliothèque/Wishlist (champ inLibrary ci-dessous).
   const wishlistIds = await getWishlistAppids(userId).catch(() => new Set());
   const wishlistOnlyIds = [...wishlistIds].filter(id => !lib.has(id));
 
@@ -1770,6 +1771,7 @@ async function getLibraryNews(userId, force = false) {
       items.push({
         appid: id,
         gameName: libEntry?.name || '', // complété ci-dessous pour les jeux wishlist (pas de libEntry)
+        inLibrary: !!libEntry, // false = jeu wishlist pas encore possédé → tag "Wishlist" côté frontend
         headerImage: `https://cdn.cloudflare.steamstatic.com/steam/apps/${id}/header.jpg`,
         gid: n.gid,
         title: n.title,

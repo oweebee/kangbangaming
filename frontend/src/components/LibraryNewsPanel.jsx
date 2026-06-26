@@ -168,8 +168,20 @@ export default function LibraryNewsPanel({ token, personaName }) {
                   <img src={item.headerImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none'; }} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 9, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.03em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {item.gameName}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <span style={{ fontSize: 9, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.03em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
+                      {item.gameName}
+                    </span>
+                    {/* Tag Bibliothèque (bleu) / Wishlist (or, même teinte que WishlistDot de SteamUI.jsx) */}
+                    <span style={{
+                      flexShrink: 0, fontSize: 8, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.02em',
+                      padding: '1px 5px', borderRadius: 4,
+                      color: item.inLibrary ? 'var(--accent)' : '#f5c518',
+                      background: item.inLibrary ? 'rgba(102,192,244,0.15)' : 'rgba(245,197,24,0.15)',
+                      border: `1px solid ${item.inLibrary ? 'rgba(102,192,244,0.4)' : 'rgba(245,197,24,0.4)'}`,
+                    }}>
+                      {item.inLibrary ? t('libnews.tag_library') : t('libnews.tag_wishlist')}
+                    </span>
                   </div>
                   {/* Même taille que le titre des boards (HomeBoardCard, App.jsx) : fontSize 13 */}
                   <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.3 }}>
