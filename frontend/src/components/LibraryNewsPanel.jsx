@@ -1,14 +1,15 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useLang } from '../i18n.js';
 import { authHeaders, formatDateShort } from '../utils.js';
-import { genreColor } from './SteamUI.jsx';
+import { genreColor, isSteamAccessBlocked, SteamAccessNotice } from './SteamUI.jsx';
 
 const API = '/api';
 const PAGE_SIZE = 20;
 const SCROLL_THRESHOLD = 120; // px avant le bas pour déclencher le chargement suivant
 
-export default function LibraryNewsPanel({ token, personaName }) {
+export default function LibraryNewsPanel({ token, personaName, currentUser }) {
   const { t } = useLang();
+  const steamBlocked = isSteamAccessBlocked(currentUser);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -131,7 +132,11 @@ export default function LibraryNewsPanel({ token, personaName }) {
           </div>
         )}
 
-        {!loading && !noSteam && !error && items.length === 0 && (
+        {!loading && !noSteam && !error && items.length === 0 && steamBlocked && (
+          <SteamAccessNotice />
+        )}
+
+        {!loading && !noSteam && !error && items.length === 0 && !steamBlocked && (
           <div style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 12 }}>
             <div style={{ fontSize: 28, marginBottom: 8 }}>📰</div>
             {t('libnews.empty')}

@@ -5,9 +5,11 @@ import { formatPlaytime, authHeaders } from '../utils.js';
 import ModalBackdrop from './ModalBackdrop.jsx';
 import SwipeTabs from './SwipeTabs.jsx';
 import { useLang } from '../i18n.js';
+import { isSteamAccessBlocked, SteamAccessNotice } from './SteamUI.jsx';
 
 export default function GameModal({ game, onClose, api, token, onPatchGame, onSoftDeleteNote, defaultTab = 'achievements', currentUser, appUsers = [] }) {
   const { t } = useLang();
+  const steamBlocked = isSteamAccessBlocked(currentUser);
   const [achievements, setAchievements] = useState(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState(defaultTab);
@@ -144,8 +146,9 @@ export default function GameModal({ game, onClose, api, token, onPatchGame, onSo
             )}
             <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px 16px' }}>
               {loading && <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 32 }}>{t('game.loading_ach')}</div>}
-              {!loading && !achievements && <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 32 }}>{t('game.no_ach')}</div>}
-              {!loading && achievements?.total === 0 && <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 32 }}>{t('game.no_ach_game')}</div>}
+              {!loading && steamBlocked && (!achievements || achievements?.total === 0) && <SteamAccessNotice />}
+              {!loading && !steamBlocked && !achievements && <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 32 }}>{t('game.no_ach')}</div>}
+              {!loading && !steamBlocked && achievements?.total === 0 && <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 32 }}>{t('game.no_ach_game')}</div>}
               {!loading && filteredAchievements.map((a, i) => (
                 <div key={a.apiname || i} style={{
                   display: 'flex', alignItems: 'center', gap: 10,

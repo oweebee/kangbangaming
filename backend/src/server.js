@@ -189,12 +189,16 @@ app.get('/api/auth/steam/callback', async (req, res) => {
     if (!steamId) return res.redirect(`${FRONTEND_URL}?steam_error=no_steamid`);
 
     // Récupérer infos Steam
-    let steamAvatar = null, steamPersonaName = null;
+    let steamAvatar = null, steamPersonaName = null, steamPublic = null;
     if (GLOBAL_STEAM_API_KEY) {
       try {
         const data = await steamFetch(`https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=${GLOBAL_STEAM_API_KEY}&steamids=${steamId}`);
         const player = data.response?.players?.[0];
-        if (player) { steamAvatar = player.avatarmedium || player.avatar || null; steamPersonaName = player.personaname || null; }
+        if (player) {
+          steamAvatar = player.avatarmedium || player.avatar || null;
+          steamPersonaName = player.personaname || null;
+          steamPublic = player.communityvisibilitystate === 3;
+        }
       } catch { /* pas critique */ }
     }
 
@@ -202,9 +206,9 @@ app.get('/api/auth/steam/callback', async (req, res) => {
     let user = users.find(u => u.steamId === steamId);
 
     if (user) {
-      // User existant — mettre à jour avatar/persona si changé
+      // User existant — mettre à jour avatar/persona/visibilité si changé
       const idx = users.indexOf(user);
-      users[idx] = { ...user, steamAvatar, steamPersonaName };
+      users[idx] = { ...user, steamAvatar, steamPersonaName, steamPublic: steamPublic !== null ? steamPublic : user.steamPublic };
       writeUsers(users);
       user = users[idx];
     } else {
@@ -226,6 +230,7 @@ app.get('/api/auth/steam/callback', async (req, res) => {
         steamId,
         steamAvatar,
         steamPersonaName,
+        steamPublic,
         steamAuth: true,
         createdAt: new Date().toISOString(),
       };
@@ -286,7 +291,7 @@ app.post('/api/auth/register', async (req, res) => {
     try {
       const data = await steamFetch(`https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=${GLOBAL_STEAM_API_KEY}&steamids=${trimmedSteamId}`);
       const player = data.response?.players?.[0];
-      if (player) { newUser.steamAvatar = player.avatarmedium || player.avatar || null; newUser.steamPersonaName = player.personaname || null; }
+      if (player) { newUser.steamAvatar = player.avatarmedium || player.avatar || null; newUser.steamPersonaName = player.personaname || null; newUser.steamPublic = player.communityvisibilitystate === 3; }
     } catch { /* not critical */ }
   }
   users.push(newUser);
@@ -298,7 +303,11 @@ app.post('/api/auth/register', async (req, res) => {
 app.get('/api/auth/me', requireAuth, (req, res) => {
   const user = readUsers().find(u => u.id === req.user.id);
   if (!user) return res.status(404).json({ error: 'User not found' });
-  res.json({ id: user.id, username: user.username, role: user.role, steamAvatar: user.steamAvatar || null, steamPersonaName: user.steamPersonaName || null, steamAuth: user.steamAuth || false });
+  res.json({
+    id: user.id, username: user.username, role: user.role,
+    steamAvatar: user.steamAvatar || null, steamPersonaName: user.steamPersonaName || null, steamAuth: user.steamAuth || false,
+    hasSteamId: !!user.steamId, steamPublic: user.steamPublic === undefined ? null : user.steamPublic, hasSteamApiKey: !!user.steamApiKey,
+  });
 });
 
 // ── Users list (for assignees feature) ───────────────────────────────────────
@@ -462,13 +471,23 @@ app.get('/api/user/profile', requireAuth, (req, res) => {
     const boardList = Object.entries(userBoards);
     const boardCount = boardList.length;
     const publicBoardCount = boardList.filter(([, b]) => b.public).length;
-    let totalGames = 0, customCards = 0, totalColumns = 0;
+    let totalGames = 0, customCards = 0, totalColumns = 0, doneCount = 0, notesCount = 0, withDeadlineCount = 0;
+    let busiestBoardName = null, busiestBoardCount = 0;
     for (const [, board] of boardList) {
       const games = Object.values(board.games || {});
       totalGames += games.length;
       customCards += games.filter(g => g.type === 'custom').length;
       totalColumns += (board.columns || []).length;
+      for (const g of games) {
+        if (g.done) doneCount++;
+        if (g.dueDate || g.startDate) withDeadlineCount++;
+        notesCount += (g.notes || []).filter(n => !n.deletedAt).length;
+      }
+      if (games.length > busiestBoardCount) { busiestBoardCount = games.length; busiestBoardName = board.name || null; }
     }
+    const followedBoardsCount = (user.favorites || []).length;
+    const accountAgeDays = user.createdAt ? Math.max(0, Math.floor((Date.now() - new Date(user.createdAt).getTime()) / 86400000)) : null;
+    const completionRate = totalGames > 0 ? Math.round((doneCount / totalGames) * 100) : 0;
 
     res.json({
       id: user.id,
@@ -479,8 +498,13 @@ app.get('/api/user/profile', requireAuth, (req, res) => {
       steamAvatar: user.steamAvatar || null,
       steamPersonaName: user.steamPersonaName || null,
       steamAuth: user.steamAuth || false,
+      steamPublic: user.steamPublic === undefined ? null : user.steamPublic, // true/false/null (jamais déterminé)
       hasSteamApiKey: !!user.steamApiKey, // jamais la clé brute — juste l'état "configurée"
-      stats: { boardCount, publicBoardCount, totalGames, customCards, totalColumns },
+      stats: {
+        boardCount, publicBoardCount, totalGames, customCards, totalColumns,
+        doneCount, completionRate, notesCount, withDeadlineCount,
+        followedBoardsCount, busiestBoardName, busiestBoardCount, accountAgeDays,
+      },
     });
   } catch (err) {
     console.error('[profile]', err);
@@ -494,6 +518,7 @@ app.get('/api/user/settings', requireAuth, (req, res) => {
   res.json({
     steamId: user.steamId || '', hasSteamId: !!user.steamId,
     steamAvatar: user.steamAvatar || null, steamPersonaName: user.steamPersonaName || null,
+    steamPublic: user.steamPublic === undefined ? null : user.steamPublic,
     hasSteamApiKey: !!user.steamApiKey, // jamais la clé brute, même pour son propriétaire — juste un indicateur
   });
 });
@@ -513,9 +538,9 @@ app.patch('/api/user/settings', requireAuth, async (req, res) => {
         try {
           const data = await steamFetch(`https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=${lookupKey}&steamids=${newSteamId}`);
           const player = data.response?.players?.[0];
-          if (player) { users[idx].steamAvatar = player.avatarmedium || player.avatar || null; users[idx].steamPersonaName = player.personaname || null; }
+          if (player) { users[idx].steamAvatar = player.avatarmedium || player.avatar || null; users[idx].steamPersonaName = player.personaname || null; users[idx].steamPublic = player.communityvisibilitystate === 3; }
         } catch { /* not critical */ }
-      } else { users[idx].steamAvatar = null; users[idx].steamPersonaName = null; }
+      } else { users[idx].steamAvatar = null; users[idx].steamPersonaName = null; users[idx].steamPublic = null; }
     }
     // ── Clé API Steam personnelle (optionnelle) ───────────────────────────────
     // Alternative au profil public : si l'utilisateur fournit SA PROPRE clé,
@@ -549,6 +574,7 @@ app.patch('/api/user/settings', requireAuth, async (req, res) => {
     res.json({
       ok: true,
       steamAvatar: users[idx].steamAvatar || null, steamPersonaName: users[idx].steamPersonaName || null,
+      steamPublic: users[idx].steamPublic === undefined ? null : users[idx].steamPublic,
       hasSteamApiKey: !!users[idx].steamApiKey,
     });
   } catch (err) {
@@ -962,12 +988,12 @@ app.post('/api/admin/preregister', requireAdmin, async (req, res) => {
   const users = readUsers();
   if (users.find(u => u.steamId === sid)) return res.status(409).json({ error: 'Un compte avec ce Steam ID existe déjà.' });
 
-  let steamAvatar = null, steamPersonaName = null;
+  let steamAvatar = null, steamPersonaName = null, steamPublic = null;
   if (GLOBAL_STEAM_API_KEY) {
     try {
       const data = await steamFetch(`https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=${GLOBAL_STEAM_API_KEY}&steamids=${sid}`);
       const player = data.response?.players?.[0];
-      if (player) { steamAvatar = player.avatarmedium || player.avatar || null; steamPersonaName = player.personaname || null; }
+      if (player) { steamAvatar = player.avatarmedium || player.avatar || null; steamPersonaName = player.personaname || null; steamPublic = player.communityvisibilitystate === 3; }
     } catch { /* pas critique */ }
   }
 
@@ -979,7 +1005,7 @@ app.post('/api/admin/preregister', requireAdmin, async (req, res) => {
   const newUser = {
     id: `user_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
     username, passwordHash: null, role: 'user', status: 'active',
-    steamId: sid, steamAvatar, steamPersonaName, steamAuth: true,
+    steamId: sid, steamAvatar, steamPersonaName, steamPublic, steamAuth: true,
     createdAt: new Date().toISOString(),
   };
   users.push(newUser);

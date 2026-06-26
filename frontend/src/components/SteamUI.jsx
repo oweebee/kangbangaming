@@ -1,5 +1,7 @@
 // ── Composants et utilitaires Steam partagés ──────────────────────────────────
 
+import { useLang } from '../i18n.js';
+
 export const GENRE_COLORS = {
   'Action': '#e05555', 'Action-Adventure': '#e07040', 'Adventure': '#55b8e0',
   'RPG': '#c090f0', 'Role-Playing Games (RPG)': '#c090f0',
@@ -74,5 +76,50 @@ export function WishlistDot() {
       <svg viewBox="0 0 24 24" width="11" height="11" fill="#f5c518" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
       Wishlist
     </span>
+  );
+}
+
+// Calcule si un module dépendant de données Steam privées (bibliothèque, succès,
+// wishlist) est bloqué : profil Steam non public ET pas de clé API personnelle.
+// `user` = objet currentUser (ou équivalent /api/user/profile|/api/user/settings) —
+// doit exposer hasSteamId (ou steamId), steamPublic, hasSteamApiKey.
+export function isSteamAccessBlocked(user) {
+  if (!user) return false;
+  const hasSteamId = user.hasSteamId ?? !!user.steamId;
+  if (!hasSteamId) return false; // pas encore lié à Steam → pas le même cas (cf. message "lier Steam")
+  if (user.hasSteamApiKey) return false; // clé perso = toujours débloqué
+  return user.steamPublic === false; // bloqué seulement si on SAIT que le profil est privé
+}
+
+// Notice brève réutilisable : pourquoi un module Steam reste vide + comment débloquer.
+// compact=true → bandeau fin une ligne (à insérer au-dessus d'une liste qui contient
+// déjà d'autres données non-Steam, ex. DeadlinePanel) plutôt qu'un état vide centré.
+export function SteamAccessNotice({ icon = '🔒', style, compact = false }) {
+  const { t } = useLang();
+  if (compact) {
+    return (
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, lineHeight: 1.5,
+        color: 'var(--text-muted)', background: 'rgba(245,197,24,0.07)', border: '1px solid rgba(245,197,24,0.25)',
+        borderRadius: 6, padding: '6px 9px', marginBottom: 10, ...style,
+      }}>
+        <span style={{ flexShrink: 0 }}>{icon}</span>
+        <span>
+          {t('steam.blocked_notice')}{' '}
+          <a href="https://help.steampowered.com/fr/faqs/view/588C-C67D-0251-C276" target="_blank" rel="noreferrer" style={{ color: '#66c0f4' }}>{t('profile.steam_how')}</a>
+          {' '}{t('steam.blocked_or')}{' '}
+          <a href="https://steamcommunity.com/dev/apikey" target="_blank" rel="noreferrer" style={{ color: '#66c0f4' }}>{t('profile.apikey_get_link')}</a>
+        </span>
+      </div>
+    );
+  }
+  return (
+    <div style={{ padding: '24px 16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 12, lineHeight: 1.6, ...style }}>
+      <div style={{ fontSize: 24, marginBottom: 8 }}>{icon}</div>
+      {t('steam.blocked_notice')}{' '}
+      <a href="https://help.steampowered.com/fr/faqs/view/588C-C67D-0251-C276" target="_blank" rel="noreferrer" style={{ color: '#66c0f4' }}>{t('profile.steam_how')}</a>
+      {' '}{t('steam.blocked_or')}{' '}
+      <a href="https://steamcommunity.com/dev/apikey" target="_blank" rel="noreferrer" style={{ color: '#66c0f4' }}>{t('profile.apikey_get_link')}</a>
+    </div>
   );
 }

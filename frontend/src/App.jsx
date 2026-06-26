@@ -1615,7 +1615,7 @@ export default function App() {
     >
       {/* Panneau 0 : Échéances */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px 14px' }}>
-        <DeadlinePanel token={token} onOpenTask={handleDeadlineOpen} refreshKey={deadlineRefreshKey} hiddenDeadlineIds={hiddenDeadlineIds} showHiddenDeadlines={showHiddenDeadlines} onHideDeadline={hideDeadline} onUnhideDeadline={unhideDeadline} onToggleShowHidden={() => setShowHiddenDeadlines(v => !v)} compact={compactView} onEmpty={() => setMobileHomeTab('boards')} />
+        <DeadlinePanel token={token} currentUser={currentUser} onOpenTask={handleDeadlineOpen} refreshKey={deadlineRefreshKey} hiddenDeadlineIds={hiddenDeadlineIds} showHiddenDeadlines={showHiddenDeadlines} onHideDeadline={hideDeadline} onUnhideDeadline={unhideDeadline} onToggleShowHidden={() => setShowHiddenDeadlines(v => !v)} compact={compactView} onEmpty={() => setMobileHomeTab('boards')} />
       </div>
       {/* Panneau 1 : Boards */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -1623,7 +1623,7 @@ export default function App() {
       </div>
       {/* Panneau 2 : News Bibliothèque */}
       <div style={{ flex: 1, overflow: 'hidden' }}>
-        <LibraryNewsPanel token={token} personaName={currentUser?.steamPersonaName} />
+        <LibraryNewsPanel token={token} personaName={currentUser?.steamPersonaName} currentUser={currentUser} />
       </div>
       {/* Panneau 3 : Upcoming */}
       <div style={{ flex: 1, overflow: 'hidden' }}>
@@ -1637,7 +1637,7 @@ export default function App() {
 
       {/* ── Colonne gauche : Échéances ── */}
       <div style={{ width: `${homeSplitPct}%`, minWidth: 0, flexShrink: 0, overflowY: 'auto', padding: '28px 20px' }}>
-        <DeadlinePanel token={token} onOpenTask={handleDeadlineOpen} refreshKey={deadlineRefreshKey} hiddenDeadlineIds={hiddenDeadlineIds} showHiddenDeadlines={showHiddenDeadlines} onHideDeadline={hideDeadline} onUnhideDeadline={unhideDeadline} onToggleShowHidden={() => setShowHiddenDeadlines(v => !v)} compact={compactView} onEmpty={() => setMobileHomeTab('boards')} />
+        <DeadlinePanel token={token} currentUser={currentUser} onOpenTask={handleDeadlineOpen} refreshKey={deadlineRefreshKey} hiddenDeadlineIds={hiddenDeadlineIds} showHiddenDeadlines={showHiddenDeadlines} onHideDeadline={hideDeadline} onUnhideDeadline={unhideDeadline} onToggleShowHidden={() => setShowHiddenDeadlines(v => !v)} compact={compactView} onEmpty={() => setMobileHomeTab('boards')} />
       </div>
 
       {/* ── Séparateur redimensionnable ── */}
@@ -1848,7 +1848,7 @@ export default function App() {
       {/* ── Colonne News Bibliothèque ── */}
       {/* maxWidth en % : même garde-fou que pour Upcoming, voir commentaire ci-dessous. */}
       <div style={{ width: homeNewsWidth, maxWidth: '30%', flexShrink: 0, overflow: 'hidden' }}>
-        <LibraryNewsPanel token={token} personaName={currentUser?.steamPersonaName} />
+        <LibraryNewsPanel token={token} personaName={currentUser?.steamPersonaName} currentUser={currentUser} />
       </div>
 
       {/* ── Séparateur 2 : News Bibliothèque / Sorties à venir ── */}

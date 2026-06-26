@@ -5,9 +5,10 @@ import { formatDateLong, authHeaders } from '../utils.js';
 import TrashPanel from './TrashPanel.jsx';
 import ZoomSlider from './ZoomSlider.jsx';
 import ModalCard from './ModalCard.jsx';
+import { isSteamAccessBlocked, SteamAccessNotice } from './SteamUI.jsx';
 
 const API = '/api';
-const TABS = ['profile', 'trash', 'wishlist'];
+const TABS = ['profile', 'stats', 'trash', 'wishlist'];
 const N    = TABS.length;
 
 export default function ProfilePage({ token, currentUser, onClose, onSaveSteam }) {
@@ -202,6 +203,7 @@ export default function ProfilePage({ token, currentUser, onClose, onSaveSteam }
 
   const hasSteam = !!savedSteamId;
   const isSteamAuth = profile?.steamAuth === true;
+  const steamBlocked = isSteamAccessBlocked(profile);
 
   useEffect(() => {
     if (activeTab !== 'wishlist' || wishlist !== null || !hasSteam) return;
@@ -248,6 +250,7 @@ export default function ProfilePage({ token, currentUser, onClose, onSaveSteam }
         <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', flexShrink: 0, background: 'var(--surface1)' }}>
           {[
             { id: 'profile',   label: t('profile.tab_profile')   },
+            { id: 'stats',     label: t('profile.tab_stats')     },
             { id: 'trash',     label: t('profile.tab_trash')     },
             { id: 'wishlist',  label: t('profile.tab_wishlist')  },
           ].map(({ id, label }) => (
@@ -448,47 +451,51 @@ export default function ProfilePage({ token, currentUser, onClose, onSaveSteam }
               <div>
                 <ZoomSlider value={zoom} onChange={setZoom} />
               </div>
-
-              {/* ── Stats KangBanGaming ── */}
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>KangBanGaming</div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                  {[
-                    ['🗂️', profile.stats.boardCount, t('profile.stat_boards')],
-                    ['🌐', profile.stats.publicBoardCount, t('profile.stat_public')],
-                    ['🎮', profile.stats.totalGames - profile.stats.customCards, t('profile.stat_games')],
-                    ['✨', profile.stats.customCards, t('profile.stat_custom')],
-                    ['📋', profile.stats.totalColumns, t('profile.stat_columns')],
-                    ['📅', profile.createdAt ? new Date(profile.createdAt).toLocaleDateString() : '—', t('profile.stat_since')],
-                  ].map(([icon, value, label]) => (
-                    <div key={label} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px', textAlign: 'center' }}>
-                      <div style={{ fontSize: 22, marginBottom: 4 }}>{icon}</div>
-                      <div style={{ fontWeight: 800, fontSize: 18, color: 'var(--text)', marginBottom: 2 }}>{value}</div>
-                      <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{label}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
             </>
           )}
           </>)}
             </div>
 
-            {/* ── Onglet Corbeille (index 1) ── */}
+            {/* ── Onglet Stats (index 1) ── */}
+            <div style={{ width: `${100 / N}%`, height: '100%', flexShrink: 0, overflowY: 'auto', padding: '20px 24px', boxSizing: 'border-box' }}>
+              {profile && (
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>KangBanGaming</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    {[
+                      ['🗂️', profile.stats.boardCount, t('profile.stat_boards')],
+                      ['🌐', profile.stats.publicBoardCount, t('profile.stat_public')],
+                      ['🎮', profile.stats.totalGames - profile.stats.customCards, t('profile.stat_games')],
+                      ['✨', profile.stats.customCards, t('profile.stat_custom')],
+                      ['📋', profile.stats.totalColumns, t('profile.stat_columns')],
+                      ['📅', profile.createdAt ? new Date(profile.createdAt).toLocaleDateString() : '—', t('profile.stat_since')],
+                      ['✅', `${profile.stats.doneCount}${profile.stats.totalGames > 0 ? ` (${profile.stats.completionRate}%)` : ''}`, t('profile.stat_done')],
+                      ['⏰', profile.stats.withDeadlineCount, t('profile.stat_deadlines')],
+                      ['📝', profile.stats.notesCount, t('profile.stat_notes')],
+                      ['⭐', profile.stats.followedBoardsCount, t('profile.stat_followed')],
+                      ['🏆', profile.stats.busiestBoardName || '—', t('profile.stat_busiest')],
+                      ['⏳', profile.stats.accountAgeDays !== null ? t('profile.stat_days_value', { days: profile.stats.accountAgeDays }) : '—', t('profile.stat_age')],
+                    ].map(([icon, value, label]) => (
+                      <div key={label} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px', textAlign: 'center' }}>
+                        <div style={{ fontSize: 22, marginBottom: 4 }}>{icon}</div>
+                        <div style={{ fontWeight: 800, fontSize: 18, color: 'var(--text)', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{value}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{label}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* ── Onglet Corbeille (index 2) ── */}
             <div style={{ width: `${100 / N}%`, height: '100%', flexShrink: 0, overflowY: 'auto', padding: '20px 24px', boxSizing: 'border-box' }}>
               <TrashPanel token={token} />
             </div>
 
-            {/* ── Onglet Wishlist Steam (index 2) ── */}
+            {/* ── Onglet Wishlist Steam (index 3) ── */}
             <div style={{ width: `${100 / N}%`, height: '100%', flexShrink: 0, overflowY: 'auto', padding: '20px 24px', boxSizing: 'border-box' }}>
-              {/* Warning : profil public requis */}
-              <div style={{ background: 'rgba(255,180,0,0.08)', border: '1px solid rgba(255,180,0,0.3)', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5 }}>
-                {t('profile.wishlist_public_warn')}{' '}
-                <a href="https://steamcommunity.com/my/edit/settings" target="_blank" rel="noopener noreferrer"
-                   style={{ color: 'var(--accent)', textDecoration: 'underline' }}>
-                  {t('profile.wishlist_public_link')}
-                </a>
-              </div>
+              {/* Notice : affichée seulement si le module est réellement bloqué (profil privé + pas de clé perso) */}
+              {hasSteam && steamBlocked && <SteamAccessNotice compact style={{ marginBottom: 16 }} />}
 
               {!hasSteam && (
                 <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, marginTop: 40 }}>

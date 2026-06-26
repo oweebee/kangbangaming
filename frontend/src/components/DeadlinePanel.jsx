@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import GameCard from './GameCard.jsx';
 import { useLang } from '../i18n.js';
-import { WishlistDot } from './SteamUI.jsx';
+import { WishlistDot, isSteamAccessBlocked, SteamAccessNotice } from './SteamUI.jsx';
 import { authHeaders } from '../utils.js';
 
 const API = '/api';
@@ -343,8 +343,9 @@ function Section({ cat, tasks, onOpenTask, hiddenDeadlineIds, showHiddenDeadline
 }
 
 // ── Composant principal ────────────────────────────────────────────────────────
-export default function DeadlinePanel({ token, onOpenTask, refreshKey = 0, hiddenDeadlineIds = new Set(), showHiddenDeadlines = false, onHideDeadline, onUnhideDeadline, onToggleShowHidden, compact = false, onEmpty }) {
+export default function DeadlinePanel({ token, currentUser, onOpenTask, refreshKey = 0, hiddenDeadlineIds = new Set(), showHiddenDeadlines = false, onHideDeadline, onUnhideDeadline, onToggleShowHidden, compact = false, onEmpty }) {
   const { t } = useLang();
+  const steamBlocked = isSteamAccessBlocked(currentUser);
   const [tasks, setTasks]       = useState([]);
   const [loading, setLoading]   = useState(true);
   const [apiCount, setApiCount] = useState(null); // nb brut renvoyé par l'API
@@ -467,6 +468,8 @@ export default function DeadlinePanel({ token, onOpenTask, refreshKey = 0, hidde
           </svg>
         </button>
       </div>
+
+      {!loading && steamBlocked && <SteamAccessNotice compact />}
 
       {loading ? (
         <div style={{ color: 'var(--text-muted)', fontSize: 11, textAlign: 'center', padding: '20px 0' }}>{t('deadline.loading')}</div>
