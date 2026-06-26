@@ -79,6 +79,35 @@ export function WishlistDot() {
   );
 }
 
+// Icône glyph Steam (logo officiel) — réutilisable partout où l'on doit indiquer
+// une provenance/donnée Steam (tag bibliothèque/wishlist news, badge "Steam Wishlist"...).
+export function SteamGlyph({ size = 10, color = '#66c0f4', style }) {
+  return (
+    <svg viewBox="0 0 496 512" xmlns="http://www.w3.org/2000/svg" style={{ width: size, height: size, fill: color, flexShrink: 0, ...style }}>
+      <path d="M496 256c0 137-111.2 248-248.4 248-113.8 0-209.7-76.3-239-180.4l95.2 39.3c6.4 32.1 34.9 56.4 68.9 56.4 38.2 0 69.1-31.1 68.9-69.3l84.5-60.2c52.1 1.3 95.8-40.9 95.8-93.5 0-51.6-42-93.5-93.7-93.5s-93.7 42-93.7 93.5v1.2L176.6 279c-15.5-.9-30.7 3.4-43.5 12.1L0 236.1C10.2 108.4 117.1 8 247.6 8 384.8 8 496 119 496 256z"/>
+    </svg>
+  );
+}
+
+// Tag rectangulaire standard (bordure colorée, fond transparent, police bold) —
+// même style que les badges Public/Privé (HomeBoardCard, AdminPanel). Réutilisé pour
+// tous les petits tags de catégorie/genre/source (UpcomingPanel, LibraryNewsPanel...)
+// afin que tous les tags de l'app partagent le même encadré et la même police.
+export function Tag({ color = 'var(--accent)', size = 10, borderWidth = 1.5, icon, children, style }) {
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 3,
+      fontSize: size, fontWeight: 700, color,
+      border: `${borderWidth}px solid ${color}`, borderRadius: 4,
+      padding: '1px 5px', whiteSpace: 'nowrap', flexShrink: 0,
+      ...style,
+    }}>
+      {icon}
+      {children}
+    </span>
+  );
+}
+
 // Calcule si un module dépendant de données Steam privées (bibliothèque, succès,
 // wishlist) est bloqué : profil Steam non public ET pas de clé API personnelle.
 // `user` = objet currentUser (ou équivalent /api/user/profile|/api/user/settings) —

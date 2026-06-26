@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useLang } from '../i18n.js';
-import { genreColor, playerTags, ReviewBadge, DaysBadge, WishlistDot } from './SteamUI.jsx';
+import { genreColor, playerTags, ReviewBadge, DaysBadge, WishlistDot, Tag } from './SteamUI.jsx';
 import { daysUntil, formatDateShort, authHeaders } from '../utils.js';
 
 const API = '/api';
@@ -80,10 +80,10 @@ function FeaturedCard({ token, wishlist = new Set() }) {
           {(game.genres?.length > 0 || playerTags(game.categories).length > 0) && (
             <div style={{ display: 'flex', gap: 4, flexWrap: 'nowrap', overflow: 'hidden', marginBottom: 4 }}>
               {game.genres?.slice(0, 2).map(g => (
-                <span key={g} style={{ fontSize: 10, background: `${gc}20`, border: `1px solid ${gc}50`, borderRadius: 3, padding: '2px 6px', color: gc, whiteSpace: 'nowrap', flexShrink: 0 }}>{g}</span>
+                <Tag key={g} color={gc} size={10}>{g}</Tag>
               ))}
-              {playerTags(game.categories).slice(0, 2).map(t => (
-                <span key={t} style={{ fontSize: 10, background: 'rgba(102,192,244,0.12)', border: '1px solid rgba(102,192,244,0.35)', borderRadius: 3, padding: '2px 6px', color: '#66c0f4', whiteSpace: 'nowrap', flexShrink: 0 }}>{t}</span>
+              {playerTags(game.categories).slice(0, 2).map(pt => (
+                <Tag key={pt} color="#66c0f4" size={10}>{pt}</Tag>
               ))}
             </div>
           )}
@@ -240,7 +240,9 @@ export default function UpcomingPanel({ token }) {
                       <DaysBadge days={0} />
                     </div>
                     {game.type === 'dlc' && (
-                      <span style={{ position: 'absolute', top: 7, left: 8, fontSize: 8, fontWeight: 800, background: 'rgba(90,60,160,0.85)', color: '#d0b0ff', borderRadius: 3, padding: '2px 5px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>DLC</span>
+                      <div style={{ position: 'absolute', top: 7, left: 8 }}>
+                        <Tag color="#d0b0ff" size={8} style={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}>DLC</Tag>
+                      </div>
                     )}
                     {wishlist.has(Number(game.appid)) && (
                       <div style={{ position: 'absolute', top: 8, left: 8 }}><WishlistDot /></div>
@@ -263,10 +265,10 @@ export default function UpcomingPanel({ token }) {
                     {(game.genres?.length > 0 || playerTags(game.categories).length > 0) && (
                       <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 5 }}>
                         {game.genres?.map(g => (
-                          <span key={g} style={{ fontSize: 10, background: `${gc}20`, border: `1px solid ${gc}50`, borderRadius: 3, padding: '2px 6px', color: gc }}>{g}</span>
+                          <Tag key={g} color={gc} size={10}>{g}</Tag>
                         ))}
-                        {playerTags(game.categories).map(t => (
-                          <span key={t} style={{ fontSize: 10, background: 'rgba(102,192,244,0.12)', border: '1px solid rgba(102,192,244,0.35)', borderRadius: 3, padding: '2px 6px', color: '#66c0f4' }}>{t}</span>
+                        {playerTags(game.categories).map(pt => (
+                          <Tag key={pt} color="#66c0f4" size={10}>{pt}</Tag>
                         ))}
                       </div>
                     )}
@@ -303,7 +305,7 @@ export default function UpcomingPanel({ token }) {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                   {game.type === 'dlc' && (
-                    <span style={{ fontSize: 8, fontWeight: 800, background: 'rgba(90,60,160,0.3)', color: '#b090f0', borderRadius: 3, padding: '1px 4px', flexShrink: 0, textTransform: 'uppercase' }}>DLC</span>
+                    <Tag color="#b090f0" size={8} style={{ textTransform: 'uppercase' }}>DLC</Tag>
                   )}
                   <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
                     {game.name}

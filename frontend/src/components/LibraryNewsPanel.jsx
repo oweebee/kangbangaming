@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useLang } from '../i18n.js';
 import { authHeaders, formatDateShort } from '../utils.js';
-import { genreColor, isSteamAccessBlocked, SteamAccessNotice } from './SteamUI.jsx';
+import { genreColor, isSteamAccessBlocked, SteamAccessNotice, SteamGlyph, Tag } from './SteamUI.jsx';
 
 const API = '/api';
 const PAGE_SIZE = 20;
@@ -177,16 +177,16 @@ export default function LibraryNewsPanel({ token, personaName, currentUser }) {
                     <span style={{ flex: 1, fontSize: 9, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.03em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
                       {item.gameName}
                     </span>
-                    {/* Tag Bibliothèque (bleu) / Wishlist (or, même teinte que WishlistDot de SteamUI.jsx) — aligné à droite */}
-                    <span style={{
-                      flexShrink: 0, marginLeft: 'auto', fontSize: 8, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.02em',
-                      padding: '1px 5px', borderRadius: 4,
-                      color: item.inLibrary ? 'var(--accent)' : '#f5c518',
-                      background: item.inLibrary ? 'rgba(102,192,244,0.15)' : 'rgba(245,197,24,0.15)',
-                      border: `1px solid ${item.inLibrary ? 'rgba(102,192,244,0.4)' : 'rgba(245,197,24,0.4)'}`,
-                    }}>
+                    {/* Tag Bibliothèque (bleu Steam) / Wishlist (or) — même encadré/police que les
+                        autres tags de l'app (Tag, SteamUI.jsx), icône Steam commune — aligné à droite */}
+                    <Tag
+                      color={item.inLibrary ? '#66c0f4' : '#f5c518'}
+                      size={8}
+                      icon={<SteamGlyph size={8} color={item.inLibrary ? '#66c0f4' : '#f5c518'} />}
+                      style={{ marginLeft: 'auto', textTransform: 'uppercase', letterSpacing: '0.02em' }}
+                    >
                       {item.inLibrary ? t('libnews.tag_library') : t('libnews.tag_wishlist')}
-                    </span>
+                    </Tag>
                   </div>
                   {/* Même taille que le titre des boards (HomeBoardCard, App.jsx) : fontSize 13 */}
                   <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.3 }}>

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import GameCard from './GameCard.jsx';
 import { useLang } from '../i18n.js';
-import { WishlistDot, isSteamAccessBlocked, SteamAccessNotice } from './SteamUI.jsx';
+import { WishlistDot, isSteamAccessBlocked, SteamAccessNotice, SteamGlyph } from './SteamUI.jsx';
 import { authHeaders } from '../utils.js';
 
 const API = '/api';
@@ -309,9 +309,7 @@ function Section({ cat, tasks, onOpenTask, hiddenDeadlineIds, showHiddenDeadline
                 }}>
                   {task._isWishlist ? (
                     <>
-                      <svg viewBox="0 0 496 512" xmlns="http://www.w3.org/2000/svg" style={{ width: 11, height: 11, fill: '#47a7f5', flexShrink: 0 }}>
-                        <path d="M496 256c0 137-111.2 248-248.4 248-113.8 0-209.7-76.3-239-180.4l95.2 39.3c6.4 32.1 34.9 56.4 68.9 56.4 38.2 0 69.1-31.1 68.9-69.3l84.5-60.2c52.1 1.3 95.8-40.9 95.8-93.5 0-51.6-42-93.5-93.7-93.5s-93.7 42-93.7 93.5v1.2L176.6 279c-15.5-.9-30.7 3.4-43.5 12.1L0 236.1C10.2 108.4 117.1 8 247.6 8 384.8 8 496 119 496 256z"/>
-                      </svg>
+                      <SteamGlyph size={11} color="#47a7f5" />
                       <span style={{ fontSize: 10, color: '#47a7f5', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
                         Steam Wishlist
                       </span>
