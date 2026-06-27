@@ -228,7 +228,7 @@ export default function AppInfoModal({ onClose }) {
   return (
     <ModalBackdrop onClose={onClose} zIndex={1100}>
       <ModalCard style={{
-        width: 580, height: '78vh', minHeight: 500, maxHeight: 920,
+        width: '100%', maxWidth: 580, height: '78vh', minHeight: 500, maxHeight: 920,
         display: 'flex', flexDirection: 'column',
       }}>
         {/* Header */}

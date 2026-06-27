@@ -311,7 +311,7 @@ export default function AdminPanel({ token, currentUser, onClose }) {
 
   return (
     <ModalBackdrop onClose={onClose} zIndex={1000}>
-      <ModalCard style={{ width: '660px', height: '78vh', minHeight: 500, maxHeight: 920, display: 'flex', flexDirection: 'column' }}>
+      <ModalCard style={{ width: '100%', maxWidth: 660, height: '78vh', minHeight: 500, maxHeight: 920, display: 'flex', flexDirection: 'column' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 20px 0', borderBottom: '1px solid var(--border)' }}>
           <h2 style={{ margin: '0 0 12px', fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>⚙️ Panneau Admin</h2>
