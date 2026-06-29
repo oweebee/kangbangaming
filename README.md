@@ -151,6 +151,54 @@ Sans ce volume, les données sont perdues à chaque redéploiement.
 
 ---
 
+## Déploiement Docker en local (sans Coolify)
+
+Le `docker-compose.yml` du repo est pensé pour Coolify, qui publie les ports et injecte `SERVICE_URL_FRONTEND` automatiquement. Pour lancer avec `docker-compose up` directement sur ta machine, deux ajouts sont nécessaires (absents du fichier par défaut) :
+
+### 1. Publier les ports
+
+```yaml
+backend:
+  # ...
+  ports:
+    - "3001:3001"   # nécessaire uniquement pour le tunnel Steam, voir étape 2
+
+frontend:
+  # ...
+  ports:
+    - "8080:80"     # adapte le port hôte à ta convenance
+```
+
+L'app est alors accessible sur `http://127.0.0.1:8080` (ou `http://localhost:8080`) — boards, kanban, compte `admin` fonctionnent immédiatement, sans rien d'autre à configurer.
+
+### 2. Activer la connexion Steam
+
+Steam OpenID refuse `localhost`/`127.0.0.1` comme domaine de callback — même règle qu'en [développement local](#auth-steam-en-développement), même solution : un tunnel public pointé sur le **backend** (port 3001) :
+
+```bash
+cloudflared tunnel --url http://localhost:3001
+# ou : ngrok http 3001
+```
+
+Puis, dans le `.env` à la racine :
+
+```env
+BACKEND_URL=https://xxx.trycloudflare.com
+FRONTEND_URL=http://127.0.0.1:8080
+```
+
+Relance les conteneurs pour appliquer :
+
+```bash
+docker-compose up -d --force-recreate
+```
+
+Le frontend reste accessible localement comme avant (`127.0.0.1:8080`) ; seul l'aller-retour de l'authentification Steam passe par le tunnel.
+
+> Même limite qu'en dev : l'URL du tunnel change à chaque redémarrage (sauf tunnel Cloudflare nommé ou ngrok payant) — il faut alors remettre à jour `BACKEND_URL` et relancer les conteneurs.
+
+---
+
 ## Authentification
 
 ### Connexion Steam (recommandée)
