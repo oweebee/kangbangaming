@@ -100,7 +100,7 @@ export default function GameModal({ game, onClose, api, token, onPatchGame, onSo
     <ModalBackdrop onClose={onClose}>
       <div style={{
         background: 'var(--surface)', border: '2px solid var(--border)', borderRadius: 14,
-        width: '100%', maxWidth: 620, maxHeight: '85vh',
+        width: '100%', maxWidth: 620, height: '85vh', minHeight: 500, maxHeight: 920,
         display: 'flex', flexDirection: 'column', overflow: 'hidden',
       }}>
         {/* Header with game art */}

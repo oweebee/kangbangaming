@@ -217,7 +217,7 @@ export default function TaskModal({ game, onClose, onEdit, appUsers = [], onPatc
         background: 'var(--surface)',
         border: isUrgent ? '2px solid rgba(220,60,60,0.6)' : tt ? `2px solid ${tt.border}` : `2px solid ${customColor || 'var(--border)'}`,
         borderRadius: 14, width: '100%', maxWidth: 500,
-        maxHeight: '88vh', display: 'flex', flexDirection: 'column', overflow: 'hidden',
+        height: '88vh', minHeight: 420, maxHeight: 800, display: 'flex', flexDirection: 'column', overflow: 'hidden',
         boxShadow: isUrgent ? '0 0 30px rgba(220,40,40,0.15)' : undefined,
       }}>
 
