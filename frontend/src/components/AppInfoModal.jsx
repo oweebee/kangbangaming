@@ -143,6 +143,7 @@ function TabFeatures() {
     { icon: '🔑', title: t('info.feat.api_key_t'), desc: t('info.feat.api_key_d') },
     { icon: '🔒', title: t('info.feat.blocked_module_t'), desc: t('info.feat.blocked_module_d') },
     { icon: '🔎', title: t('info.feat.ui_zoom_t'), desc: t('info.feat.ui_zoom_d') },
+    { icon: '🔽', title: t('info.feat.filter_t'), desc: t('info.feat.filter_d') },
   ];
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>

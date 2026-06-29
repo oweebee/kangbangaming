@@ -1578,6 +1578,17 @@ async function getLibraryMap(userId) {
   }
 }
 
+// Enrichit une liste de cartes "jeu" avec le temps de jeu Steam à jour (lib du
+// joueur courant), sans jamais persister la valeur — recalculée à chaque lecture
+// pour rester juste même si elle évolue après l'ajout de la carte (cf. bug :
+// playtime_minutes n'était jamais stocké à la création ni rafraîchi ensuite,
+// contrairement aux succès qui sont, eux, toujours allés chercher en direct).
+// Cartes "custom" (tâches/perso, sans jeu Steam réel) laissées intactes.
+async function enrichPlaytime(games, userId) {
+  const lib = await getLibraryMap(userId);
+  return games.map(g => g.type === 'custom' ? g : { ...g, playtime_minutes: lib.get(parseInt(g.appid))?.playtime_forever ?? 0 });
+}
+
 // ── Steam routes ──────────────────────────────────────────────────────────────
 
 app.get('/api/steam/search', requireAuth, async (req, res) => {
@@ -2115,10 +2126,14 @@ app.delete('/api/public/boards/:boardId/columns/:colId', requireAuth, (req, res)
   res.json({ ok: true });
 });
 
-app.get('/api/public/boards/:boardId/games', requireAuth, (req, res) => {
+app.get('/api/public/boards/:boardId/games', requireAuth, async (req, res) => {
   const f = loadPublicBoardOrRespond(req, res);
   if (!f) return;
-  res.json(Object.values(f.board.games || {}).filter(g => !g.deletedAt));
+  // Temps de jeu basé sur le compte Steam du visiteur courant (même logique que
+  // les succès, déjà toujours calculés "pour moi" indépendamment du propriétaire
+  // du board public).
+  const visible = Object.values(f.board.games || {}).filter(g => !g.deletedAt);
+  res.json(await enrichPlaytime(visible, req.user.id));
 });
 
 app.post('/api/public/boards/:boardId/games', requireAuth, (req, res) => {
@@ -2488,11 +2503,12 @@ app.delete('/api/boards/:boardId/columns/:colId', requireAuth, (req, res) => {
 
 // ── Game routes ───────────────────────────────────────────────────────────────
 
-app.get('/api/boards/:boardId/games', requireAuth, (req, res) => {
+app.get('/api/boards/:boardId/games', requireAuth, async (req, res) => {
   const board = getUserBoards(req.user.id)[req.params.boardId];
   if (!board) return res.status(404).json({ error: 'Board not found' });
   // Exclure les cartes soft-deletées (dans la corbeille)
-  res.json(Object.values(board.games || {}).filter(g => !g.deletedAt));
+  const visible = Object.values(board.games || {}).filter(g => !g.deletedAt);
+  res.json(await enrichPlaytime(visible, req.user.id));
 });
 
 app.post('/api/boards/:boardId/games', requireAuth, (req, res) => {

@@ -454,6 +454,8 @@ fr: {
   'info.feat.blocked_module_d':     'Si la bibliothèque, les succès, la wishlist ou les échéances Steam ne peuvent rien afficher (profil privé + pas de clé perso), un court message explique pourquoi et propose deux liens : rendre ton profil public, ou générer ta clé API perso.',
   'info.feat.ui_zoom_t':            "Zoom de l'interface",
   'info.feat.ui_zoom_d':            "Dans ton profil (onglet Profil), un curseur par paliers de 5% (80 → 100%) réduit l'échelle globale de l'app — comme dans Teams ou Discord — pour afficher plus de contenu sur les écrans basse résolution. Réglage sauvegardé par compte.",
+  'info.feat.filter_t':             'Filtre par nom',
+  'info.feat.filter_d':             "Une icône entonnoir à gauche de la recherche globale ouvre un filtre par nom (insensible aux accents/majuscules) : un filtre global sur l'accueil (boards, sidebar, échéances, news, sorties à venir en même temps) et un filtre local indépendant à l'intérieur de chaque board ouvert (cartes Kanban). La valeur reste active même quand le panneau se replie.",
 
   'info.kanban.intro':             "Le Kanban est une méthode de gestion visuelle inventée chez Toyota dans les années 50. L'idée : organiser des tâches en colonnes représentant des étapes d'avancement.",
   'info.kanban.col_todo':          'À faire',
@@ -1106,6 +1108,8 @@ en: {
   'info.feat.blocked_module_d':     "If the library, achievements, wishlist or Steam deadlines can't display anything (private profile + no personal key), a short message explains why and offers two links: make your profile public, or generate your personal API key.",
   'info.feat.ui_zoom_t':            'Interface zoom',
   'info.feat.ui_zoom_d':            "In your profile (Profile tab), a slider in 5% steps (80 → 100%) reduces the app's overall scale — like in Teams or Discord — to show more content on low-resolution screens. Setting saved per account.",
+  'info.feat.filter_t':             'Filter by name',
+  'info.feat.filter_d':             'A funnel icon to the left of global search opens a name filter (accent/case-insensitive): a global filter on the home screen (boards, sidebar, deadlines, news, upcoming releases all at once) and an independent local filter inside each open board (Kanban cards). The value stays active even when the panel is collapsed.',
 
   'info.kanban.intro':             'Kanban is a visual management method invented at Toyota in the 1950s. The idea: organize tasks into columns representing stages of progress.',
   'info.kanban.col_todo':          'To do',
@@ -1738,6 +1742,8 @@ es: {
   'info.feat.blocked_module_d':     'Si la biblioteca, los logros, la lista de deseos o las fechas límite de Steam no pueden mostrar nada (perfil privado + sin clave personal), un breve mensaje explica por qué y ofrece dos enlaces: hacer público tu perfil, o generar tu clave API personal.',
   'info.feat.ui_zoom_t':            'Zoom de la interfaz',
   'info.feat.ui_zoom_d':            'En tu perfil (pestaña Perfil), un control deslizante en pasos del 5% (80 → 100%) reduce la escala global de la app, como en Teams o Discord, para mostrar más contenido en pantallas de baja resolución. Ajuste guardado por cuenta.',
+  'info.feat.filter_t':             'Filtrar por nombre',
+  'info.feat.filter_d':             'Un icono de embudo a la izquierda de la búsqueda global abre un filtro por nombre (sin distinguir acentos/mayúsculas): un filtro global en el inicio (tableros, barra lateral, vencimientos, noticias, próximos lanzamientos a la vez) y un filtro local independiente dentro de cada tablero abierto (tarjetas Kanban). El valor permanece activo aunque se cierre el panel.',
 
   'info.kanban.intro':             'Kanban es un método de gestión visual inventado en Toyota en los años 50. La idea: organizar tareas en columnas que representan etapas de avance.',
   'info.kanban.col_todo':          'Por hacer',
@@ -2370,6 +2376,8 @@ de: {
   'info.feat.blocked_module_d':     'Wenn Bibliothek, Erfolge, Wunschliste oder Steam-Fristen nichts anzeigen können (privates Profil + kein eigener Schlüssel), erklärt eine kurze Meldung den Grund und bietet zwei Links: Profil öffentlich machen oder eigenen API-Schlüssel erstellen.',
   'info.feat.ui_zoom_t':            'Oberflächen-Zoom',
   'info.feat.ui_zoom_d':            'In deinem Profil (Tab Profil) verringert ein Schieberegler in 5%-Schritten (80 → 100%) die globale Skalierung der App — wie bei Teams oder Discord —, um auf Bildschirmen mit niedriger Auflösung mehr Inhalt anzuzeigen. Einstellung wird pro Konto gespeichert.',
+  'info.feat.filter_t':             'Nach Namen filtern',
+  'info.feat.filter_d':             'Ein Trichter-Symbol links von der globalen Suche öffnet einen Namensfilter (Groß-/Kleinschreibung und Akzente egal): ein globaler Filter auf der Startseite (Boards, Seitenleiste, Fristen, News, kommende Releases gleichzeitig) und ein unabhängiger lokaler Filter innerhalb jedes geöffneten Boards (Kanban-Karten). Der Wert bleibt aktiv, auch wenn das Feld eingeklappt wird.',
 
   'info.kanban.intro':             'Kanban ist eine visuelle Managementmethode, die in den 1950er-Jahren bei Toyota entwickelt wurde. Die Idee: Aufgaben in Spalten organisieren, die Fortschrittsstufen darstellen.',
   'info.kanban.col_todo':          'Zu tun',
@@ -3002,6 +3010,8 @@ ru: {
   'info.feat.blocked_module_d':     'Если библиотека, достижения, список желаемого или сроки Steam не могут ничего показать (приватный профиль + нет личного ключа), короткое сообщение объясняет причину и предлагает две ссылки: сделать профиль публичным или создать личный API-ключ.',
   'info.feat.ui_zoom_t':            'Масштаб интерфейса',
   'info.feat.ui_zoom_d':            'В твоём профиле (вкладка «Профиль») ползунок с шагом 5% (80 → 100%) уменьшает общий масштаб приложения — как в Teams или Discord — чтобы показать больше контента на экранах низкого разрешения. Настройка сохраняется по аккаунту.',
+  'info.feat.filter_t':             'Фильтр по названию',
+  'info.feat.filter_d':             'Значок воронки слева от глобального поиска открывает фильтр по названию (без учёта регистра и акцентов): глобальный фильтр на главной странице (доски, боковая панель, сроки, новости, ожидаемые релизы одновременно) и независимый локальный фильтр внутри каждой открытой доски (карточки Kanban). Значение остаётся активным даже при сворачивании панели.',
 
   'info.kanban.intro':             'Канбан — метод визуального управления, придуманный в Toyota в 1950-х годах. Идея: организовать задачи в колонки, представляющие этапы выполнения.',
   'info.kanban.col_todo':          'К выполнению',
@@ -3634,6 +3644,8 @@ zh: {
   'info.feat.blocked_module_d':     '如果资料库、成就、心愿单或 Steam 截止日期无法显示内容（资料私密 + 无个人密钥），会显示一条简短说明并提供两个链接：将资料公开，或生成个人 API 密钥。',
   'info.feat.ui_zoom_t':            '界面缩放',
   'info.feat.ui_zoom_d':            '在你的个人资料（"个人资料"标签）中，一个以 5% 为步进（80% → 100%）的滑块可缩小应用的整体比例 — 类似 Teams 或 Discord — 以在低分辨率屏幕上显示更多内容。该设置按账号保存。',
+  'info.feat.filter_t':             '按名称筛选',
+  'info.feat.filter_d':             '全局搜索左侧的漏斗图标可打开按名称筛选（不区分大小写和重音符号）：首页全局筛选（同时筛选看板、侧边栏、截止日期、新闻、即将发布）以及每个打开的看板内独立的本地筛选（看板卡片）。即使收起面板，筛选值仍保持有效。',
 
   'info.kanban.intro':             '看板（Kanban）是一种视觉化管理方法，于 20 世纪 50 年代在丰田发明。其理念是：将任务组织到代表进度阶段的列中。',
   'info.kanban.col_todo':          '待办',
