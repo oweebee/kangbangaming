@@ -1,13 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useLang } from '../i18n.js';
-import { authHeaders, formatDateShort } from '../utils.js';
+import { authHeaders, formatDateShort, matchesFilter } from '../utils.js';
 import { genreColor, isSteamAccessBlocked, SteamAccessNotice, SteamGlyph, Tag } from './SteamUI.jsx';
 
 const API = '/api';
 const PAGE_SIZE = 20;
 const SCROLL_THRESHOLD = 120; // px avant le bas pour déclencher le chargement suivant
 
-export default function LibraryNewsPanel({ token, personaName, currentUser }) {
+export default function LibraryNewsPanel({ token, personaName, currentUser, filterText = '' }) {
   const { t } = useLang();
   const steamBlocked = isSteamAccessBlocked(currentUser);
   const [items, setItems] = useState([]);
@@ -65,6 +65,10 @@ export default function LibraryNewsPanel({ token, personaName, currentUser }) {
     if (el.scrollHeight - el.scrollTop - el.clientHeight < SCROLL_THRESHOLD) loadMore();
   };
 
+  // Filtre nom du jeu OU titre de la news — match sur l'un des deux suffit.
+  const visibleItems = items.filter(item => matchesFilter(item.gameName, filterText) || matchesFilter(item.title, filterText));
+  const noMatch = items.length > 0 && visibleItems.length === 0;
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       {/* Section : News Bibliothèque */}
@@ -76,7 +80,7 @@ export default function LibraryNewsPanel({ token, personaName, currentUser }) {
           {personaName ? t('libnews.header_named', { name: personaName }) : t('libnews.header')}
           {!loading && !noSteam && items.length > 0 && (
             <span style={{ fontSize: 10, color: 'var(--text-muted)', background: 'var(--surface2)', borderRadius: 99, padding: '1px 6px', fontWeight: 600 }}>
-              {items.length}
+              {visibleItems.length}
             </span>
           )}
           {!noSteam && (
@@ -143,7 +147,14 @@ export default function LibraryNewsPanel({ token, personaName, currentUser }) {
           </div>
         )}
 
-        {!loading && !noSteam && !error && items.map(item => {
+        {!loading && !noSteam && !error && noMatch && (
+          <div style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 12 }}>
+            <div style={{ fontSize: 28, marginBottom: 8 }}>🔎</div>
+            {t('filter.no_results')}
+          </div>
+        )}
+
+        {!loading && !noSteam && !error && visibleItems.map(item => {
           // Couleur de bordure selon le genre du jeu — même logique/fonction
           // partagée que les cartes de "Sorties à venir" (SteamUI.jsx).
           const gc = genreColor(item.genres);

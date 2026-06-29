@@ -95,3 +95,28 @@ export function daysUntil(isoDate) {
 export function authHeaders(token) {
   return { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
 }
+
+/**
+ * Test de correspondance pour le champ Filtre (FilterField.jsx) — insensible à la
+ * casse et aux accents (ex: "zelda" matche "Zeldä"). Une chaîne de filtre vide ou
+ * blanche ne filtre rien (tout correspond). Partagé par toute l'app (accueil,
+ * sidebar, boards, news, jeux à venir) pour garantir un comportement identique
+ * partout sans dupliquer la logique.
+ */
+export function matchesFilter(text, filterText) {
+  if (!filterText || !filterText.trim()) return true;
+  if (!text) return false;
+  // Retire les diacritiques (accents) après décomposition NFD, sans regex Unicode
+  // (plage de points de code 0x0300–0x036F = marques combinantes), pour rester
+  // robuste indépendamment de l'environnement d'exécution.
+  const norm = (s) => {
+    const decomposed = s.toString().normalize('NFD');
+    let out = '';
+    for (let i = 0; i < decomposed.length; i++) {
+      const code = decomposed.charCodeAt(i);
+      if (code < 0x0300 || code > 0x036f) out += decomposed[i];
+    }
+    return out.toLowerCase();
+  };
+  return norm(text).includes(norm(filterText.trim()));
+}

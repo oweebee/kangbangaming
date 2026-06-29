@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback, useLayoutEffect } from 'react';
 import GameCard from './GameCard.jsx';
 import { useLang } from '../i18n.js';
+import { matchesFilter } from '../utils.js';
 
 // ── Petite flèche SVG pour le bouton "Déplacer vers" ─────────────────────────
 function MoveIcon() {
@@ -65,7 +66,7 @@ export default function MobileBoard({
   isTaskBoard, onToggleDone, onToggleUrgent, onUpdateAssignees, onClickNotes,
   genreColors = {}, hiddenCardIds = new Set(), showHiddenCards = false,
   onHideCard, onUnhideCard, compact = false,
-  moveGame, onReorderGames, onAddToColumn,
+  moveGame, onReorderGames, onAddToColumn, filterText = '',
 }) {
   const { t } = useLang();
   const [activeColId,  setActiveColId]  = useState(columns[0]?.id || null);
@@ -350,7 +351,7 @@ export default function MobileBoard({
         <div ref={tabBarRef} style={{ display: 'flex', gap: 6, padding: '10px 12px', overflowX: 'auto', scrollbarWidth: 'none' }}>
           {columns.map(col => {
             const active = col.id === currentColId;
-            const count  = (byColumn[col.id] || []).length;
+            const count  = (byColumn[col.id] || []).filter(g => matchesFilter(g.name, filterText)).length;
             return (
               <button
                 key={col.id}
@@ -404,6 +405,13 @@ export default function MobileBoard({
               }
             }
 
+            // Filtre local — uniquement pour l'affichage : `colGames` (passé tel
+            // quel à handleCardTouchStart, ligne plus bas) reste la liste complète
+            // de la colonne, donc le drag-to-reorder continue de fonctionner sur
+            // TOUTES les cartes même quand un filtre masque certaines d'entre elles.
+            const visibleDisplayGames = displayGames.filter(g => matchesFilter(g.name, filterText));
+            const noMatch = displayGames.length > 0 && visibleDisplayGames.length === 0;
+
             return (
               <div
                 key={col.id}
@@ -427,7 +435,12 @@ export default function MobileBoard({
                     Aucune carte dans cette colonne
                   </div>
                 )}
-                {displayGames.map(game => {
+                {noMatch && (
+                  <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, padding: '40px 20px', border: '1px dashed var(--border)', borderRadius: 10 }}>
+                    {t('filter.no_results')}
+                  </div>
+                )}
+                {visibleDisplayGames.map(game => {
                   const isBeingDragged = dragAppid === game.appid;
                   return (
                     <div

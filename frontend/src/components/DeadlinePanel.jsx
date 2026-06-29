@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import GameCard from './GameCard.jsx';
 import { useLang } from '../i18n.js';
 import { WishlistDot, isSteamAccessBlocked, SteamAccessNotice, SteamGlyph } from './SteamUI.jsx';
-import { authHeaders } from '../utils.js';
+import { authHeaders, matchesFilter } from '../utils.js';
 
 const API = '/api';
 
@@ -104,7 +104,7 @@ function taskToGame(task) {
 }
 
 // ── Section ────────────────────────────────────────────────────────────────────
-function Section({ cat, tasks, onOpenTask, hiddenDeadlineIds, showHiddenDeadlines, onHideDeadline, onUnhideDeadline, compact = false }) {
+function Section({ cat, tasks, onOpenTask, hiddenDeadlineIds, showHiddenDeadlines, onHideDeadline, onUnhideDeadline, compact = false, filterText = '' }) {
   const { t } = useLang();
   const CAT_META = {
     overdue:  { label: t('deadline.cat_warning'),  color: '#e05555', icon: null },
@@ -170,7 +170,12 @@ function Section({ cat, tasks, onOpenTask, hiddenDeadlineIds, showHiddenDeadline
   }
 
   const allSorted = applyOrder(tasks);
-  const sorted = allSorted.filter(t => showHiddenDeadlines ? true : !hiddenDeadlineIds.has(taskKey(t)));
+  const visible = allSorted.filter(t => showHiddenDeadlines ? true : !hiddenDeadlineIds.has(taskKey(t)));
+  const sorted = visible.filter(t => matchesFilter(t.name, filterText));
+  // Vide "vraiment" (rien à afficher même sans le filtre, ex: tout masqué via le
+  // bouton œil) vs vide "à cause du filtre" (filterText a tout exclu) — seul ce
+  // 2e cas affiche le message dédié ; le 1er reste silencieux comme avant.
+  const noMatch = visible.length > 0 && sorted.length === 0;
 
   return (
     <div style={{ marginBottom: 20 }}>
@@ -188,7 +193,9 @@ function Section({ cat, tasks, onOpenTask, hiddenDeadlineIds, showHiddenDeadline
         <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke={meta.color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transition: 'transform .2s', transform: collapsed ? 'rotate(-90deg)' : 'rotate(0deg)', flexShrink: 0, opacity: 0.75 }}><polyline points="6 9 12 15 18 9"/></svg>
       </div>
 
-      {!collapsed && (
+      {!collapsed && noMatch ? (
+        <div style={{ color: 'var(--text-muted)', fontSize: 11, padding: '4px 2px 2px' }}>{t('filter.no_results')}</div>
+      ) : !collapsed && (
         <div style={{ display: 'grid', gridTemplateColumns: compact ? '1fr' : 'repeat(auto-fill, minmax(190px, 1fr))', gap: 10 }}>
           {sorted.map((task, i) => {
             const game = taskToGame(task);
@@ -341,7 +348,7 @@ function Section({ cat, tasks, onOpenTask, hiddenDeadlineIds, showHiddenDeadline
 }
 
 // ── Composant principal ────────────────────────────────────────────────────────
-export default function DeadlinePanel({ token, currentUser, onOpenTask, refreshKey = 0, hiddenDeadlineIds = new Set(), showHiddenDeadlines = false, onHideDeadline, onUnhideDeadline, onToggleShowHidden, compact = false, onEmpty }) {
+export default function DeadlinePanel({ token, currentUser, onOpenTask, refreshKey = 0, hiddenDeadlineIds = new Set(), showHiddenDeadlines = false, onHideDeadline, onUnhideDeadline, onToggleShowHidden, compact = false, onEmpty, filterText = '' }) {
   const { t } = useLang();
   const steamBlocked = isSteamAccessBlocked(currentUser);
   const [tasks, setTasks]       = useState([]);
@@ -491,10 +498,10 @@ export default function DeadlinePanel({ token, currentUser, onOpenTask, refreshK
         )
       ) : (
         <>
-          <Section cat="overdue"  tasks={categorized.overdue}   onOpenTask={onOpenTask} hiddenDeadlineIds={hiddenDeadlineIds} showHiddenDeadlines={showHiddenDeadlines} onHideDeadline={onHideDeadline} onUnhideDeadline={onUnhideDeadline} compact={compact} />
-          <Section cat="active"   tasks={categorized.active}    onOpenTask={onOpenTask} hiddenDeadlineIds={hiddenDeadlineIds} showHiddenDeadlines={showHiddenDeadlines} onHideDeadline={onHideDeadline} onUnhideDeadline={onUnhideDeadline} compact={compact} />
-          <Section cat="tomorrow" tasks={categorized.tomorrow}  onOpenTask={onOpenTask} hiddenDeadlineIds={hiddenDeadlineIds} showHiddenDeadlines={showHiddenDeadlines} onHideDeadline={onHideDeadline} onUnhideDeadline={onUnhideDeadline} compact={compact} />
-          <Section cat="upcoming" tasks={categorized.upcoming}  onOpenTask={onOpenTask} hiddenDeadlineIds={hiddenDeadlineIds} showHiddenDeadlines={showHiddenDeadlines} onHideDeadline={onHideDeadline} onUnhideDeadline={onUnhideDeadline} compact={compact} />
+          <Section cat="overdue"  tasks={categorized.overdue}   onOpenTask={onOpenTask} hiddenDeadlineIds={hiddenDeadlineIds} showHiddenDeadlines={showHiddenDeadlines} onHideDeadline={onHideDeadline} onUnhideDeadline={onUnhideDeadline} compact={compact} filterText={filterText} />
+          <Section cat="active"   tasks={categorized.active}    onOpenTask={onOpenTask} hiddenDeadlineIds={hiddenDeadlineIds} showHiddenDeadlines={showHiddenDeadlines} onHideDeadline={onHideDeadline} onUnhideDeadline={onUnhideDeadline} compact={compact} filterText={filterText} />
+          <Section cat="tomorrow" tasks={categorized.tomorrow}  onOpenTask={onOpenTask} hiddenDeadlineIds={hiddenDeadlineIds} showHiddenDeadlines={showHiddenDeadlines} onHideDeadline={onHideDeadline} onUnhideDeadline={onUnhideDeadline} compact={compact} filterText={filterText} />
+          <Section cat="upcoming" tasks={categorized.upcoming}  onOpenTask={onOpenTask} hiddenDeadlineIds={hiddenDeadlineIds} showHiddenDeadlines={showHiddenDeadlines} onHideDeadline={onHideDeadline} onUnhideDeadline={onUnhideDeadline} compact={compact} filterText={filterText} />
           </>
       )}
     </>

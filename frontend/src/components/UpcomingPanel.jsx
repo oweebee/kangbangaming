@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useLang } from '../i18n.js';
 import { genreColor, playerTags, ReviewBadge, DaysBadge, WishlistDot, Tag } from './SteamUI.jsx';
-import { daysUntil, formatDateShort, authHeaders } from '../utils.js';
+import { daysUntil, formatDateShort, authHeaders, matchesFilter } from '../utils.js';
 
 const API = '/api';
 
@@ -9,7 +9,7 @@ function formatDate(isoDate) {
   return formatDateShort(isoDate);
 }
 
-function FeaturedCard({ token, wishlist = new Set() }) {
+function FeaturedCard({ token, wishlist = new Set(), filterText = '' }) {
   const [items, setItems] = useState([]);
   const [idx, setIdx] = useState(0);
   const timerRef = useRef(null);
@@ -22,14 +22,20 @@ function FeaturedCard({ token, wishlist = new Set() }) {
       .catch(() => {});
   }, [token]);
 
-  useEffect(() => {
-    if (items.length < 2) return;
-    timerRef.current = setInterval(() => setIdx(i => (i + 1) % items.length), 5000);
-    return () => clearInterval(timerRef.current);
-  }, [items.length]);
+  // Liste filtrée par nom — la rotation/les dots se basent sur cette liste,
+  // pas sur `items` brute, pour rester cohérents avec le filtre actif.
+  const visibleItems = items.filter(g => matchesFilter(g.name, filterText));
 
-  if (!items.length) return null;
-  const game = items[idx];
+  useEffect(() => {
+    if (visibleItems.length < 2) return;
+    timerRef.current = setInterval(() => setIdx(i => (i + 1) % visibleItems.length), 5000);
+    return () => clearInterval(timerRef.current);
+  }, [visibleItems.length]);
+
+  // Filtre actif sans aucune correspondance : on masque la carte en silence
+  // (carrousel d'un seul élément à la fois, pas de liste → pas de message "aucun résultat" ici).
+  if (!visibleItems.length) return null;
+  const game = visibleItems[idx % visibleItems.length];
   const gc = genreColor(game.genres);
 
   return (
@@ -51,9 +57,9 @@ function FeaturedCard({ token, wishlist = new Set() }) {
           <img src={game.headerImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none'; }} />
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 35%, rgba(0,0,0,0.75) 100%)' }} />
           {/* Dots navigation */}
-          {items.length > 1 && (
+          {visibleItems.length > 1 && (
             <div style={{ position: 'absolute', bottom: 8, right: 8, display: 'flex', gap: 4 }}>
-              {items.map((_, i) => (
+              {visibleItems.map((_, i) => (
                 <div key={i} onClick={e => { e.preventDefault(); e.stopPropagation(); clearInterval(timerRef.current); setIdx(i); }}
                   style={{ width: i === idx ? 14 : 5, height: 5, borderRadius: 3, background: i === idx ? '#fff' : 'rgba(255,255,255,0.4)', cursor: 'pointer', transition: 'all .2s' }} />
               ))}
@@ -99,7 +105,7 @@ function FeaturedCard({ token, wishlist = new Set() }) {
 }
 
 
-export default function UpcomingPanel({ token }) {
+export default function UpcomingPanel({ token, filterText = '' }) {
   const { t } = useLang();
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -134,6 +140,11 @@ export default function UpcomingPanel({ token }) {
       .catch(() => {});
   }, [token]);
 
+  // Filtre nom du jeu (recherche globale accueil) — la section "à venir" affiche
+  // visibleGames ; FeaturedCard se filtre lui-même en interne via sa propre prop.
+  const visibleGames = games.filter(g => matchesFilter(g.name, filterText));
+  const noMatch = games.length > 0 && visibleGames.length === 0;
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       {/* Section : Populaires & Recommandés */}
@@ -145,7 +156,7 @@ export default function UpcomingPanel({ token }) {
       </div>
 
       {/* Featured */}
-      <FeaturedCard token={token} wishlist={wishlist} />
+      <FeaturedCard token={token} wishlist={wishlist} filterText={filterText} />
 
       {/* Section : Sorties à venir */}
       <div style={{ padding: '14px 14px 8px', flexShrink: 0 }}>
@@ -154,9 +165,9 @@ export default function UpcomingPanel({ token }) {
             <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
           </svg>
           {t('upcoming.releases')}
-          {!loading && games.length > 0 && (
+          {!loading && visibleGames.length > 0 && (
             <span style={{ fontSize: 10, color: 'var(--text-muted)', background: 'var(--surface2)', borderRadius: 99, padding: '1px 6px', fontWeight: 600 }}>
-              {games.length}
+              {visibleGames.length}
             </span>
           )}
           <button
@@ -207,7 +218,14 @@ export default function UpcomingPanel({ token }) {
           </div>
         )}
 
-        {!loading && !error && games.map((game, idx) => {
+        {!loading && !error && noMatch && (
+          <div style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 12 }}>
+            <div style={{ fontSize: 28, marginBottom: 8 }}>🔎</div>
+            {t('filter.no_results')}
+          </div>
+        )}
+
+        {!loading && !error && visibleGames.map((game, idx) => {
           const days = daysUntil(game.releaseDate);
           const isToday = days === 0;
           const isVeryClose = days <= 3 && !isToday;

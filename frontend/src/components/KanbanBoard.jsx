@@ -3,6 +3,7 @@ import GameCard from './GameCard.jsx';
 import AssigneeAvatars from './AssigneeAvatars.jsx';
 import { getTaskType } from '../taskTypes.jsx';
 import { useLang } from '../i18n.js';
+import { matchesFilter } from '../utils.js';
 
 const EMOJI_CATS = [
   { label: '🎮 Gaming', emojis: ['🎮','🕹️','👾','🎲','🃏','🧩','🎯','🏹','⚔️','🗡️','🛡️','🪃','🔫','💣','🧲','🪄','🎪','🎡','🎠','🎢'] },
@@ -135,7 +136,7 @@ function ColumnHeader({ col, onRename, onDelete, onSetEmoji, onColDragStart, onC
   );
 }
 
-export default function KanbanBoard({ columns, byColumn, dragging, setDragging, moveGame, onCardClick, onArchiveGame, onUnarchiveGame, onDeleteGame, onEditGame, onRenameColumn, onDeleteColumn, onSetEmoji, onReorderColumns, onAddToColumn, onReorderGames, isTaskBoard, appUsers = [], compactView = false, leftOffset = 0, rightOffset = 0, onToggleDone, onToggleUrgent, onUpdateAssignees, onClickNotes, genreColors = {}, hiddenCardIds = new Set(), showHiddenCards = false, onHideCard, onUnhideCard }) {
+export default function KanbanBoard({ columns, byColumn, dragging, setDragging, moveGame, onCardClick, onArchiveGame, onUnarchiveGame, onDeleteGame, onEditGame, onRenameColumn, onDeleteColumn, onSetEmoji, onReorderColumns, onAddToColumn, onReorderGames, isTaskBoard, appUsers = [], compactView = false, leftOffset = 0, rightOffset = 0, onToggleDone, onToggleUrgent, onUpdateAssignees, onClickNotes, genreColors = {}, hiddenCardIds = new Set(), showHiddenCards = false, onHideCard, onUnhideCard, filterText = '' }) {
   const { t } = useLang();
   const [draggingColId, setDraggingColId] = useState(null);
   const [dragOverColId, setDragOverColId] = useState(null);
@@ -164,6 +165,13 @@ export default function KanbanBoard({ columns, byColumn, dragging, setDragging, 
       )}
       {columns.map(col => {
         const games = byColumn[col.id] || [];
+        // Filtre local (cartes) — on ne filtre QUE la liste affichée/parcourue ici ;
+        // `games` (= byColumn[col.id]) reste intact pour tous les calculs de
+        // réordonnancement drag-and-drop (onDrop / dragInsert), qui continuent de
+        // s'appuyer sur la liste complète. L'index plein `games.indexOf(game)` est
+        // recalculé pour chaque carte visible afin de garder `games[idx+1]` correct.
+        const visibleGames = games.filter(g => matchesFilter(g.name, filterText));
+        const noMatch = games.length > 0 && visibleGames.length === 0;
         const isColDragOver = dragOverColId === col.id && draggingColId && draggingColId !== col.id;
         return (
           <div key={col.id}
@@ -214,7 +222,7 @@ export default function KanbanBoard({ columns, byColumn, dragging, setDragging, 
             }}
           >
             <ColumnHeader
-              col={{ ...col, _count: games.length }}
+              col={{ ...col, _count: visibleGames.length }}
               onRename={onRenameColumn} onDelete={onDeleteColumn} onSetEmoji={onSetEmoji}
               onColDragStart={handleColDragStart} onColDragEnd={handleColDragEnd}
               isDragOver={isColDragOver}
@@ -225,7 +233,13 @@ export default function KanbanBoard({ columns, byColumn, dragging, setDragging, 
                   {isTaskBoard ? t('col.empty_task') : t('col.empty_game')}
                 </div>
               )}
-              {games.map((game, idx) => {
+              {noMatch && (
+                <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 11, padding: '20px 8px', border: '1px dashed var(--border)', borderRadius: 7 }}>
+                  {t('filter.no_results')}
+                </div>
+              )}
+              {visibleGames.map((game) => {
+                const idx = games.indexOf(game);
                 const hasAssignees = isTaskBoard && appUsers.length > 0 && game.assignees?.length > 0;
                 const tt = game.taskType ? getTaskType(game.taskType) : null;
                 const steamColor = game.type !== 'custom' ? (genreColors[String(game.appid)] || '#66c0f4') : null;

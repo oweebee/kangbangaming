@@ -14,7 +14,6 @@ export default function GameModal({ game, onClose, api, token, onPatchGame, onSo
   const [gameInfo, setGameInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState(defaultTab);
-  const [filter, setFilter] = useState('all');
   const notesCount = (game.notes || []).filter(n => !n.deletedAt).length;
   const isDone   = !!game.done;
   const isUrgent = !!game.urgent;
@@ -85,11 +84,10 @@ export default function GameModal({ game, onClose, api, token, onPatchGame, onSo
     loadInfo();
   }, [game.appid, api, token]);
 
-  const filteredAchievements = (achievements?.achievements?.filter(a => {
-    if (filter === 'unlocked') return a.unlocked;
-    if (filter === 'locked') return !a.unlocked;
-    return true;
-  }) || []).slice().sort((a, b) => (a.unlocked === b.unlocked ? 0 : a.unlocked ? -1 : 1));
+  // Liste unique : tous les succès, triés débloqués en premier (plus de filtres
+  // séparés "débloqués"/"verrouillés" — tout est affiché dans la même liste).
+  const filteredAchievements = (achievements?.achievements || []).slice()
+    .sort((a, b) => (a.unlocked === b.unlocked ? 0 : a.unlocked ? -1 : 1));
 
   // Couleurs/emoji de la pastille avis, identiques à SteamEncart
   const reviewScoreVal = gameInfo?.reviewScore ?? 0;
@@ -297,24 +295,11 @@ export default function GameModal({ game, onClose, api, token, onPatchGame, onSo
           </div>
 
           {/* ── Panneau Succès ──
-              Conteneur flex-colonne unique (au lieu d'un Fragment à deux enfants directs)
-              pour garantir que la zone scrollable hérite correctement de la hauteur du
-              panneau SwipeTabs : barre de filtres figée (flexShrink:0) + liste scrollable
-              (flex:1, minHeight:0, overflowY:auto) qui prend tout le reste de la hauteur. */}
+              Liste unique (plus de filtres Débloqués/Verrouillés séparés) : tous les
+              succès, triés débloqués en premier. Conteneur flex-colonne pour que la zone
+              scrollable hérite correctement de la hauteur du panneau SwipeTabs. */}
           <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
-            {achievements && achievements.total > 0 && (
-              <div style={{ padding: '10px 16px', flexShrink: 0, display: 'flex', gap: 6 }}>
-                {[['all', t('game.filter_all'), achievements.total], ['unlocked', t('game.filter_unlocked'), achievements.unlocked], ['locked', t('game.filter_locked'), achievements.total - achievements.unlocked]].map(([id, label, count]) => (
-                  <button key={id} onClick={() => setFilter(id)} style={{
-                    background: filter === id ? 'var(--accent)' : 'var(--surface2)',
-                    border: '2px solid var(--border)', borderRadius: 6, padding: '4px 10px',
-                    color: filter === id ? '#000' : 'var(--text-muted)',
-                    fontSize: 12, fontWeight: filter === id ? 600 : 400, cursor: 'pointer',
-                  }}>{label} {count}</button>
-                ))}
-              </div>
-            )}
-            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '0 16px 16px' }}>
+            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '16px 16px 16px' }}>
               {loading && <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 32 }}>{t('game.loading_ach')}</div>}
               {!loading && steamBlocked && (!achievements || achievements?.total === 0) && <SteamAccessNotice />}
               {!loading && !steamBlocked && !achievements && <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 32 }}>{t('game.no_ach')}</div>}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { initUserLang, useLang } from './i18n.js';
 import { initUserZoom } from './zoom.js';
-import { resolveSingleSteamCardImg, authHeaders } from './utils.js';
+import { resolveSingleSteamCardImg, authHeaders, matchesFilter } from './utils.js';
 import KanbanBoard from './components/KanbanBoard.jsx';
 import NowPlayingBanner from './components/NowPlayingBanner.jsx';
 import MobileBoard from './components/MobileBoard.jsx';
@@ -16,6 +16,7 @@ import ProfilePage from './components/ProfilePage.jsx';
 import AppInfoModal from './components/AppInfoModal.jsx';
 import GameStatsWidget from './components/GameStatsWidget.jsx';
 import GlobalSearch from './components/GlobalSearch.jsx';
+import FilterField from './components/FilterField.jsx';
 import SteamEncart from './components/SteamEncart.jsx';
 import BoardIcon from './components/BoardIcon.jsx';
 import GameInfoPanel, { GAME_INFO_PANEL_WIDTH } from './components/GameInfoPanel.jsx';
@@ -453,6 +454,17 @@ export default function App() {
   // ── Masquage échéances (localStorage par user) ─────────────────────────────
   const [hiddenDeadlineIds, setHiddenDeadlineIds] = useState(() => new Set());
   const [showHiddenDeadlines, setShowHiddenDeadlines] = useState(false);
+  // ── Filtre (FilterField.jsx) — accueil (global) + board ouvert (local) ────
+  // homeFilterText : un seul état, partagé par la sidebar ET les 4 sections de
+  // l'accueil (boards, échéances, news, jeux à venir) — filtre global unique.
+  // cardFilterText : indépendant, propre au board actuellement ouvert ; remis à
+  // zéro à chaque changement de board pour ne pas "fuiter" d'un board à l'autre
+  // (même logique que showArchived plus haut).
+  const [homeFilterText, setHomeFilterText] = useState('');
+  const [cardFilterText, setCardFilterText] = useState('');
+  useEffect(() => {
+    setCardFilterText('');
+  }, [activeBoardId, publicBoardMode?.id]);
   const [infoPanelLocked, setInfoPanelLockedRaw] = useState(() => {
     try { return JSON.parse(localStorage.getItem('infoPanelLocked') || 'false'); } catch { return false; }
   });
@@ -1475,7 +1487,7 @@ export default function App() {
         {!homePublicCollapsed && (nonFollowedPublicBoards.length === 0
           ? <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>{t('board.no_public')}</div>
           : <div style={{ display: 'grid', gridTemplateColumns: compactView ? '1fr' : 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
-              {applySectionOrder(nonFollowedPublicBoards, homePublicOrder).filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).map(b => (
+              {applySectionOrder(nonFollowedPublicBoards, homePublicOrder).filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).filter(b => matchesFilter(b.name, homeFilterText)).map(b => (
                 <div
                   key={b.id}
                   data-hbd-id={b.id}
@@ -1526,7 +1538,7 @@ export default function App() {
             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#70b8ff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transition: 'transform .2s', transform: homeFollowedCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', flexShrink: 0, opacity: 0.7 }}><polyline points="6 9 12 15 18 9"/></svg>
           </div>
           {!homeFollowedCollapsed && <div style={{ display: 'grid', gridTemplateColumns: compactView ? '1fr' : 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
-            {applySectionOrder(followedPublicBoards, homeFollowedOrder).filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).map(b => (
+            {applySectionOrder(followedPublicBoards, homeFollowedOrder).filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).filter(b => matchesFilter(b.name, homeFilterText)).map(b => (
               <div
                 key={b.id}
                 data-hbd-id={b.id}
@@ -1581,7 +1593,7 @@ export default function App() {
                 <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#f5c518" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transition: 'transform .2s', transform: homeFavCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', flexShrink: 0, opacity: 0.7 }}><polyline points="6 9 12 15 18 9"/></svg>
               </div>
               {!homeFavCollapsed && <div style={{ display: 'grid', gridTemplateColumns: compactView ? '1fr' : 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
-                {applySectionOrder(favBoards2, homeFavOrder).filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).map(b => (
+                {applySectionOrder(favBoards2, homeFavOrder).filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).filter(b => matchesFilter(b.name, homeFilterText)).map(b => (
                   <div
                     key={b.id}
                     data-hbd-id={b.id}
@@ -1632,7 +1644,7 @@ export default function App() {
               : otherBoards.length === 0
                 ? <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>{t('board.all_pinned')}</div>
                 : <div style={{ display: 'grid', gridTemplateColumns: compactView ? '1fr' : 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
-                    {applySectionOrder(otherBoards, homeOtherOrder).filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).map(b => (
+                    {applySectionOrder(otherBoards, homeOtherOrder).filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).filter(b => matchesFilter(b.name, homeFilterText)).map(b => (
                       <div
                         key={b.id}
                         data-hbd-id={b.id}
@@ -1689,7 +1701,7 @@ export default function App() {
     >
       {/* Panneau 0 : Échéances */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px 14px' }}>
-        <DeadlinePanel token={token} currentUser={currentUser} onOpenTask={handleDeadlineOpen} refreshKey={deadlineRefreshKey} hiddenDeadlineIds={hiddenDeadlineIds} showHiddenDeadlines={showHiddenDeadlines} onHideDeadline={hideDeadline} onUnhideDeadline={unhideDeadline} onToggleShowHidden={() => setShowHiddenDeadlines(v => !v)} compact={compactView} onEmpty={() => setMobileHomeTab('boards')} />
+        <DeadlinePanel token={token} currentUser={currentUser} onOpenTask={handleDeadlineOpen} refreshKey={deadlineRefreshKey} hiddenDeadlineIds={hiddenDeadlineIds} showHiddenDeadlines={showHiddenDeadlines} onHideDeadline={hideDeadline} onUnhideDeadline={unhideDeadline} onToggleShowHidden={() => setShowHiddenDeadlines(v => !v)} compact={compactView} onEmpty={() => setMobileHomeTab('boards')} filterText={homeFilterText} />
       </div>
       {/* Panneau 1 : Boards */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -1697,11 +1709,11 @@ export default function App() {
       </div>
       {/* Panneau 2 : News Bibliothèque */}
       <div style={{ flex: 1, overflow: 'hidden' }}>
-        <LibraryNewsPanel token={token} personaName={currentUser?.steamPersonaName} currentUser={currentUser} />
+        <LibraryNewsPanel token={token} personaName={currentUser?.steamPersonaName} currentUser={currentUser} filterText={homeFilterText} />
       </div>
       {/* Panneau 3 : Upcoming */}
       <div style={{ flex: 1, overflow: 'hidden' }}>
-        <UpcomingPanel token={token} />
+        <UpcomingPanel token={token} filterText={homeFilterText} />
       </div>
     </MobileHomeSlider>
   );
@@ -1711,7 +1723,7 @@ export default function App() {
 
       {/* ── Colonne gauche : Échéances ── */}
       <div style={{ width: `${homeSplitPct}%`, minWidth: 0, flexShrink: 0, overflowY: 'auto', padding: '28px 20px' }}>
-        <DeadlinePanel token={token} currentUser={currentUser} onOpenTask={handleDeadlineOpen} refreshKey={deadlineRefreshKey} hiddenDeadlineIds={hiddenDeadlineIds} showHiddenDeadlines={showHiddenDeadlines} onHideDeadline={hideDeadline} onUnhideDeadline={unhideDeadline} onToggleShowHidden={() => setShowHiddenDeadlines(v => !v)} compact={compactView} onEmpty={() => setMobileHomeTab('boards')} />
+        <DeadlinePanel token={token} currentUser={currentUser} onOpenTask={handleDeadlineOpen} refreshKey={deadlineRefreshKey} hiddenDeadlineIds={hiddenDeadlineIds} showHiddenDeadlines={showHiddenDeadlines} onHideDeadline={hideDeadline} onUnhideDeadline={unhideDeadline} onToggleShowHidden={() => setShowHiddenDeadlines(v => !v)} compact={compactView} onEmpty={() => setMobileHomeTab('boards')} filterText={homeFilterText} />
       </div>
 
       {/* ── Séparateur redimensionnable ── */}
@@ -1774,7 +1786,7 @@ export default function App() {
             <div style={{ color: 'var(--text-muted)', fontSize: 12, padding: '16px 0' }}>{t('board.no_public_long')}</div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: compactView ? '1fr' : 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
-              {applySectionOrder(nonFollowedPublicBoards, homePublicOrder).filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).map(b => (
+              {applySectionOrder(nonFollowedPublicBoards, homePublicOrder).filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).filter(b => matchesFilter(b.name, homeFilterText)).map(b => (
                 <div key={b.id}
                   draggable
                   onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; setHomeDragId(b.id); }}
@@ -1813,7 +1825,7 @@ export default function App() {
               </div>
               {!homeFollowedCollapsed && (
                 <div style={{ display: 'grid', gridTemplateColumns: compactView ? '1fr' : 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
-                  {applySectionOrder(followedPublicBoards, homeFollowedOrder).filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).map(b => (
+                  {applySectionOrder(followedPublicBoards, homeFollowedOrder).filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).filter(b => matchesFilter(b.name, homeFilterText)).map(b => (
                     <div key={b.id}
                       draggable
                       onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; setHomeDragId(b.id); }}
@@ -1849,7 +1861,7 @@ export default function App() {
                   </div>
                   {!homeFavCollapsed && (
                     <div style={{ display: 'grid', gridTemplateColumns: compactView ? '1fr' : 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
-                      {applySectionOrder(favBoards2, homeFavOrder).filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).map(b => (
+                      {applySectionOrder(favBoards2, homeFavOrder).filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).filter(b => matchesFilter(b.name, homeFilterText)).map(b => (
                         <div key={b.id}
                           draggable
                           onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; setHomeDragId(b.id); }}
@@ -1878,7 +1890,7 @@ export default function App() {
                   <div style={{ color: 'var(--text-muted)', fontSize: 12, padding: '8px 0' }}>{t('board.all_pinned')}</div>
                 ) : (
                   <div style={{ display: 'grid', gridTemplateColumns: compactView ? '1fr' : 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
-                    {applySectionOrder(otherBoards, homeOtherOrder).filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).map(b => (
+                    {applySectionOrder(otherBoards, homeOtherOrder).filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).filter(b => matchesFilter(b.name, homeFilterText)).map(b => (
                       <div key={b.id}
                         draggable
                         onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; setHomeDragId(b.id); }}
@@ -1922,7 +1934,7 @@ export default function App() {
       {/* ── Colonne News Bibliothèque ── */}
       {/* maxWidth en % : même garde-fou que pour Upcoming, voir commentaire ci-dessous. */}
       <div style={{ width: homeNewsWidth, maxWidth: '30%', flexShrink: 0, overflow: 'hidden' }}>
-        <LibraryNewsPanel token={token} personaName={currentUser?.steamPersonaName} currentUser={currentUser} />
+        <LibraryNewsPanel token={token} personaName={currentUser?.steamPersonaName} currentUser={currentUser} filterText={homeFilterText} />
       </div>
 
       {/* ── Séparateur 2 : News Bibliothèque / Sorties à venir ── */}
@@ -1947,7 +1959,7 @@ export default function App() {
           (zoom.js) et empêche cette colonne d'être poussée hors champ par overflow
           si homeUpcomingWidth (px stockable jusqu'à 560) dépasse la largeur dispo. */}
       <div style={{ width: homeUpcomingWidth, maxWidth: '45%', flexShrink: 0, overflow: 'hidden' }}>
-        <UpcomingPanel token={token} />
+        <UpcomingPanel token={token} filterText={homeFilterText} />
       </div>
 
     </div>
@@ -2030,7 +2042,7 @@ export default function App() {
             {t('board.pinned_section')}
           </div>
           <div style={{ maxHeight: '28vh', overflowY: 'auto' }}>
-          {sortedBoards.filter(b => personalFavIds.includes(b.id)).filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).map(b => (
+          {sortedBoards.filter(b => personalFavIds.includes(b.id)).filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).filter(b => matchesFilter(b.name, homeFilterText)).map(b => (
           <div key={b.id}
             draggable
             onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; setBoardDragId(b.id); }}
@@ -2107,7 +2119,7 @@ export default function App() {
         )}
 
         {/* Non-pinned boards */}
-        {sortedBoards.filter(b => !personalFavIds.includes(b.id)).filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).map(b => (
+        {sortedBoards.filter(b => !personalFavIds.includes(b.id)).filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).filter(b => matchesFilter(b.name, homeFilterText)).map(b => (
           <div key={b.id}
             draggable
             onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; setBoardDragId(b.id); }}
@@ -2195,7 +2207,7 @@ export default function App() {
             {t('board.followed_public')}
           </div>
           <div style={{ maxHeight: '32vh', overflowY: 'auto' }}>
-          {sortedFavBoards.filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).map(b => (
+          {sortedFavBoards.filter(b => showHiddenBoards ? true : !hiddenBoardIds.has(b.id)).filter(b => matchesFilter(b.name, homeFilterText)).map(b => (
             <div key={b.id}
               draggable
               onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; setFavDragId(b.id); }}
@@ -2392,11 +2404,11 @@ export default function App() {
         {showHome && !publicBoardMode ? (
           mobileHomeView
         ) : publicBoardMode ? (
-          <MobileBoard columns={columns} byColumn={byColumn} onCardClick={g => { setSelectedGameDefaultTab('infos'); setSelectedGame(g); }} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} isTaskBoard={isTaskBoard} onToggleDone={(appid, done) => patchGame(appid, { done })} onToggleUrgent={(appid, urgent) => patchGame(appid, { urgent })} onUpdateAssignees={(appid, assignees) => patchGame(appid, { assignees })} onClickNotes={handleCardNotesClick} genreColors={boardGenreColors} hiddenCardIds={new Set()} showHiddenCards={false} onHideCard={undefined} onUnhideCard={undefined} compact={compactView} moveGame={moveGame} onReorderGames={reorderGamesInColumn} onAddToColumn={colId => { setSearchTargetCol(colId); setShowSearch(true); }} />
+          <MobileBoard columns={columns} byColumn={byColumn} onCardClick={g => { setSelectedGameDefaultTab('infos'); setSelectedGame(g); }} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} isTaskBoard={isTaskBoard} onToggleDone={(appid, done) => patchGame(appid, { done })} onToggleUrgent={(appid, urgent) => patchGame(appid, { urgent })} onUpdateAssignees={(appid, assignees) => patchGame(appid, { assignees })} onClickNotes={handleCardNotesClick} genreColors={boardGenreColors} hiddenCardIds={new Set()} showHiddenCards={false} onHideCard={undefined} onUnhideCard={undefined} compact={compactView} moveGame={moveGame} onReorderGames={reorderGamesInColumn} onAddToColumn={colId => { setSearchTargetCol(colId); setShowSearch(true); }} filterText={cardFilterText} />
         ) : !activeBoardId ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Crée un board pour commencer</div>
         ) : (
-          <MobileBoard columns={columns} byColumn={byColumn} onCardClick={g => { setSelectedGameDefaultTab('infos'); setSelectedGame(g); }} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} isTaskBoard={isTaskBoard} onToggleDone={(appid, done) => patchGame(appid, { done })} onToggleUrgent={(appid, urgent) => patchGame(appid, { urgent })} onUpdateAssignees={(appid, assignees) => patchGame(appid, { assignees })} onClickNotes={handleCardNotesClick} genreColors={boardGenreColors} hiddenCardIds={new Set()} showHiddenCards={false} onHideCard={undefined} onUnhideCard={undefined} compact={compactView} moveGame={moveGame} onReorderGames={reorderGamesInColumn} onAddToColumn={colId => { setSearchTargetCol(colId); setShowSearch(true); }} />
+          <MobileBoard columns={columns} byColumn={byColumn} onCardClick={g => { setSelectedGameDefaultTab('infos'); setSelectedGame(g); }} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} isTaskBoard={isTaskBoard} onToggleDone={(appid, done) => patchGame(appid, { done })} onToggleUrgent={(appid, urgent) => patchGame(appid, { urgent })} onUpdateAssignees={(appid, assignees) => patchGame(appid, { assignees })} onClickNotes={handleCardNotesClick} genreColors={boardGenreColors} hiddenCardIds={new Set()} showHiddenCards={false} onHideCard={undefined} onUnhideCard={undefined} compact={compactView} moveGame={moveGame} onReorderGames={reorderGamesInColumn} onAddToColumn={colId => { setSearchTargetCol(colId); setShowSearch(true); }} filterText={cardFilterText} />
         )}
         {(activeBoardId || publicBoardMode) && (
           <div style={{ background: 'var(--surface)', borderTop: '1px solid var(--border)', padding: '8px 12px', display: 'flex', gap: 8, flexShrink: 0 }}>
@@ -2585,6 +2597,15 @@ export default function App() {
               <SteamEncart gameInfo={gameInfo} />
             </>
           )}
+          {/* Filtre — toujours positionné juste à gauche de la loupe, même comportement
+              (clic pour déplier). Deux instances indépendantes du même composant :
+              accueil (filtre global : boards + sidebar + news + jeux à venir + échéances)
+              ou board ouvert (filtre local : cartes de ce board uniquement). */}
+          {showHome && !publicBoardMode ? (
+            <FilterField value={homeFilterText} onChange={setHomeFilterText} title={t('filter.title')} placeholder={t('filter.placeholder')} />
+          ) : (activeBoardId || publicBoardMode) ? (
+            <FilterField value={cardFilterText} onChange={setCardFilterText} title={t('filter.title')} placeholder={t('filter.placeholder')} />
+          ) : null}
           {/* Search — always visible on every page */}
           <GlobalSearch token={token} onGoToBoard={handleSearchGoToBoard} onOpenGame={handleSearchOpenGame} />
         </header>
@@ -2595,14 +2616,14 @@ export default function App() {
           loading ? (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Chargement...</div>
           ) : (
-            <KanbanBoard columns={columns} byColumn={byColumn} dragging={dragging} setDragging={setDragging} moveGame={moveGame} onCardClick={g => { setSelectedGameDefaultTab('infos'); setSelectedGame(g); }} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} onRenameColumn={renameColumn} onDeleteColumn={deleteColumn} onSetEmoji={setColumnEmoji} onReorderColumns={reorderColumns} onAddToColumn={colId => { setSearchTargetCol(colId); setShowSearch(true); }} onReorderGames={reorderGamesInColumn} isTaskBoard={isTaskBoard} appUsers={appUsers} compactView={compactView} leftOffset={infoPanelLocked && infoPanelSide === 'left' ? GAME_INFO_PANEL_WIDTH : 0} rightOffset={infoPanelLocked && infoPanelSide === 'right' ? GAME_INFO_PANEL_WIDTH : 0} onToggleDone={(appid, done) => patchGame(appid, { done })} onToggleUrgent={(appid, urgent) => patchGame(appid, { urgent })} onUpdateAssignees={(appid, assignees) => patchGame(appid, { assignees })} onClickNotes={handleCardNotesClick} genreColors={boardGenreColors} hiddenCardIds={new Set()} showHiddenCards={false} onHideCard={undefined} onUnhideCard={undefined} />
+            <KanbanBoard columns={columns} byColumn={byColumn} dragging={dragging} setDragging={setDragging} moveGame={moveGame} onCardClick={g => { setSelectedGameDefaultTab('infos'); setSelectedGame(g); }} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} onRenameColumn={renameColumn} onDeleteColumn={deleteColumn} onSetEmoji={setColumnEmoji} onReorderColumns={reorderColumns} onAddToColumn={colId => { setSearchTargetCol(colId); setShowSearch(true); }} onReorderGames={reorderGamesInColumn} isTaskBoard={isTaskBoard} appUsers={appUsers} compactView={compactView} leftOffset={infoPanelLocked && infoPanelSide === 'left' ? GAME_INFO_PANEL_WIDTH : 0} rightOffset={infoPanelLocked && infoPanelSide === 'right' ? GAME_INFO_PANEL_WIDTH : 0} onToggleDone={(appid, done) => patchGame(appid, { done })} onToggleUrgent={(appid, urgent) => patchGame(appid, { urgent })} onUpdateAssignees={(appid, assignees) => patchGame(appid, { assignees })} onClickNotes={handleCardNotesClick} genreColors={boardGenreColors} hiddenCardIds={new Set()} showHiddenCards={false} onHideCard={undefined} onUnhideCard={undefined} filterText={cardFilterText} />
           )
         ) : !activeBoardId ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Crée un board pour commencer</div>
         ) : loading ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Chargement...</div>
         ) : (
-          <KanbanBoard columns={columns} byColumn={byColumn} dragging={dragging} setDragging={setDragging} moveGame={moveGame} onCardClick={g => { setSelectedGameDefaultTab('infos'); setSelectedGame(g); }} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} onRenameColumn={renameColumn} onDeleteColumn={deleteColumn} onSetEmoji={setColumnEmoji} onReorderColumns={reorderColumns} onAddToColumn={colId => { setSearchTargetCol(colId); setShowSearch(true); }} onReorderGames={reorderGamesInColumn} isTaskBoard={isTaskBoard} appUsers={appUsers} compactView={compactView} leftOffset={infoPanelLocked && infoPanelSide === 'left' ? GAME_INFO_PANEL_WIDTH : 0} rightOffset={infoPanelLocked && infoPanelSide === 'right' ? GAME_INFO_PANEL_WIDTH : 0} onToggleDone={(appid, done) => patchGame(appid, { done })} onToggleUrgent={(appid, urgent) => patchGame(appid, { urgent })} onUpdateAssignees={(appid, assignees) => patchGame(appid, { assignees })} onClickNotes={handleCardNotesClick} genreColors={boardGenreColors} hiddenCardIds={new Set()} showHiddenCards={false} onHideCard={undefined} onUnhideCard={undefined} />
+          <KanbanBoard columns={columns} byColumn={byColumn} dragging={dragging} setDragging={setDragging} moveGame={moveGame} onCardClick={g => { setSelectedGameDefaultTab('infos'); setSelectedGame(g); }} onArchiveGame={archiveGame} onUnarchiveGame={unarchiveGame} onDeleteGame={removeGame} onEditGame={setEditingGame} onRenameColumn={renameColumn} onDeleteColumn={deleteColumn} onSetEmoji={setColumnEmoji} onReorderColumns={reorderColumns} onAddToColumn={colId => { setSearchTargetCol(colId); setShowSearch(true); }} onReorderGames={reorderGamesInColumn} isTaskBoard={isTaskBoard} appUsers={appUsers} compactView={compactView} leftOffset={infoPanelLocked && infoPanelSide === 'left' ? GAME_INFO_PANEL_WIDTH : 0} rightOffset={infoPanelLocked && infoPanelSide === 'right' ? GAME_INFO_PANEL_WIDTH : 0} onToggleDone={(appid, done) => patchGame(appid, { done })} onToggleUrgent={(appid, urgent) => patchGame(appid, { urgent })} onUpdateAssignees={(appid, assignees) => patchGame(appid, { assignees })} onClickNotes={handleCardNotesClick} genreColors={boardGenreColors} hiddenCardIds={new Set()} showHiddenCards={false} onHideCard={undefined} onUnhideCard={undefined} filterText={cardFilterText} />
         )}
         </div>
       </div>
