@@ -484,9 +484,24 @@ export default function App() {
   // Steam game info for active board
   const [gameInfo, setGameInfo] = useState(null);
 
-  // Vue compacte — persistée
-  const [compactView, setCompactView] = useState(() => localStorage.getItem('compactView') === '1');
-  const toggleCompact = () => setCompactView(v => { localStorage.setItem('compactView', v ? '0' : '1'); return !v; });
+  // Vue compacte — persistée PAR board (clé = board courant, ou 'home' sur la page d'accueil),
+  // pour que l'activer sur une board ne l'impose pas aux autres ni à l'accueil.
+  const [compactViewMap, setCompactViewMap] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('compactViewMap') || '{}');
+      // Migration depuis l'ancien réglage global unique (clé 'compactView') : on ne perd pas
+      // la préférence existante de l'utilisateur, elle devient juste celle de l'accueil.
+      if (saved.home === undefined && localStorage.getItem('compactView') === '1') saved.home = true;
+      return saved;
+    } catch { return {}; }
+  });
+  const compactKey = publicBoardMode ? `pub:${publicBoardMode.id}` : activeBoardId ? `board:${activeBoardId}` : 'home';
+  const compactView = !!compactViewMap[compactKey];
+  const toggleCompact = () => setCompactViewMap(prev => {
+    const next = { ...prev, [compactKey]: !prev[compactKey] };
+    localStorage.setItem('compactViewMap', JSON.stringify(next));
+    return next;
+  });
 
   // Global search: pending game to open after board loads
   const [pendingOpenGameId, setPendingOpenGameId] = useState(null);
@@ -2545,9 +2560,6 @@ export default function App() {
               {(activeBoardId || publicBoardMode) && (
                 <button onClick={toggleCompact} style={{ background: compactView ? 'rgba(192,87,10,0.15)' : 'var(--surface2)', border: compactView ? '1px solid var(--accent)' : '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: compactView ? 'var(--accent)' : 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0, fontWeight: compactView ? 700 : 400 }}>{t('nav.compact')}</button>
               )}
-              {/* Encart infos Steam (joueurs, avis, prix, tags…) — visible uniquement si le board est lié à un jeu Steam ;
-                  le composant gère lui-même son centrage (spacers internes) + son masquage si pas assez de place */}
-              <SteamEncart gameInfo={gameInfo} />
               {(activeBoardId || publicBoardMode) && archiveCount > 0 && (
                 <button
                   onClick={toggleShowArchived}
@@ -2565,6 +2577,11 @@ export default function App() {
               {activeBoardId && (
                 <button onClick={() => { if (activeBoardId) fetchGames(activeBoardId); }} title={t('nav.refresh')} style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 9px', color: 'var(--text-muted)', fontSize: 15, cursor: 'pointer', lineHeight: 1, flexShrink: 0 }}>↻</button>
               )}
+              {/* Encart infos Steam (joueurs, avis, prix, tags…) — visible uniquement si le board est lié à un jeu Steam ;
+                  le composant gère lui-même son centrage (spacers internes) + son masquage si pas assez de place.
+                  Positionné après le bouton archives (et pas avant) pour rester cohérent avec l'ordre des boutons
+                  côté board public. */}
+              <SteamEncart gameInfo={gameInfo} />
             </>
           )}
           {/* Search — always visible on every page */}

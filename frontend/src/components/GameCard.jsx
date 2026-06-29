@@ -6,8 +6,6 @@ import AssigneeAvatars from './AssigneeAvatars.jsx';
 import { formatPlaytime } from '../utils.js';
 import { useLang } from '../i18n.js';
 
-const COMPACT_ICON_SIZE = 32; // 40 * 0.8 (-20%)
-
 export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArchive, onUnarchive, onDelete, onEdit, isDragging, readOnly, isTaskBoard, compact = false, assignees = [], appUsers = [], onToggleDone, onToggleUrgent, onUpdateAssignees, onClickNotes, genreColor = null, isHidden = false, onHide, onUnhide, headerHeight = null }) {
   const { t } = useLang();
   const [imgError, setImgError] = useState(false);
@@ -21,11 +19,6 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
   const customColor = isCustom && !tt ? (game.color || '#66c0f4') : null;
   const TtFallback = tt?.FallbackIcon;
   const dateInfo  = getDateInfo(game);
-  // En mode compact, on n'affiche l'icône en bas que s'il y a une vraie image (pas juste un emoji)
-  const hasCompactIcon = compact && (
-    (!isCustom && !!game.icon_img) ||
-    (isCustom && tt && !!tt.img && !ttImgError)
-  );
   const compactThumbSrc = compact
     ? (!isCustom ? (game.icon_img || game.header_img || null)
        : (tt && tt.img && !ttImgError ? tt.img : null))
@@ -43,6 +36,10 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
         border: isArchived ? '2px solid #787878' : isDone ? '2px solid #3db86a' : isUrgent ? '2px solid #dc3c3c' : tt ? `2px solid ${tt.border}` : customColor ? `2px solid ${customColor}` : `2px solid ${genreColor || '#66c0f4'}`,
         borderRadius: 8,
         overflow: 'hidden',
+        // pan-y : le tactile sur une carte ne déclenche plus le scroll/slide HORIZONTAL des
+        // colonnes (qui entrait en conflit avec le drag tactile en PWA) ; le scroll vertical
+        // de la liste de cartes reste autorisé.
+        touchAction: readOnly || isArchived ? undefined : 'pan-y',
         cursor: readOnly || isArchived ? 'default' : 'grab',
         opacity: isDragging ? 0.35 : isArchived ? 0.6 : isHidden ? 0.5 : 1,
         transform: isDragging ? 'rotate(2deg) scale(1.03)' : undefined,
@@ -187,15 +184,32 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
 
       {/* ── Info area ── */}
       <div style={{ padding: compact ? '4px 6px' : '7px 9px', paddingRight: compact ? 60 : 9, paddingBottom: compact ? 5 : 7, display: compact ? 'flex' : 'block', alignItems: compact ? 'center' : undefined, gap: compact ? 7 : undefined }}>
-        {/* Thumbnail carré gauche — compact seulement */}
+        {/* Thumbnail gauche — compact seulement : hauteur calée sur celle de la carte
+            (alignSelf:stretch reprend la hauteur de la ligne flex), largeur déduite via
+            aspectRatio:1 pour rester carrée plutôt que de s'étirer/déformer. */}
         {compact && (
-          <div style={{ width: 30, height: 30, borderRadius: 5, overflow: 'hidden', flexShrink: 0, background: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            {compactThumbSrc
-              ? <img src={compactThumbSrc} alt="" onError={() => isCustom ? setTtImgError(true) : setImgError(true)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              : isCustom
-                ? <span style={{ fontSize: 15 }}>{game.emoji || (tt?.emoji) || '📋'}</span>
-                : <span style={{ fontSize: 15 }}>🎮</span>
-            }
+          <div style={{ position: 'relative', alignSelf: 'stretch', aspectRatio: '1 / 1', flexShrink: 0 }}>
+            <div style={{ width: '100%', height: '100%', borderRadius: 5, overflow: 'hidden', background: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {compactThumbSrc
+                ? <img src={compactThumbSrc} alt="" onError={() => isCustom ? setTtImgError(true) : setImgError(true)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : isCustom
+                  ? <span style={{ fontSize: 15 }}>{game.emoji || (tt?.emoji) || '📋'}</span>
+                  : <span style={{ fontSize: 15 }}>🎮</span>
+              }
+            </div>
+            {/* Avatars assignés — petit badge ancré au coin de la miniature plutôt qu'au bas
+                de toute la carte : reste correct même quand la carte est très basse (titre
+                court sur une seule ligne) et ne peut donc plus chevaucher le titre/les badges. */}
+            {assignees?.length > 0 && appUsers?.length > 0 && (
+              <AssigneeAvatars
+                assignees={assignees}
+                appUsers={appUsers}
+                size={15}
+                borderColor={tt ? tt.border : 'var(--border)'}
+                bottom={-4}
+                left={-4}
+              />
+            )}
           </div>
         )}
         <div style={{ flex: compact ? 1 : undefined, minWidth: 0 }}>
@@ -203,10 +217,9 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
           <div style={{
             fontWeight: 600, fontSize: compact ? 13 : 14, lineHeight: compact ? '1.2' : '1.3', marginBottom: compact ? 1 : 3,
             wordBreak: 'break-word', flex: 1,
-            // Hauteur réservée pour 2 lignes en permanence (même si le nom tient sur 1 ligne) :
-            // un nom plus long passe sur 2 lignes en utilisant cet espace déjà alloué, au lieu
-            // d'agrandir la carte. Au-delà de 2 lignes, troncature avec "…".
-            minHeight: compact ? 31 : 37,
+            // Pas de hauteur minimale forcée : une carte avec un nom court garde sa taille
+            // d'origine. Si le nom passe sur 2 lignes, on le laisse simplement s'étendre
+            // (au-delà, troncature avec "…") plutôt que de réserver 2 lignes en permanence.
             display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
           }} title={game.name}>{game.name}</div>
 
@@ -318,45 +331,8 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
           ))}
         </div>
       )}
-      {/* ── Compact mode: icône bas-droite + avatars (seulement si image réelle) ── */}
-      {hasCompactIcon && (
-        <>
-          {/* Icône bas-droite */}
-          <div style={{
-            position: 'absolute',
-            bottom: typeof game.progress === 'number' && !isArchived ? 9 : 6,
-            right: 6,
-            width: COMPACT_ICON_SIZE,
-            height: COMPACT_ICON_SIZE,
-            borderRadius: 6,
-            overflow: 'hidden',
-            border: '2px solid rgba(255,255,255,0.4)',
-            background: 'var(--surface2)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            flexShrink: 0,
-          }}>
-            {/* Carte Steam → icône du jeu */}
-            {!isCustom && game.icon_img && (
-              <img src={game.icon_img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            )}
-            {/* Tâche avec type → image type */}
-            {isCustom && tt && !ttImgError && tt.img && (
-              <img src={tt.img} alt={tt.label} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            )}
-          </div>
-          {/* Avatars en mode compact — bas gauche */}
-          {assignees?.length > 0 && appUsers?.length > 0 && (
-            <AssigneeAvatars
-              assignees={assignees}
-              appUsers={appUsers}
-              size={COMPACT_ICON_SIZE}
-              borderColor={tt ? tt.border : 'var(--border)'}
-              bottom={typeof game.progress === 'number' && !isArchived ? 9 : 6}
-              left={6}
-            />
-          )}
-        </>
-      )}
+      {/* (avatars assignés en mode compact : déplacés en badge sur la miniature, voir plus haut —
+          évite tout chevauchement avec le titre quand la carte est très basse) */}
 
 
       {/* Done badge overlay on image */}
@@ -394,7 +370,7 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
             position: 'absolute',
             ...(compact ? {
               bottom: typeof game.progress === 'number' && !isArchived ? 9 : 6,
-              right: 6 + COMPACT_ICON_SIZE + 4,
+              right: 6,
             } : {
               top: isUrgent ? 26 : 5,
               right: 5,
