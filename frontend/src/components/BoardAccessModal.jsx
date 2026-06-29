@@ -113,7 +113,7 @@ export default function BoardAccessModal({ token, boardId, boardName, onClose, o
 
   return (
     <ModalBackdrop onClose={onClose} zIndex={1000}>
-      <ModalCard style={{ width: '100%', maxWidth: 560, height: '72vh', minHeight: 420, maxHeight: 760, display: 'flex', flexDirection: 'column' }}>
+      <ModalCard style={{ width: 'min(560px, calc(100vw - 40px))', height: '72vh', minHeight: 420, maxHeight: 760, display: 'flex', flexDirection: 'column' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 20px 14px', borderBottom: '1px solid var(--border)' }}>
           <div>
