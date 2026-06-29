@@ -180,27 +180,27 @@ export default function GameInfoPanel({
           userSelect: 'none',
         }}
       >
-        {/* Side-switch — always visible, top zone */}
-        <div
-          onClick={handleSideToggle}
-          title={isLeft ? t('ginfo.move_right') : t('ginfo.move_left')}
-          style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', flex: 1, paddingTop: 6 }}
-        >
-          {/* ↔ swap icon — distinct from chevron */}
-          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke={dimColor} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M7 16l-4-4 4-4M17 8l4 4-4 4M3 12h18"/>
-          </svg>
-        </div>
-
-        {/* Newspaper icon — always visible */}
+        {/* Newspaper icon — always visible, top zone */}
         <div
           onClick={handleTabClick}
           title={isOpen ? (locked ? t('ginfo.locked') : t('ginfo.close')) : t('ginfo.open')}
-          style={{ cursor: locked ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', flex: 1 }}
+          style={{ cursor: locked ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', flex: 1, paddingTop: 6 }}
         >
           <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke={accentColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/>
             <path d="M18 14h-8M15 18h-5M10 6h8v4h-8z"/>
+          </svg>
+        </div>
+
+        {/* Side-switch — always visible */}
+        <div
+          onClick={handleSideToggle}
+          title={isLeft ? t('ginfo.move_right') : t('ginfo.move_left')}
+          style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', flex: 1 }}
+        >
+          {/* ↔ swap icon — distinct from chevron */}
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke={dimColor} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M7 16l-4-4 4-4M17 8l4 4-4 4M3 12h18"/>
           </svg>
         </div>
 
