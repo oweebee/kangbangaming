@@ -184,11 +184,18 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
 
       {/* ── Info area ── */}
       <div style={{ padding: compact ? '4px 6px' : '7px 9px', paddingRight: compact ? 60 : 9, paddingBottom: compact ? 5 : 7, display: compact ? 'flex' : 'block', alignItems: compact ? 'center' : undefined, gap: compact ? 7 : undefined }}>
-        {/* Thumbnail gauche — compact seulement : hauteur calée sur celle de la carte
-            (alignSelf:stretch reprend la hauteur de la ligne flex), largeur déduite via
-            aspectRatio:1 pour rester carrée plutôt que de s'étirer/déformer. */}
+        {/* Thumbnail gauche — compact seulement : taille FIXE en px (40x40), pas de
+            alignSelf:stretch + aspectRatio. Raison : avec une taille déduite (stretch/aspect-
+            ratio) + une <img> en width/height:100%, dès que la taille du conteneur ne peut
+            pas être résolue de façon certaine (pas de hauteur explicite sur la ligne), le
+            navigateur retombe sur la taille INTRINSÈQUE de l'image chargée. Pour la plupart
+            des jeux Steam, icon_img est une petite icône (~32px) donc ça passait inaperçu —
+            mais pour certains jeux dont Steam ne fournit pas icon_img (cas réel chez Rockstar
+            par ex.), le code retombe sur header_img (bannière ~460x215), qui s'affichait alors
+            à sa taille native géante au lieu de rester une vignette carrée. Taille fixe +
+            overflow:hidden = immunisé contre ce cas, quelle que soit l'image chargée. */}
         {compact && (
-          <div style={{ position: 'relative', alignSelf: 'stretch', aspectRatio: '1 / 1', flexShrink: 0, background: 'var(--surface)', borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ position: 'relative', width: 40, height: 40, flexShrink: 0, overflow: 'hidden', background: 'var(--surface)', borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             {compactThumbSrc
               ? <img src={compactThumbSrc} alt="" onError={() => isCustom ? setTtImgError(true) : setImgError(true)} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 5, display: 'block' }} />
               : isCustom
