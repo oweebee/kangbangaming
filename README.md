@@ -198,7 +198,13 @@ Une fois le contrôle d'accès **activé** :
 
 Le contrôle d'accès est **désactivé par défaut** sur tous les boards publics — aucune migration ni action requise, le comportement actuel (accès complet pour tous) est préservé tant que le créateur ne l'active pas explicitement.
 
-Endpoints concernés : `GET/PATCH /api/public/boards/:boardId/access`, `PATCH /api/public/boards/:boardId/access/users/:userId`, `GET /api/public/boards/:boardId/permissions`.
+**Transfert de propriété.** Pour chaque utilisateur autorisé, le créateur peut aussi lui **donner définitivement la propriété du board** via le bouton 👑, après confirmation. Le board (et son contenu) est alors déplacé vers le compte du nouvel utilisateur, qui devient l'unique créateur :
+
+- L'ancien créateur perd l'accès à la gestion des accès de ce board (il n'en est plus le propriétaire), mais conserve ses droits de modification et suit désormais le board dans ses favoris.
+- Le nouveau propriétaire obtient tous les droits, indépendamment de son statut précédent dans la liste d'accès.
+- Le transfert est réservé au créateur actuel et irréversible depuis cette modale (le nouveau propriétaire peut, lui, transférer à nouveau le board s'il le souhaite).
+
+Endpoints concernés : `GET/PATCH /api/public/boards/:boardId/access`, `PATCH /api/public/boards/:boardId/access/users/:userId`, `GET /api/public/boards/:boardId/permissions`, `POST /api/public/boards/:boardId/transfer`.
 
 ---
 

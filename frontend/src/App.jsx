@@ -350,8 +350,12 @@ export default function App() {
   // Personal board favorites (IDs only)
   const [personalFavIds, setPersonalFavIds] = useState([]);
   // Collaborative public board currently open (null = own boards mode)
-  const [publicBoardMode, setPublicBoardMode] = useState(null); // { id, name, ownerUsername, canEdit }
-  const isOwnPublicBoard = !!(publicBoardMode && currentUser && publicBoardMode.ownerUsername === currentUser.username);
+  const [publicBoardMode, setPublicBoardMode] = useState(null); // { id, name, ownerUsername, canEdit, isOwner }
+  // Basé sur perms.isOwner (autorité backend) une fois connu ; avant le premier chargement
+  // des permissions, on retombe sur la comparaison de username pour un affichage immédiat.
+  const isOwnPublicBoard = !!(publicBoardMode && currentUser && (
+    publicBoardMode.isOwner !== undefined ? publicBoardMode.isOwner : publicBoardMode.ownerUsername === currentUser.username
+  ));
   // Lecture seule tant que le statut n'est pas connu (canEdit===false explicitement) sur un board d'un autre user
   const canEditPublicBoard = isOwnPublicBoard || !publicBoardMode || publicBoardMode.canEdit !== false;
   const [showAccessModal, setShowAccessModal] = useState(false);
@@ -650,7 +654,7 @@ export default function App() {
       const perms = await permRes.json().catch(() => ({}));
       setColumns(cols);
       setGames(gms);
-      setPublicBoardMode(prev => prev ? { ...prev, canEdit: perms.canEdit !== false } : prev);
+      setPublicBoardMode(prev => prev ? { ...prev, canEdit: perms.canEdit !== false, isOwner: !!perms.isOwner } : prev);
       // Repli : si le board n'a pas sa propre image et contient EXACTEMENT une carte Steam,
       // on affiche l'image de cette carte (board réellement "lié" à un seul jeu). Si plusieurs
       // jeux différents sont présents (board perso/backlog), on ne montre rien (emoji affiché à la place).
@@ -686,8 +690,18 @@ export default function App() {
       const perms = await permRes.json().catch(() => ({}));
       setColumns(cols);
       setGames(gms);
-      setPublicBoardMode(prev => prev ? { ...prev, canEdit: perms.canEdit !== false } : prev);
+      setPublicBoardMode(prev => prev ? { ...prev, canEdit: perms.canEdit !== false, isOwner: !!perms.isOwner } : prev);
     } catch {} finally { setLoading(false); }
+  };
+
+  // Appelé après un transfert de propriété réussi (BoardAccessModal) : on reste sur le
+  // board (l'ancien propriétaire garde l'accès) mais on recharge les permissions pour
+  // faire disparaître le bouton "Gestion des accès", et on rafraîchit listes/favoris.
+  const handleBoardTransferred = () => {
+    setShowAccessModal(false);
+    refreshPublicBoard();
+    fetchBoards(); fetchFavorites(); fetchPersonalFavorites();
+    fetch(`${API}/public/boards`, { headers: authHeaders(token) }).then(r => r.ok ? r.json() : []).then(setHomePublicBoards).catch(() => {});
   };
 
   const fetchBoards = useCallback(async () => {
@@ -2399,7 +2413,7 @@ export default function App() {
           : displayedGame && <GameModal game={displayedGame} onClose={() => { setSelectedGame(null); setSelectedGameDefaultTab('infos'); }} api={API} token={token} onPatchGame={patchGame} onSoftDeleteNote={softDeleteNote} defaultTab={selectedGameDefaultTab === 'notes' ? 'notes' : 'achievements'} currentUser={currentUser} appUsers={appUsers} />
         }
         {showAdmin && <AdminPanel token={token} currentUser={currentUser} onClose={() => setShowAdmin(false)} />}
-        {showAccessModal && isOwnPublicBoard && publicBoardMode && <BoardAccessModal token={token} boardId={publicBoardMode.id} boardName={publicBoardMode.name} onClose={() => setShowAccessModal(false)} />}
+        {showAccessModal && isOwnPublicBoard && publicBoardMode && <BoardAccessModal token={token} boardId={publicBoardMode.id} boardName={publicBoardMode.name} onClose={() => setShowAccessModal(false)} onTransferred={handleBoardTransferred} />}
 
 
         {showAppInfo && <AppInfoModal onClose={() => setShowAppInfo(false)} />}
@@ -2455,6 +2469,20 @@ export default function App() {
                 <span title={t('access.readonly_alert')} style={{ fontSize: 11, fontWeight: 700, color: '#d99a3d', border: '1px solid rgba(217,154,61,0.5)', borderRadius: 5, padding: '3px 8px', flexShrink: 0 }}>{t('access.readonly_badge')}</span>
               )}
               <button onClick={toggleCompact} style={{ background: compactView ? 'rgba(192,87,10,0.15)' : 'var(--surface2)', border: compactView ? '1px solid var(--accent)' : '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: compactView ? 'var(--accent)' : 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0, fontWeight: compactView ? 700 : 400 }}>{t('nav.compact')}</button>
+              {archiveCount > 0 && (
+                <button
+                  onClick={toggleShowArchived}
+                  style={{
+                    background: showArchived ? 'rgba(120,80,160,0.25)' : 'var(--surface2)',
+                    border: showArchived ? '1px solid rgba(160,100,220,0.6)' : '1px solid var(--border)',
+                    borderRadius: 6, padding: '6px 12px', color: showArchived ? '#c090f0' : 'var(--text-muted)',
+                    fontSize: 12, cursor: 'pointer', flexShrink: 0, fontWeight: showArchived ? 700 : 400,
+                  }}
+                  title={showArchived ? t('nav.hide_archives') : t('nav.show_archives')}
+                >
+                  {t('nav.archives')}{archiveCount > 0 ? ` (${archiveCount})` : ''}
+                </button>
+              )}
               <button onClick={refreshPublicBoard} style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 11px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ fontSize: 15, lineHeight: 1 }}>↻</span> {t('nav.refresh').replace('↻ ', '')}</button>
               {/* Encart infos Steam (joueurs, avis, prix, tags…) — visible uniquement si le board est lié à un jeu Steam ;
                   le composant gère lui-même son centrage (spacers internes) + son masquage si pas assez de place */}

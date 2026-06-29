@@ -14,7 +14,7 @@ const API = '/api';
  *
  * Par défaut (enabled = false) : comportement actuel inchangé, tout le monde a accès complet.
  */
-export default function BoardAccessModal({ token, boardId, boardName, onClose }) {
+export default function BoardAccessModal({ token, boardId, boardName, onClose, onTransferred }) {
   const { t } = useLang();
   const h = authHeaders(token);
   const [loading, setLoading] = useState(true);
@@ -23,6 +23,7 @@ export default function BoardAccessModal({ token, boardId, boardName, onClose })
   const [users, setUsers] = useState([]);
   const [savingEnabled, setSavingEnabled] = useState(false);
   const [savingUserId, setSavingUserId] = useState(null);
+  const [transferringId, setTransferringId] = useState(null);
 
   const fetchAccess = useCallback(async () => {
     setLoading(true); setError('');
@@ -79,6 +80,30 @@ export default function BoardAccessModal({ token, boardId, boardName, onClose })
 
   const toggleAllowed = (u) => patchUser(u.id, { allowed: !u.allowed });
   const toggleCanEdit = (u) => patchUser(u.id, { canEdit: !u.canEdit });
+
+  // Transfert de propriété : remplace définitivement le créateur par `u`. Une fois
+  // confirmé, le créateur actuel perd l'accès à cette modale (il redevient un
+  // utilisateur normal du board, avec accès en modification conservé).
+  const transferOwnership = async (u) => {
+    if (!confirm(t('access.transfer_confirm', { name: u.username }))) return;
+    setTransferringId(u.id);
+    try {
+      const res = await fetch(`${API}/public/boards/${boardId}/transfer`, {
+        method: 'POST', headers: h, body: JSON.stringify({ newOwnerId: u.id }),
+      });
+      if (res.ok) {
+        alert(t('access.transfer_success', { name: u.username }));
+        onTransferred?.();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || t('access.transfer_error'));
+      }
+    } catch {
+      alert(t('access.transfer_error'));
+    } finally {
+      setTransferringId(null);
+    }
+  };
 
   // Utilisateurs autorisés en premier (ordre stable au sein de chaque groupe)
   const sortedUsers = useMemo(
@@ -172,6 +197,21 @@ export default function BoardAccessModal({ token, boardId, boardName, onClose })
                         }}
                       >
                         {u.canEdit ? t('access.can_edit') : t('access.read_only')}
+                      </button>
+                    )}
+                    {u.allowed && (
+                      <button
+                        onClick={() => transferOwnership(u)}
+                        disabled={savingUserId === u.id || transferringId === u.id}
+                        title={t('access.transfer')}
+                        style={{
+                          background: 'rgba(245,200,60,.1)', border: '1px solid rgba(245,200,60,.3)',
+                          borderRadius: 6, padding: '5px 8px', color: '#f5c83c',
+                          fontSize: 13, cursor: transferringId === u.id ? 'default' : 'pointer', flexShrink: 0,
+                          opacity: transferringId === u.id ? 0.6 : 1,
+                        }}
+                      >
+                        👑
                       </button>
                     )}
                   </div>

@@ -2258,6 +2258,55 @@ app.patch('/api/public/boards/:boardId/access/users/:userId', requireAuth, (req,
   });
 });
 
+// Transfert de propriété d'un board public (réservé au créateur actuel).
+// Déplace physiquement le board (même id) du bucket de l'ancien propriétaire
+// vers celui du nouveau, puisque la propriété est déterminée par le bucket qui
+// contient le board (il n'y a pas de champ ownerId sur le board lui-même).
+app.post('/api/public/boards/:boardId/transfer', requireAuth, (req, res) => {
+  const f = requirePublicBoardOwner(req, res);
+  if (!f) return;
+  const { newOwnerId } = req.body;
+  if (!newOwnerId) return res.status(400).json({ error: 'newOwnerId requis' });
+  if (newOwnerId === f.userId) return res.status(400).json({ error: 'Déjà propriétaire' });
+  const users = readUsers();
+  const newOwner = users.find(u => u.id === newOwnerId);
+  if (!newOwner || (newOwner.status || 'active') !== 'active' || newOwner.role === 'admin') {
+    return res.status(400).json({ error: 'Utilisateur invalide' });
+  }
+  const boardId = req.params.boardId;
+  const destBoards = f.all[newOwnerId] || {};
+  if (destBoards[boardId]) {
+    return res.status(409).json({ error: "Conflit d'identifiant de board chez le destinataire" });
+  }
+  const board = f.board;
+  // Ajuste la liste d'accès si activée : l'ancien propriétaire garde un accès en
+  // modification (pour ne pas se retrouver bloqué hors de son propre board une
+  // fois redevenu un utilisateur normal), le nouveau propriétaire est retiré des
+  // listes (droits pleins implicites désormais via la propriété).
+  const ac = getBoardAccess(board);
+  if (ac.enabled) {
+    if (!ac.allowed.includes(f.userId)) ac.allowed.push(f.userId);
+    ac.editBlocked = ac.editBlocked.filter(id => id !== f.userId);
+    ac.allowed = ac.allowed.filter(id => id !== newOwnerId);
+    ac.editBlocked = ac.editBlocked.filter(id => id !== newOwnerId);
+    board.accessControl = ac;
+  }
+  // Déplace le board d'un bucket à l'autre (même boardId).
+  delete f.userBoards[boardId];
+  f.all[f.userId] = f.userBoards;
+  destBoards[boardId] = board;
+  f.all[newOwnerId] = destBoards;
+  writeBoards(f.all);
+  // L'ancien propriétaire suit désormais le board comme favori, pour le retrouver facilement.
+  const oldOwnerIdx = users.findIndex(u => u.id === f.userId);
+  if (oldOwnerIdx !== -1) {
+    const favs = users[oldOwnerIdx].favorites || [];
+    if (!favs.includes(boardId)) users[oldOwnerIdx].favorites = [...favs, boardId];
+    writeUsers(users);
+  }
+  res.json({ ok: true, newOwnerId, newOwnerUsername: newOwner.username });
+});
+
 // ── Board routes ──────────────────────────────────────────────────────────────
 
 app.get('/api/boards', requireAuth, (req, res) => {
