@@ -381,6 +381,7 @@ app.get('/api/deadlines', requireAuth, (req, res) => {
     if (userId === req.user.id) continue;
     for (const [boardId, board] of Object.entries(boards)) {
       if (!board.public || !favIds.has(boardId)) continue;
+      if (!getPublicBoardPermissions(board, req.user.id, userId).canView) continue;
       collectFromBoard(boardId, board, userId);
     }
   }
@@ -450,6 +451,7 @@ app.get('/api/search', requireAuth, (req, res) => {
     if (userId === req.user.id) continue; // already searched above
     for (const [boardId, board] of Object.entries(boards)) {
       if (!board.public) continue;
+      if (!getPublicBoardPermissions(board, req.user.id, userId).canView) continue;
       const ownerUsername = userMap.get(userId) || 'unknown';
       const isFollowed = favIds.has(boardId);
       searchBoard(boardId, board, { isPublic: true, ownerUsername, isFollowed });
@@ -1920,6 +1922,8 @@ app.get('/api/public/boards', requireAuth, (req, res) => {
   for (const [userId, userBoards] of Object.entries(all)) {
     for (const [boardId, board] of Object.entries(userBoards || {})) {
       if (!board.public) continue;
+      const perms = getPublicBoardPermissions(board, req.user.id, userId);
+      if (!perms.canView) continue; // accès restreint par le créateur : board masqué pour cet utilisateur
       const headerImg = resolveBoardHeaderImg(board);
       result.push({
         id: boardId, name: board.name, emoji: board.emoji || '',
@@ -1927,7 +1931,8 @@ app.get('/api/public/boards', requireAuth, (req, res) => {
         columns: board.columns || [], games: Object.values(board.games || {}),
         gameCount: Object.keys(board.games || {}).length,
         ownerUsername: userMap.get(userId) || 'unknown', ownerId: userId,
-        isOwner: userId === req.user.id, isFavorite: favIds.has(boardId),
+        isOwner: perms.isOwner, isFavorite: favIds.has(boardId),
+        canEdit: perms.canEdit, accessControlEnabled: getBoardAccess(board).enabled,
       });
     }
   }
@@ -1947,7 +1952,9 @@ app.get('/api/user/favorites', requireAuth, (req, res) => {
   for (const [userId, userBoards] of Object.entries(all)) {
     for (const [boardId, board] of Object.entries(userBoards || {})) {
       if (favIds.has(boardId) && board.public) {
-        result.push({ id: boardId, name: board.name, emoji: board.emoji || '', gameIcon: board.gameIcon || null, headerImg: resolveBoardHeaderImg(board), ownerUsername: userMap.get(userId) || 'unknown', ownerId: userId, isFavorite: true });
+        const perms = getPublicBoardPermissions(board, req.user.id, userId);
+        if (!perms.canView) continue; // accès retiré par le créateur : le board suivi disparaît de la liste
+        result.push({ id: boardId, name: board.name, emoji: board.emoji || '', gameIcon: board.gameIcon || null, headerImg: resolveBoardHeaderImg(board), ownerUsername: userMap.get(userId) || 'unknown', ownerId: userId, isFavorite: true, isOwner: perms.isOwner, canEdit: perms.canEdit });
       }
     }
   }
@@ -2013,15 +2020,57 @@ function findPublicBoard(boardId) {
   return null;
 }
 
-app.get('/api/public/boards/:boardId/columns', requireAuth, (req, res) => {
+// ── Gestion des accès aux boards publics ───────────────────────────────────────
+// Par défaut (accessControl absent ou enabled=false) : tout utilisateur connecté
+// peut voir et modifier un board public, comme avant. Si le créateur active la
+// gestion des accès, seuls les utilisateurs listés dans `allowed` peuvent encore
+// voir le board ; parmi eux, ceux listés dans `editBlocked` passent en lecture seule.
+function getBoardAccess(board) {
+  const ac = board.accessControl || {};
+  return {
+    enabled: !!ac.enabled,
+    allowed: Array.isArray(ac.allowed) ? ac.allowed : [],
+    editBlocked: Array.isArray(ac.editBlocked) ? ac.editBlocked : [],
+  };
+}
+
+// Droits de `userId` sur ce board public ; le créateur (ownerId) a toujours tous les droits.
+function getPublicBoardPermissions(board, userId, ownerId) {
+  if (userId === ownerId) return { isOwner: true, canView: true, canEdit: true };
+  const ac = getBoardAccess(board);
+  if (!ac.enabled) return { isOwner: false, canView: true, canEdit: true };
+  if (!ac.allowed.includes(userId)) return { isOwner: false, canView: false, canEdit: false };
+  return { isOwner: false, canView: true, canEdit: !ac.editBlocked.includes(userId) };
+}
+
+// Charge un board public pour la requête courante, en appliquant les droits d'accès.
+// Répond directement (404/403) et retourne null si l'accès est refusé.
+function loadPublicBoardOrRespond(req, res, { needEdit = false } = {}) {
   const f = findPublicBoard(req.params.boardId);
-  if (!f) return res.status(404).json({ error: 'Not found' });
+  if (!f) { res.status(404).json({ error: 'Not found' }); return null; }
+  const perms = getPublicBoardPermissions(f.board, req.user.id, f.userId);
+  if (!perms.canView) { res.status(403).json({ error: 'Access denied' }); return null; }
+  if (needEdit && !perms.canEdit) { res.status(403).json({ error: 'Read-only access' }); return null; }
+  return { ...f, perms };
+}
+
+// Charge un board public pour la requête courante en exigeant que l'appelant en soit le créateur.
+function requirePublicBoardOwner(req, res) {
+  const f = findPublicBoard(req.params.boardId);
+  if (!f) { res.status(404).json({ error: 'Not found' }); return null; }
+  if (f.userId !== req.user.id) { res.status(403).json({ error: 'Forbidden' }); return null; }
+  return f;
+}
+
+app.get('/api/public/boards/:boardId/columns', requireAuth, (req, res) => {
+  const f = loadPublicBoardOrRespond(req, res);
+  if (!f) return;
   res.json(f.board.columns || []);
 });
 
 app.post('/api/public/boards/:boardId/columns', requireAuth, (req, res) => {
-  const f = findPublicBoard(req.params.boardId);
-  if (!f) return res.status(404).json({ error: 'Not found' });
+  const f = loadPublicBoardOrRespond(req, res, { needEdit: true });
+  if (!f) return;
   const col = { id: `col_${Date.now()}`, label: req.body.label || 'Nouvelle colonne', emoji: req.body.emoji || '' };
   f.board.columns = [...(f.board.columns || []), col];
   f.userBoards[req.params.boardId] = f.board;
@@ -2031,8 +2080,8 @@ app.post('/api/public/boards/:boardId/columns', requireAuth, (req, res) => {
 });
 
 app.patch('/api/public/boards/:boardId/columns/:colId', requireAuth, (req, res) => {
-  const f = findPublicBoard(req.params.boardId);
-  if (!f) return res.status(404).json({ error: 'Not found' });
+  const f = loadPublicBoardOrRespond(req, res, { needEdit: true });
+  if (!f) return;
   const col = (f.board.columns || []).find(c => c.id === req.params.colId);
   if (!col) return res.status(404).json({ error: 'Column not found' });
   if (req.body.label !== undefined) col.label = req.body.label;
@@ -2046,8 +2095,8 @@ app.patch('/api/public/boards/:boardId/columns/:colId', requireAuth, (req, res) 
 app.patch('/api/public/boards/:boardId/columns/reorder', requireAuth, (req, res) => {
   const { order } = req.body;
   if (!Array.isArray(order)) return res.status(400).json({ error: 'order must be array' });
-  const f = findPublicBoard(req.params.boardId);
-  if (!f) return res.status(404).json({ error: 'Board not found' });
+  const f = loadPublicBoardOrRespond(req, res, { needEdit: true });
+  if (!f) return;
   const colMap = Object.fromEntries((f.board.columns || []).map(c => [c.id, c]));
   f.board.columns = order.filter(id => colMap[id]).map(id => colMap[id]);
   f.all[f.userId] = f.userBoards;
@@ -2056,8 +2105,8 @@ app.patch('/api/public/boards/:boardId/columns/reorder', requireAuth, (req, res)
 });
 
 app.delete('/api/public/boards/:boardId/columns/:colId', requireAuth, (req, res) => {
-  const f = findPublicBoard(req.params.boardId);
-  if (!f) return res.status(404).json({ error: 'Not found' });
+  const f = loadPublicBoardOrRespond(req, res, { needEdit: true });
+  if (!f) return;
   f.board.columns = (f.board.columns || []).filter(c => c.id !== req.params.colId);
   if (f.board.games) Object.values(f.board.games).forEach(g => { if (g.column === req.params.colId) g.column = f.board.columns[0]?.id || ''; });
   f.userBoards[req.params.boardId] = f.board;
@@ -2067,14 +2116,14 @@ app.delete('/api/public/boards/:boardId/columns/:colId', requireAuth, (req, res)
 });
 
 app.get('/api/public/boards/:boardId/games', requireAuth, (req, res) => {
-  const f = findPublicBoard(req.params.boardId);
-  if (!f) return res.status(404).json({ error: 'Not found' });
+  const f = loadPublicBoardOrRespond(req, res);
+  if (!f) return;
   res.json(Object.values(f.board.games || {}).filter(g => !g.deletedAt));
 });
 
 app.post('/api/public/boards/:boardId/games', requireAuth, (req, res) => {
-  const f = findPublicBoard(req.params.boardId);
-  if (!f) return res.status(404).json({ error: 'Not found' });
+  const f = loadPublicBoardOrRespond(req, res, { needEdit: true });
+  if (!f) return;
   const { appid, name, header_img, icon_img, column, type, emoji, color, taskType, dueDate, startDate, endDate, dueTime, startTime, endTime, urgent, assignees, notes, progress } = req.body;
   if (!appid || !column) return res.status(400).json({ error: 'Missing fields' });
   if (!f.board.games) f.board.games = {};
@@ -2086,8 +2135,8 @@ app.post('/api/public/boards/:boardId/games', requireAuth, (req, res) => {
 });
 
 app.patch('/api/public/boards/:boardId/games/:appid', requireAuth, (req, res) => {
-  const f = findPublicBoard(req.params.boardId);
-  if (!f) return res.status(404).json({ error: 'Not found' });
+  const f = loadPublicBoardOrRespond(req, res, { needEdit: true });
+  if (!f) return;
   const game = (f.board.games || {})[req.params.appid];
   if (!game) return res.status(404).json({ error: 'Game not found' });
   if (req.body.column !== undefined) game.column = req.body.column;
@@ -2114,8 +2163,8 @@ app.patch('/api/public/boards/:boardId/games/:appid', requireAuth, (req, res) =>
 });
 
 app.patch('/api/public/boards/:boardId/columns/:colId/games/reorder', requireAuth, (req, res) => {
-  const f = findPublicBoard(req.params.boardId);
-  if (!f) return res.status(404).json({ error: 'Not found' });
+  const f = loadPublicBoardOrRespond(req, res, { needEdit: true });
+  if (!f) return;
   const { order } = req.body;
   if (!Array.isArray(order)) return res.status(400).json({ error: 'order must be array' });
   order.forEach((appid, idx) => {
@@ -2131,8 +2180,8 @@ app.patch('/api/public/boards/:boardId/columns/:colId/games/reorder', requireAut
 });
 
 app.delete('/api/public/boards/:boardId/games/:appid', requireAuth, (req, res) => {
-  const f = findPublicBoard(req.params.boardId);
-  if (!f) return res.status(404).json({ error: 'Not found' });
+  const f = loadPublicBoardOrRespond(req, res, { needEdit: true });
+  if (!f) return;
   const game = (f.board.games || {})[req.params.appid];
   if (!game) return res.status(404).json({ error: 'Not found' });
   // Soft-delete (corbeille 30 j côté propriétaire du board) — même filet de
@@ -2142,6 +2191,71 @@ app.delete('/api/public/boards/:boardId/games/:appid', requireAuth, (req, res) =
   f.all[f.userId] = f.userBoards;
   writeBoards(f.all);
   res.json({ ok: true, softDeleted: true, deletedAt: game.deletedAt });
+});
+
+// ── Gestion des accès au board public (réservé au créateur) ────────────────────
+
+app.get('/api/public/boards/:boardId/permissions', requireAuth, (req, res) => {
+  const f = findPublicBoard(req.params.boardId);
+  if (!f) return res.status(404).json({ error: 'Not found' });
+  const perms = getPublicBoardPermissions(f.board, req.user.id, f.userId);
+  if (!perms.canView) return res.status(403).json({ error: 'Access denied' });
+  res.json(perms);
+});
+
+app.get('/api/public/boards/:boardId/access', requireAuth, (req, res) => {
+  const f = requirePublicBoardOwner(req, res);
+  if (!f) return;
+  const ac = getBoardAccess(f.board);
+  const users = readUsers()
+    .filter(u => (u.status || 'active') === 'active' && u.role !== 'admin' && u.id !== f.userId)
+    .map(u => ({
+      id: u.id, username: u.username, steamAvatar: u.steamAvatar || null, steamPersonaName: u.steamPersonaName || null,
+      allowed: ac.allowed.includes(u.id),
+      canEdit: !ac.editBlocked.includes(u.id),
+    }));
+  res.json({ enabled: ac.enabled, users });
+});
+
+app.patch('/api/public/boards/:boardId/access', requireAuth, (req, res) => {
+  const f = requirePublicBoardOwner(req, res);
+  if (!f) return;
+  const ac = getBoardAccess(f.board);
+  if (req.body.enabled !== undefined) ac.enabled = !!req.body.enabled;
+  f.board.accessControl = ac;
+  f.userBoards[req.params.boardId] = f.board;
+  f.all[f.userId] = f.userBoards;
+  writeBoards(f.all);
+  res.json({ enabled: ac.enabled });
+});
+
+app.patch('/api/public/boards/:boardId/access/users/:userId', requireAuth, (req, res) => {
+  const f = requirePublicBoardOwner(req, res);
+  if (!f) return;
+  const ac = getBoardAccess(f.board);
+  const uid = req.params.userId;
+  if (req.body.allowed !== undefined) {
+    if (req.body.allowed) {
+      if (!ac.allowed.includes(uid)) ac.allowed.push(uid);
+    } else {
+      // Retirer l'accès retire aussi le blocage d'édition associé (état sans objet une fois l'accès coupé)
+      ac.allowed = ac.allowed.filter(id => id !== uid);
+      ac.editBlocked = ac.editBlocked.filter(id => id !== uid);
+    }
+  }
+  if (req.body.canEdit !== undefined) {
+    if (req.body.canEdit) ac.editBlocked = ac.editBlocked.filter(id => id !== uid);
+    else if (!ac.editBlocked.includes(uid)) ac.editBlocked.push(uid);
+  }
+  f.board.accessControl = ac;
+  f.userBoards[req.params.boardId] = f.board;
+  f.all[f.userId] = f.userBoards;
+  writeBoards(f.all);
+  const user = readUsers().find(u => u.id === uid);
+  res.json({
+    id: uid, username: user?.username || null,
+    allowed: ac.allowed.includes(uid), canEdit: !ac.editBlocked.includes(uid),
+  });
 });
 
 // ── Board routes ──────────────────────────────────────────────────────────────

@@ -11,6 +11,7 @@ import SearchModal from './components/SearchModal.jsx';
 import LoginPage from './components/LoginPage.jsx';
 // RegisterPage removed — Steam-only login
 import AdminPanel from './components/AdminPanel.jsx';
+import BoardAccessModal from './components/BoardAccessModal.jsx';
 import ProfilePage from './components/ProfilePage.jsx';
 import AppInfoModal from './components/AppInfoModal.jsx';
 import GameStatsWidget from './components/GameStatsWidget.jsx';
@@ -349,8 +350,11 @@ export default function App() {
   // Personal board favorites (IDs only)
   const [personalFavIds, setPersonalFavIds] = useState([]);
   // Collaborative public board currently open (null = own boards mode)
-  const [publicBoardMode, setPublicBoardMode] = useState(null); // { id, name, ownerUsername }
+  const [publicBoardMode, setPublicBoardMode] = useState(null); // { id, name, ownerUsername, canEdit }
   const isOwnPublicBoard = !!(publicBoardMode && currentUser && publicBoardMode.ownerUsername === currentUser.username);
+  // Lecture seule tant que le statut n'est pas connu (canEdit===false explicitement) sur un board d'un autre user
+  const canEditPublicBoard = isOwnPublicBoard || !publicBoardMode || publicBoardMode.canEdit !== false;
+  const [showAccessModal, setShowAccessModal] = useState(false);
 
   // Home view
   const [showHome, setShowHome] = useState(true);
@@ -615,6 +619,16 @@ export default function App() {
   // Returns the right API base for the active board context
   const boardApi = publicBoardMode ? `/api/public/boards/${publicBoardMode.id}` : null;
 
+  // Garde-fou frontend : bloque les actions de modification quand l'accès est en lecture seule.
+  // (Le backend refuse de toute façon en 403 — ceci évite juste une UI optimiste trompeuse.)
+  const assertCanEdit = () => {
+    if (publicBoardMode && !canEditPublicBoard) {
+      alert(t('access.readonly_alert'));
+      return false;
+    }
+    return true;
+  };
+
   const openPublicBoard = async (board) => {
     setPublicBoardMode(board);
     setShowHome(false);
@@ -623,12 +637,20 @@ export default function App() {
     setLoading(true);
     try {
       const h = authHeaders(token);
-      const [cols, gms] = await Promise.all([
+      const [permRes, cols, gms] = await Promise.all([
+        fetch(`${API}/public/boards/${board.id}/permissions`, { headers: h }),
         fetch(`${API}/public/boards/${board.id}/columns`, { headers: h }).then(r => r.json()),
         fetch(`${API}/public/boards/${board.id}/games`, { headers: h }).then(r => r.json()),
       ]);
+      if (permRes.status === 403) {
+        alert(t('access.revoked_alert'));
+        closePublicBoard();
+        return;
+      }
+      const perms = await permRes.json().catch(() => ({}));
       setColumns(cols);
       setGames(gms);
+      setPublicBoardMode(prev => prev ? { ...prev, canEdit: perms.canEdit !== false } : prev);
       // Repli : si le board n'a pas sa propre image et contient EXACTEMENT une carte Steam,
       // on affiche l'image de cette carte (board réellement "lié" à un seul jeu). Si plusieurs
       // jeux différents sont présents (board perso/backlog), on ne montre rien (emoji affiché à la place).
@@ -651,12 +673,20 @@ export default function App() {
     setLoading(true);
     try {
       const h = authHeaders(token);
-      const [cols, gms] = await Promise.all([
+      const [permRes, cols, gms] = await Promise.all([
+        fetch(`${API}/public/boards/${publicBoardMode.id}/permissions`, { headers: h }),
         fetch(`${API}/public/boards/${publicBoardMode.id}/columns`, { headers: h }).then(r => r.json()),
         fetch(`${API}/public/boards/${publicBoardMode.id}/games`, { headers: h }).then(r => r.json()),
       ]);
+      if (permRes.status === 403) {
+        alert(t('access.revoked_alert'));
+        closePublicBoard();
+        return;
+      }
+      const perms = await permRes.json().catch(() => ({}));
       setColumns(cols);
       setGames(gms);
+      setPublicBoardMode(prev => prev ? { ...prev, canEdit: perms.canEdit !== false } : prev);
     } catch {} finally { setLoading(false); }
   };
 
@@ -752,6 +782,7 @@ export default function App() {
       if (showNewBoard)    { setShowNewBoard(false);   return; }
       if (showBoardSearch) { setShowBoardSearch(false); return; }
       if (showAdmin)       { setShowAdmin(false);      return; }
+      if (showAccessModal) { setShowAccessModal(false); return; }
       if (showProfile)     { setShowProfile(false);    return; }
       if (showAppInfo)     { setShowAppInfo(false);    return; }
       if (selectedGame)    { setSelectedGame(null); setSelectedGameDefaultTab('infos'); return; }
@@ -762,7 +793,7 @@ export default function App() {
 
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [showDrawer, editingGame, showSearch, showNewBoard, showBoardSearch, showAdmin, showProfile, showAppInfo, selectedGame, gameInfo, publicBoardMode, activeBoardId]);
+  }, [showDrawer, editingGame, showSearch, showNewBoard, showBoardSearch, showAdmin, showAccessModal, showProfile, showAppInfo, selectedGame, gameInfo, publicBoardMode, activeBoardId]);
 
   // Sync columns whenever activeBoardId OR boards changes (avoids race where boards loads after activeBoardId effect)
   useEffect(() => {
@@ -966,6 +997,7 @@ export default function App() {
 
   // Columns CRUD
   const addColumn = async () => {
+    if (!assertCanEdit()) return;
     try {
       const boardApi = getBoardApi();
       const res = await fetch(`${boardApi}/columns`, { method: 'POST', headers: authHeaders(token), body: JSON.stringify({ label: t('col.new_label') }) });
@@ -976,6 +1008,7 @@ export default function App() {
     } catch (err) { alert(t('err.col_network') + err.message); }
   };
   const renameColumn = async (colId, label) => {
+    if (!assertCanEdit()) return;
     const boardApi = getBoardApi();
     await fetch(`${boardApi}/columns/${colId}`, { method: 'PATCH', headers: authHeaders(token), body: JSON.stringify({ label }) });
     const updated = columns.map(c => c.id === colId ? { ...c, label } : c);
@@ -983,6 +1016,7 @@ export default function App() {
     if (!publicBoardMode) setBoards(prev => prev.map(b => b.id === activeBoardId ? { ...b, columns: updated } : b));
   };
   const setColumnEmoji = async (colId, emoji) => {
+    if (!assertCanEdit()) return;
     const boardApi = getBoardApi();
     await fetch(`${boardApi}/columns/${colId}`, { method: 'PATCH', headers: authHeaders(token), body: JSON.stringify({ emoji }) });
     const updated = columns.map(c => c.id === colId ? { ...c, emoji } : c);
@@ -990,6 +1024,7 @@ export default function App() {
     if (!publicBoardMode) setBoards(prev => prev.map(b => b.id === activeBoardId ? { ...b, columns: updated } : b));
   };
   const deleteColumn = async (colId) => {
+    if (!assertCanEdit()) return;
     if (!confirm(t('col.del_confirm'))) return;
     const boardApi = getBoardApi();
     await fetch(`${boardApi}/columns/${colId}`, { method: 'DELETE', headers: authHeaders(token) });
@@ -1006,6 +1041,7 @@ export default function App() {
 
   // Games CRUD
   const addGame = async (game, targetColId) => {
+    if (!assertCanEdit()) return;
     const colId = targetColId || columns[0]?.id;
     const boardApi = getBoardApi();
     try {
@@ -1037,6 +1073,7 @@ export default function App() {
   };
 
   const removeGame = async (appid) => {
+    if (!assertCanEdit()) return;
     const boardApi = getBoardApi();
     try {
       const res = await fetch(`${boardApi}/games/${appid}`, { method: 'DELETE', headers: authHeaders(token) });
@@ -1056,6 +1093,7 @@ export default function App() {
   };
 
   const archiveGame = async (appid) => {
+    if (!assertCanEdit()) return;
     setGames(prev => prev.map(g => g.appid === appid ? { ...g, archived: true } : g));
     // Dès qu'on archive, on repasse l'affichage des archivées à OFF par défaut :
     // la carte qu'on vient d'archiver (et toutes les autres déjà archivées)
@@ -1077,6 +1115,7 @@ export default function App() {
   };
 
   const unarchiveGame = async (appid) => {
+    if (!assertCanEdit()) return;
     setGames(prev => prev.map(g => g.appid === appid ? { ...g, archived: false } : g));
     const boardApi = getBoardApi();
     try {
@@ -1094,6 +1133,7 @@ export default function App() {
   };
 
   const reorderGamesInColumn = useCallback(async (colId, orderedAppids) => {
+    if (!assertCanEdit()) return;
     setGames(prev => prev.map(g => {
       const idx = orderedAppids.indexOf(g.appid);
       if (idx !== -1) return { ...g, sortOrder: idx, column: colId };
@@ -1107,6 +1147,7 @@ export default function App() {
   }, [activeBoardId, token, publicBoardMode]);
 
   const updateGame = async (updatedGame) => {
+    if (!assertCanEdit()) return;
     const boardApi = getBoardApi();
     const { appid, name, emoji, color, taskType, dueDate, startDate, endDate, urgent, assignees, notes, progress } = updatedGame;
     await fetch(`${boardApi}/games/${appid}`, {
@@ -1119,6 +1160,7 @@ export default function App() {
 
   // Generic field patch — used by TaskModal for immediate note/urgent/assignee saves
   const patchGame = async (appid, fields) => {
+    if (!assertCanEdit()) return;
     // Auto-done when progress hits 100
     if (fields.progress === 100 && !fields.hasOwnProperty('done')) fields = { ...fields, done: true };
     const boardApi = getBoardApi();
@@ -1152,6 +1194,7 @@ export default function App() {
   };
   // Soft-delete atomique d'une note — contourne patchGame, endpoint dédié
   const softDeleteNote = async (appid, noteId) => {
+    if (!assertCanEdit()) throw new Error('read-only');
     const boardApi = getBoardApi();
     const res = await fetch(`${boardApi}/games/${appid}/notes/${noteId}/trash`, {
       method: 'POST', headers: authHeaders(token),
@@ -1171,12 +1214,14 @@ export default function App() {
   };
 
   const moveGame = useCallback(async (appid, column) => {
+    if (!assertCanEdit()) return;
     setGames(prev => prev.map(g => g.appid === appid ? { ...g, column } : g));
     const boardApi = getBoardApi();
     await fetch(`${boardApi}/games/${appid}`, { method: 'PATCH', headers: authHeaders(token), body: JSON.stringify({ column }) });
   }, [activeBoardId, token, publicBoardMode]);
 
   const reorderColumns = async (orderedIds) => {
+    if (!assertCanEdit()) return;
     // Optimistic update
     const reordered = orderedIds.map(id => columns.find(c => c.id === id)).filter(Boolean);
     setColumns(reordered);
@@ -2281,7 +2326,9 @@ export default function App() {
                 >📦 {archiveCount}</button>
               )}
               <button onClick={refreshPublicBoard} title={t('nav.refresh')} style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', color: 'var(--text-muted)', fontSize: 14, cursor: 'pointer', flexShrink: 0, lineHeight: 1 }}>↻</button>
-              <button onClick={closePublicBoard} style={{ background: 'rgba(255,255,255,.08)', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 10px', color: 'var(--text-muted)', fontSize: 11, cursor: 'pointer', flexShrink: 0 }}>✕</button>
+              {isOwnPublicBoard && (
+                <button onClick={() => setShowAccessModal(true)} title={t('access.title')} style={{ background: 'rgba(255,255,255,.08)', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer', flexShrink: 0, lineHeight: 1 }}>🔐</button>
+              )}
             </>
           ) : showHome ? (
             <>
@@ -2324,7 +2371,11 @@ export default function App() {
         )}
         {(activeBoardId || publicBoardMode) && (
           <div style={{ background: 'var(--surface)', borderTop: '1px solid var(--border)', padding: '8px 12px', display: 'flex', gap: 8, flexShrink: 0 }}>
-            <button onClick={addColumn} style={{ flex: 1, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '8px', color: 'var(--text-muted)', fontSize: 12 }}>+ Colonne</button>
+            {canEditPublicBoard ? (
+              <button onClick={addColumn} style={{ flex: 1, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '8px', color: 'var(--text-muted)', fontSize: 12 }}>+ Colonne</button>
+            ) : (
+              <span style={{ flex: 1, textAlign: 'center', padding: '8px', color: '#d99a3d', fontSize: 11, fontWeight: 700 }}>{t('access.readonly_badge')}</span>
+            )}
             {archiveCount > 0 && (
               <button
                 onClick={toggleShowArchived}
@@ -2348,6 +2399,7 @@ export default function App() {
           : displayedGame && <GameModal game={displayedGame} onClose={() => { setSelectedGame(null); setSelectedGameDefaultTab('infos'); }} api={API} token={token} onPatchGame={patchGame} onSoftDeleteNote={softDeleteNote} defaultTab={selectedGameDefaultTab === 'notes' ? 'notes' : 'achievements'} currentUser={currentUser} appUsers={appUsers} />
         }
         {showAdmin && <AdminPanel token={token} currentUser={currentUser} onClose={() => setShowAdmin(false)} />}
+        {showAccessModal && isOwnPublicBoard && publicBoardMode && <BoardAccessModal token={token} boardId={publicBoardMode.id} boardName={publicBoardMode.name} onClose={() => setShowAccessModal(false)} />}
 
 
         {showAppInfo && <AppInfoModal onClose={() => setShowAppInfo(false)} />}
@@ -2396,8 +2448,11 @@ export default function App() {
                   <circle cx="10" cy="7" r="4"/><path d="M4 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M15 3.13a4 4 0 0 1 0 7.75"/><path d="M20 21v-2a4 4 0 0 0-3-3.85"/>
                 </svg> Public
               </span>
-              {publicBoardMode && (
+              {canEditPublicBoard && (
                 <button onClick={addColumn} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>{t('board.add_col')}</button>
+              )}
+              {publicBoardMode && !canEditPublicBoard && (
+                <span title={t('access.readonly_alert')} style={{ fontSize: 11, fontWeight: 700, color: '#d99a3d', border: '1px solid rgba(217,154,61,0.5)', borderRadius: 5, padding: '3px 8px', flexShrink: 0 }}>{t('access.readonly_badge')}</span>
               )}
               <button onClick={toggleCompact} style={{ background: compactView ? 'rgba(192,87,10,0.15)' : 'var(--surface2)', border: compactView ? '1px solid var(--accent)' : '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: compactView ? 'var(--accent)' : 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0, fontWeight: compactView ? 700 : 400 }}>{t('nav.compact')}</button>
               <button onClick={refreshPublicBoard} style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 11px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ fontSize: 15, lineHeight: 1 }}>↻</span> {t('nav.refresh').replace('↻ ', '')}</button>
@@ -2406,7 +2461,9 @@ export default function App() {
               <SteamEncart gameInfo={gameInfo} />
               <input type="search" placeholder={t('nav.filter_ph')} value={search} onChange={e => setSearch(e.target.value)}
                 style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 10px', color: 'var(--text)', fontSize: 12, outline: 'none', maxWidth: 180 }} />
-              <button onClick={closePublicBoard} style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>{t('nav.quit')}</button>
+              {isOwnPublicBoard && (
+                <button onClick={() => setShowAccessModal(true)} style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 5 }}>🔐 {t('access.title')}</button>
+              )}
             </>
           ) : showHome ? (
             <>
@@ -2515,6 +2572,7 @@ export default function App() {
         : displayedGame && <GameModal game={displayedGame} onClose={() => { setSelectedGame(null); setSelectedGameDefaultTab('infos'); }} api={API} token={token} onPatchGame={patchGame} defaultTab={selectedGameDefaultTab === 'notes' ? 'notes' : 'achievements'} currentUser={currentUser} appUsers={appUsers} />
       }
       {showAdmin && <AdminPanel token={token} currentUser={currentUser} onClose={() => setShowAdmin(false)} />}
+      {showAccessModal && isOwnPublicBoard && publicBoardMode && <BoardAccessModal token={token} boardId={publicBoardMode.id} boardName={publicBoardMode.name} onClose={() => setShowAccessModal(false)} />}
       {showAppInfo && <AppInfoModal onClose={() => setShowAppInfo(false)} />}
       {showProfile && <ProfilePage token={token} currentUser={currentUser} onClose={() => setShowProfile(false)} onSaveSteam={handleSteamSave} />}
       {activeBoard?.gameIcon && !showHome && <NowPlayingBanner gameIconUrl={activeBoard.gameIcon} token={token} />}
