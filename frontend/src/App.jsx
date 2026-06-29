@@ -2511,8 +2511,9 @@ export default function App() {
           ) : showHome ? (
             <>
               <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>Tableau de Board</span>
-              <div style={{ flex: 1 }} />
+              {/* Compact à gauche, collé au titre — même position que sur les boards (cohérence) */}
               <button onClick={toggleCompact} style={{ background: compactView ? 'rgba(192,87,10,0.15)' : 'var(--surface2)', border: compactView ? '1px solid var(--accent)' : '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: compactView ? 'var(--accent)' : 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0, fontWeight: compactView ? 700 : 400 }}>{t('nav.compact')}</button>
+              <div style={{ flex: 1 }} />
               <button
                 onClick={() => { fetchBoards(); fetchFavorites(); fetchPersonalFavorites(); fetch(`${API}/public/boards`, { headers: authHeaders(token) }).then(r => r.ok ? r.json() : []).then(setHomePublicBoards).catch(() => {}); }}
                 title="Rafraîchir"

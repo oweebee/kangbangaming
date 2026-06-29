@@ -188,15 +188,13 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
             (alignSelf:stretch reprend la hauteur de la ligne flex), largeur déduite via
             aspectRatio:1 pour rester carrée plutôt que de s'étirer/déformer. */}
         {compact && (
-          <div style={{ position: 'relative', alignSelf: 'stretch', aspectRatio: '1 / 1', flexShrink: 0 }}>
-            <div style={{ width: '100%', height: '100%', borderRadius: 5, overflow: 'hidden', background: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {compactThumbSrc
-                ? <img src={compactThumbSrc} alt="" onError={() => isCustom ? setTtImgError(true) : setImgError(true)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                : isCustom
-                  ? <span style={{ fontSize: 15 }}>{game.emoji || (tt?.emoji) || '📋'}</span>
-                  : <span style={{ fontSize: 15 }}>🎮</span>
-              }
-            </div>
+          <div style={{ position: 'relative', alignSelf: 'stretch', aspectRatio: '1 / 1', flexShrink: 0, background: 'var(--surface)', borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {compactThumbSrc
+              ? <img src={compactThumbSrc} alt="" onError={() => isCustom ? setTtImgError(true) : setImgError(true)} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 5, display: 'block' }} />
+              : isCustom
+                ? <span style={{ fontSize: 15 }}>{game.emoji || (tt?.emoji) || '📋'}</span>
+                : <span style={{ fontSize: 15 }}>🎮</span>
+            }
             {/* Avatars assignés — petit badge ancré au coin de la miniature plutôt qu'au bas
                 de toute la carte : reste correct même quand la carte est très basse (titre
                 court sur une seule ligne) et ne peut donc plus chevaucher le titre/les badges. */}

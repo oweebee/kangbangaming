@@ -149,6 +149,7 @@ export default function SwipeTabs({ tabs, activeTab, onTabChange, children, tabB
               style={{
                 width: `${100 / N}%`,
                 height: '100%',
+                minHeight: 0,
                 flexShrink: 0,
                 display: 'flex',
                 flexDirection: 'column',

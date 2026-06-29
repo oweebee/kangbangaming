@@ -95,7 +95,6 @@ export default function GameModal({ game, onClose, api, token, onPatchGame, onSo
   const reviewScoreVal = gameInfo?.reviewScore ?? 0;
   const reviewColor = reviewScoreVal >= 8 ? '#4cd882' : reviewScoreVal >= 5 ? '#f5c518' : '#f87575';
   const reviewEmoji = reviewScoreVal >= 8 ? '👍' : reviewScoreVal >= 5 ? '😐' : '👎';
-  const hasBadges = !!(gameInfo?.genres?.length || gameInfo?.multiplayerLabel || gameInfo?.earlyAccess || gameInfo?.comingSoon);
 
   return (
     <ModalBackdrop onClose={onClose}>
@@ -180,97 +179,93 @@ export default function GameModal({ game, onClose, api, token, onPatchGame, onSo
               onEndTimeChange={handleEndTimeChange}
             />
 
-            {/* Fiche du jeu — infos Steam présentées de façon aérée (joueurs, avis,
-                Metacritic, prix, genres, studio, date de sortie) */}
-            {gameInfo && (
-              <div style={{
-                display: 'flex', flexDirection: 'column', gap: 16,
-                background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.1)',
-                borderRadius: 12, padding: '18px 20px',
-              }}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 18 }}>
-                  {gameInfo.playerCount !== null && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#3db86a', boxShadow: '0 0 8px #3db86a99', display: 'inline-block', flexShrink: 0 }} />
-                      <div>
-                        <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text)', lineHeight: 1.25 }}>{gameInfo.playerCount.toLocaleString('fr-FR')}</div>
-                        <div style={{ fontSize: 10.5, color: 'var(--text-muted)' }}>{t('ginfo.in_game')}</div>
-                      </div>
-                    </div>
-                  )}
-                  {gameInfo.reviewScoreDesc && (
+            {/* Résumé Steam rapide — présenté en liste (une ligne = un champ : Avis,
+                Joueurs en ligne, Prix, Style…) plutôt qu'en grille de pastilles */}
+            {gameInfo && (() => {
+              const rows = [
+                gameInfo.reviewScoreDesc && {
+                  key: 'reviews', icon: reviewEmoji, label: t('ginfo.label_reviews'),
+                  onClick: () => window.open(`https://store.steampowered.com/app/${game.appid}/#app_reviews_hash`, '_blank'),
+                  title: t('ginfo.see_reviews'),
+                  value: (
+                    <>
+                      <span style={{ color: reviewColor }}>{gameInfo.reviewScoreDesc}</span>
+                      {gameInfo.positivePercent !== null && <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}> · {t('ginfo.positive_pct', { percent: gameInfo.positivePercent })}</span>}
+                      {gameInfo.totalReviews ? <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}> ({gameInfo.totalReviews.toLocaleString('fr-FR')})</span> : null}
+                    </>
+                  ),
+                },
+                gameInfo.playerCount !== null && {
+                  key: 'players', icon: '🟢', label: t('ginfo.label_players'),
+                  value: gameInfo.playerCount.toLocaleString('fr-FR'),
+                },
+                gameInfo.price && {
+                  key: 'price', icon: '💰', label: t('ginfo.label_price'),
+                  value: (
+                    <>
+                      {gameInfo.discount > 0 && <span style={{ background: '#4c6b22', color: '#a4d007', fontWeight: 900, fontSize: 10.5, padding: '1px 5px', borderRadius: 4, marginRight: 6 }}>-{gameInfo.discount}%</span>}
+                      {gameInfo.discount > 0 && gameInfo.priceInitial && <span style={{ color: 'var(--text-muted)', textDecoration: 'line-through', fontWeight: 400, marginRight: 6 }}>{gameInfo.priceInitial}</span>}
+                      <span style={{ color: gameInfo.discount > 0 ? '#a4d007' : 'var(--text)' }}>{gameInfo.price}</span>
+                    </>
+                  ),
+                },
+                gameInfo.metacritic !== null && {
+                  key: 'metacritic', icon: '🎯', label: 'Metacritic',
+                  onClick: gameInfo.metacriticUrl ? () => window.open(gameInfo.metacriticUrl, '_blank') : undefined,
+                  title: gameInfo.metacriticUrl ? t('ginfo.see_metacritic') : undefined,
+                  value: <span style={{ display: 'inline-block', minWidth: 26, textAlign: 'center', padding: '1px 7px', borderRadius: 5, fontWeight: 900, color: '#000', background: gameInfo.metacritic >= 75 ? '#6c3' : gameInfo.metacritic >= 50 ? '#fc3' : '#f00' }}>{gameInfo.metacritic}</span>,
+                },
+                (gameInfo.genres?.length > 0 || gameInfo.multiplayerLabel) && {
+                  key: 'style', icon: '🎮', label: t('ginfo.label_style'),
+                  value: [...(gameInfo.genres || []), gameInfo.multiplayerLabel].filter(Boolean).join(' · '),
+                },
+                gameInfo.developer && {
+                  key: 'studio', icon: '🛠', label: t('ginfo.label_studio'),
+                  value: gameInfo.developer,
+                },
+                gameInfo.releaseDate && {
+                  key: 'release', icon: '📅', label: t('ginfo.label_release'),
+                  value: gameInfo.releaseDate,
+                },
+                gameInfo.earlyAccess && {
+                  key: 'status', icon: '⚠', label: t('ginfo.label_status'),
+                  value: <span style={{ color: '#ff5555' }}>{t('ginfo.early_access')}</span>,
+                },
+                gameInfo.comingSoon && !gameInfo.earlyAccess && {
+                  key: 'status2', icon: '🔜', label: t('ginfo.label_status'),
+                  value: <span style={{ color: '#f5c518' }}>{t('ginfo.coming_soon')}</span>,
+                },
+              ].filter(Boolean);
+
+              if (rows.length === 0) return null;
+
+              return (
+                <div style={{
+                  display: 'flex', flexDirection: 'column',
+                  background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: 12, overflow: 'hidden',
+                }}>
+                  {rows.map((row, i) => (
                     <div
-                      style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
-                      onClick={() => window.open(`https://store.steampowered.com/app/${game.appid}/#app_reviews_hash`, '_blank')}
-                      title={t('ginfo.see_reviews')}
+                      key={row.key}
+                      onClick={row.onClick}
+                      title={row.title}
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14,
+                        padding: '11px 18px',
+                        borderBottom: i < rows.length - 1 ? '1px solid rgba(255,255,255,0.08)' : 'none',
+                        cursor: row.onClick ? 'pointer' : 'default',
+                      }}
                     >
-                      <span style={{ fontSize: 22, lineHeight: 1 }}>{reviewEmoji}</span>
-                      <div>
-                        <div style={{ fontWeight: 700, fontSize: 16, color: reviewColor, lineHeight: 1.25 }}>{gameInfo.reviewScoreDesc}</div>
-                        <div style={{ fontSize: 10.5, color: 'var(--text-muted)' }}>
-                          {gameInfo.positivePercent !== null ? t('ginfo.positive_pct', { percent: gameInfo.positivePercent }) : ''}
-                          {gameInfo.totalReviews ? ` · ${gameInfo.totalReviews.toLocaleString('fr-FR')}` : ''}
-                        </div>
-                      </div>
+                      <span style={{ fontSize: 12.5, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0 }}>
+                        <span style={{ fontSize: 13 }}>{row.icon}</span>{row.label}
+                      </span>
+                      <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)', textAlign: 'right' }}>{row.value}</span>
                     </div>
-                  )}
-                  {gameInfo.metacritic !== null && (
-                    <div
-                      style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: gameInfo.metacriticUrl ? 'pointer' : 'default' }}
-                      onClick={() => gameInfo.metacriticUrl && window.open(gameInfo.metacriticUrl, '_blank')}
-                      title={gameInfo.metacriticUrl ? t('ginfo.see_metacritic') : undefined}
-                    >
-                      <div style={{ width: 30, height: 30, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 14, color: '#000', background: gameInfo.metacritic >= 75 ? '#6c3' : gameInfo.metacritic >= 50 ? '#fc3' : '#f00', flexShrink: 0 }}>
-                        {gameInfo.metacritic}
-                      </div>
-                      <div style={{ fontSize: 10.5, color: 'var(--text-muted)', lineHeight: 1.3 }}>Meta<br/>critic</div>
-                    </div>
-                  )}
-                  {gameInfo.price && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      {gameInfo.discount > 0 && (
-                        <span style={{ background: '#4c6b22', color: '#a4d007', fontWeight: 900, fontSize: 11, padding: '2px 6px', borderRadius: 4, flexShrink: 0 }}>
-                          -{gameInfo.discount}%
-                        </span>
-                      )}
-                      <div>
-                        {gameInfo.discount > 0 && gameInfo.priceInitial && (
-                          <div style={{ fontSize: 10.5, color: 'var(--text-muted)', textDecoration: 'line-through', lineHeight: 1 }}>{gameInfo.priceInitial}</div>
-                        )}
-                        <div style={{ fontWeight: 700, fontSize: 16, color: gameInfo.discount > 0 ? '#a4d007' : 'var(--text)', lineHeight: 1.25 }}>{gameInfo.price}</div>
-                      </div>
-                    </div>
-                  )}
+                  ))}
                 </div>
-
-                {hasBadges && (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-                    {gameInfo.earlyAccess && (
-                      <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 5, background: 'rgba(220,50,50,0.18)', color: '#ff5555', border: '2px solid rgba(220,50,50,0.85)', whiteSpace: 'nowrap' }}>{t('ginfo.early_access')}</span>
-                    )}
-                    {gameInfo.comingSoon && !gameInfo.earlyAccess && (
-                      <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 5, background: 'rgba(245,197,24,0.12)', color: '#f5c518', border: '2px solid rgba(245,197,24,0.75)', whiteSpace: 'nowrap' }}>{t('ginfo.coming_soon')}</span>
-                    )}
-                    {gameInfo.multiplayerLabel && (
-                      <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 5, background: 'rgba(71,167,245,0.15)', color: '#47a7f5', border: '2px solid rgba(71,167,245,0.75)', whiteSpace: 'nowrap' }}>👥 {gameInfo.multiplayerLabel}</span>
-                    )}
-                    {(gameInfo.genres || []).map(g => (
-                      <span key={g} style={{ fontSize: 11, padding: '3px 8px', borderRadius: 5, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.6)', border: '2px solid rgba(255,255,255,0.25)', whiteSpace: 'nowrap' }}>{g}</span>
-                    ))}
-                  </div>
-                )}
-
-                {(gameInfo.developer || gameInfo.releaseDate) && (
-                  <div style={{
-                    display: 'flex', gap: 18, alignItems: 'center', fontSize: 11.5, color: 'var(--text-muted)',
-                    ...(hasBadges ? {} : { paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.08)' }),
-                  }}>
-                    {gameInfo.developer && <span>🛠 {gameInfo.developer}</span>}
-                    {gameInfo.releaseDate && <span>📅 {gameInfo.releaseDate}</span>}
-                  </div>
-                )}
-              </div>
-            )}
+              );
+            })()}
 
             {/* Infos */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -301,8 +296,12 @@ export default function GameModal({ game, onClose, api, token, onPatchGame, onSo
             />
           </div>
 
-          {/* ── Panneau Succès ── */}
-          <>
+          {/* ── Panneau Succès ──
+              Conteneur flex-colonne unique (au lieu d'un Fragment à deux enfants directs)
+              pour garantir que la zone scrollable hérite correctement de la hauteur du
+              panneau SwipeTabs : barre de filtres figée (flexShrink:0) + liste scrollable
+              (flex:1, minHeight:0, overflowY:auto) qui prend tout le reste de la hauteur. */}
+          <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
             {achievements && achievements.total > 0 && (
               <div style={{ padding: '10px 16px', flexShrink: 0, display: 'flex', gap: 6 }}>
                 {[['all', t('game.filter_all'), achievements.total], ['unlocked', t('game.filter_unlocked'), achievements.unlocked], ['locked', t('game.filter_locked'), achievements.total - achievements.unlocked]].map(([id, label, count]) => (
@@ -339,7 +338,7 @@ export default function GameModal({ game, onClose, api, token, onPatchGame, onSo
                 </div>
               ))}
             </div>
-          </>
+          </div>
 
         </SwipeTabs>
       </div>
