@@ -203,6 +203,11 @@ export default function GameCard({ game, onDragStart, onDragEnd, onClick, onArch
           <div style={{
             fontWeight: 600, fontSize: compact ? 13 : 14, lineHeight: compact ? '1.2' : '1.3', marginBottom: compact ? 1 : 3,
             wordBreak: 'break-word', flex: 1,
+            // Hauteur réservée pour 2 lignes en permanence (même si le nom tient sur 1 ligne) :
+            // un nom plus long passe sur 2 lignes en utilisant cet espace déjà alloué, au lieu
+            // d'agrandir la carte. Au-delà de 2 lignes, troncature avec "…".
+            minHeight: compact ? 31 : 37,
+            display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
           }} title={game.name}>{game.name}</div>
 
           {/* Boutons inline — NON-compact seulement */}

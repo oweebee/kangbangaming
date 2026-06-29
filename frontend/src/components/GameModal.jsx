@@ -7,10 +7,11 @@ import SwipeTabs from './SwipeTabs.jsx';
 import { useLang } from '../i18n.js';
 import { isSteamAccessBlocked, SteamAccessNotice } from './SteamUI.jsx';
 
-export default function GameModal({ game, onClose, api, token, onPatchGame, onSoftDeleteNote, defaultTab = 'achievements', currentUser, appUsers = [] }) {
+export default function GameModal({ game, onClose, api, token, onPatchGame, onSoftDeleteNote, defaultTab = 'info', currentUser, appUsers = [] }) {
   const { t } = useLang();
   const steamBlocked = isSteamAccessBlocked(currentUser);
   const [achievements, setAchievements] = useState(null);
+  const [gameInfo, setGameInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState(defaultTab);
   const [filter, setFilter] = useState('all');
@@ -67,11 +68,33 @@ export default function GameModal({ game, onClose, api, token, onPatchGame, onSo
     load();
   }, [game.appid, api, token]);
 
-  const filteredAchievements = achievements?.achievements?.filter(a => {
+  // Infos publiques Steam (joueurs en ligne, avis, Metacritic, prix, genres…) —
+  // même endpoint que le cartouche d'en-tête (SteamEncart), mis en cache côté
+  // serveur par appid, donc sûr à appeler par carte sans surcharge.
+  useEffect(() => {
+    async function loadInfo() {
+      try {
+        const res = await fetch(`${api}/steam/gameinfo/${game.appid}`, {
+          headers: token ? authHeaders(token) : {},
+        });
+        setGameInfo(res.ok ? await res.json() : null);
+      } catch {
+        setGameInfo(null);
+      }
+    }
+    loadInfo();
+  }, [game.appid, api, token]);
+
+  const filteredAchievements = (achievements?.achievements?.filter(a => {
     if (filter === 'unlocked') return a.unlocked;
     if (filter === 'locked') return !a.unlocked;
     return true;
-  }) || [];
+  }) || []).slice().sort((a, b) => (a.unlocked === b.unlocked ? 0 : a.unlocked ? -1 : 1));
+
+  // Couleurs/emoji de la pastille avis, identiques à SteamEncart
+  const reviewScoreVal = gameInfo?.reviewScore ?? 0;
+  const reviewColor = reviewScoreVal >= 8 ? '#4cd882' : reviewScoreVal >= 5 ? '#f5c518' : '#f87575';
+  const reviewEmoji = reviewScoreVal >= 8 ? '👍' : reviewScoreVal >= 5 ? '😐' : '👎';
 
   return (
     <ModalBackdrop onClose={onClose}>
@@ -122,56 +145,103 @@ export default function GameModal({ game, onClose, api, token, onPatchGame, onSo
 
         <SwipeTabs
           tabs={[
-            { id: 'achievements', label: t('game.tab_achievements') },
             { id: 'info',         label: t('game.tab_info') },
             { id: 'notes',        label: `${t('game.tab_notes')}${notesCount > 0 ? ` (${notesCount})` : ''}` },
+            { id: 'achievements', label: t('game.tab_achievements') },
           ]}
           activeTab={tab}
           onTabChange={setTab}
         >
 
-          {/* ── Panneau Succès ── */}
-          <>
-            {achievements && achievements.total > 0 && (
-              <div style={{ padding: '10px 16px', flexShrink: 0, display: 'flex', gap: 6 }}>
-                {[['all', t('game.filter_all'), achievements.total], ['unlocked', t('game.filter_unlocked'), achievements.unlocked], ['locked', t('game.filter_locked'), achievements.total - achievements.unlocked]].map(([id, label, count]) => (
-                  <button key={id} onClick={() => setFilter(id)} style={{
-                    background: filter === id ? 'var(--accent)' : 'var(--surface2)',
-                    border: '2px solid var(--border)', borderRadius: 6, padding: '4px 10px',
-                    color: filter === id ? '#000' : 'var(--text-muted)',
-                    fontSize: 12, fontWeight: filter === id ? 600 : 400, cursor: 'pointer',
-                  }}>{label} {count}</button>
-                ))}
-              </div>
-            )}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px 16px' }}>
-              {loading && <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 32 }}>{t('game.loading_ach')}</div>}
-              {!loading && steamBlocked && (!achievements || achievements?.total === 0) && <SteamAccessNotice />}
-              {!loading && !steamBlocked && !achievements && <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 32 }}>{t('game.no_ach')}</div>}
-              {!loading && !steamBlocked && achievements?.total === 0 && <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 32 }}>{t('game.no_ach_game')}</div>}
-              {!loading && filteredAchievements.map((a, i) => (
-                <div key={a.apiname || i} style={{
-                  display: 'flex', alignItems: 'center', gap: 10,
-                  padding: '8px 0', borderBottom: '1px solid var(--border)',
-                  opacity: a.unlocked ? 1 : 0.5,
-                }}>
-                  {a.icon ? (
-                    <img src={a.icon} alt="" style={{ width: 40, height: 40, borderRadius: 6, flexShrink: 0 }} onError={e => { e.target.style.display = 'none'; }} />
-                  ) : (
-                    <div style={{ width: 40, height: 40, background: 'var(--border)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>{a.unlocked ? '✅' : '🔒'}</div>
-                  )}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 600, fontSize: 12, marginBottom: 2 }}>{a.name}</div>
-                    {a.description && <div style={{ color: 'var(--text-muted)', fontSize: 11, lineHeight: 1.4 }}>{a.description}</div>}
-                  </div>
-                  {a.unlocked && <div style={{ color: 'var(--accent)', fontSize: 11, flexShrink: 0 }}>✓</div>}
-                </div>
-              ))}
-            </div>
-          </>
-
           {/* ── Panneau Infos ── */}
           <div style={{ overflowY: 'auto', padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {/* Cartouche infos Steam (joueurs, avis, Metacritic, prix, genres…) */}
+            {gameInfo && (
+              <div style={{
+                display: 'flex', flexDirection: 'column', gap: 8,
+                background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: 10, padding: '10px 12px', fontSize: 12,
+              }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14 }}>
+                  {gameInfo.playerCount !== null && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#3db86a', boxShadow: '0 0 6px #3db86a88', display: 'inline-block', flexShrink: 0 }} />
+                      <div>
+                        <div style={{ fontWeight: 700, color: 'var(--text)', lineHeight: 1.2 }}>{gameInfo.playerCount.toLocaleString('fr-FR')}</div>
+                        <div style={{ fontSize: 9, color: 'var(--text-muted)', lineHeight: 1 }}>{t('ginfo.in_game')}</div>
+                      </div>
+                    </div>
+                  )}
+                  {gameInfo.reviewScoreDesc && (
+                    <div
+                      style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}
+                      onClick={() => window.open(`https://store.steampowered.com/app/${game.appid}/#app_reviews_hash`, '_blank')}
+                      title={t('ginfo.see_reviews')}
+                    >
+                      <span style={{ fontSize: 14, lineHeight: 1 }}>{reviewEmoji}</span>
+                      <div>
+                        <div style={{ fontWeight: 700, color: reviewColor, lineHeight: 1.2 }}>{gameInfo.reviewScoreDesc}</div>
+                        <div style={{ fontSize: 9, color: 'var(--text-muted)', lineHeight: 1 }}>
+                          {gameInfo.positivePercent !== null ? t('ginfo.positive_pct', { percent: gameInfo.positivePercent }) : ''}
+                          {gameInfo.totalReviews ? ` · ${gameInfo.totalReviews.toLocaleString('fr-FR')}` : ''}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {gameInfo.metacritic !== null && (
+                    <div
+                      style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: gameInfo.metacriticUrl ? 'pointer' : 'default' }}
+                      onClick={() => gameInfo.metacriticUrl && window.open(gameInfo.metacriticUrl, '_blank')}
+                      title={gameInfo.metacriticUrl ? t('ginfo.see_metacritic') : undefined}
+                    >
+                      <div style={{ width: 24, height: 24, borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 12, color: '#000', background: gameInfo.metacritic >= 75 ? '#6c3' : gameInfo.metacritic >= 50 ? '#fc3' : '#f00', flexShrink: 0 }}>
+                        {gameInfo.metacritic}
+                      </div>
+                      <div style={{ fontSize: 9, color: 'var(--text-muted)', lineHeight: 1.3 }}>Meta<br/>critic</div>
+                    </div>
+                  )}
+                  {gameInfo.price && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                      {gameInfo.discount > 0 && (
+                        <span style={{ background: '#4c6b22', color: '#a4d007', fontWeight: 900, fontSize: 10, padding: '1px 4px', borderRadius: 3, flexShrink: 0 }}>
+                          -{gameInfo.discount}%
+                        </span>
+                      )}
+                      <div>
+                        {gameInfo.discount > 0 && gameInfo.priceInitial && (
+                          <div style={{ fontSize: 9, color: 'var(--text-muted)', textDecoration: 'line-through', lineHeight: 1 }}>{gameInfo.priceInitial}</div>
+                        )}
+                        <div style={{ fontWeight: 700, color: gameInfo.discount > 0 ? '#a4d007' : 'var(--text)', lineHeight: 1.2 }}>{gameInfo.price}</div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                {(gameInfo.genres?.length || gameInfo.multiplayerLabel || gameInfo.earlyAccess || gameInfo.comingSoon) && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                    {gameInfo.earlyAccess && (
+                      <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 4, background: 'rgba(220,50,50,0.18)', color: '#ff5555', border: '2px solid rgba(220,50,50,0.85)', whiteSpace: 'nowrap' }}>{t('ginfo.early_access')}</span>
+                    )}
+                    {gameInfo.comingSoon && !gameInfo.earlyAccess && (
+                      <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 4, background: 'rgba(245,197,24,0.12)', color: '#f5c518', border: '2px solid rgba(245,197,24,0.75)', whiteSpace: 'nowrap' }}>{t('ginfo.coming_soon')}</span>
+                    )}
+                    {gameInfo.multiplayerLabel && (
+                      <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 4, background: 'rgba(71,167,245,0.15)', color: '#47a7f5', border: '2px solid rgba(71,167,245,0.75)', whiteSpace: 'nowrap' }}>👥 {gameInfo.multiplayerLabel}</span>
+                    )}
+                    {(gameInfo.genres || []).map(g => (
+                      <span key={g} style={{ fontSize: 10, padding: '1px 5px', borderRadius: 4, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.55)', border: '2px solid rgba(255,255,255,0.25)', whiteSpace: 'nowrap' }}>{g}</span>
+                    ))}
+                  </div>
+                )}
+                {(gameInfo.developer || gameInfo.releaseDate) && (
+                  <div style={{ display: 'flex', gap: 5, alignItems: 'center', fontSize: 10, color: 'var(--text-muted)' }}>
+                    {gameInfo.developer && <span>🛠 {gameInfo.developer}</span>}
+                    {gameInfo.developer && gameInfo.releaseDate && <span style={{ opacity: 0.4 }}>·</span>}
+                    {gameInfo.releaseDate && <span>📅 {gameInfo.releaseDate}</span>}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Terminée + Urgent */}
             <StatusToggles
               isDone={isDone} onToggleDone={handleToggleDone}
@@ -223,6 +293,46 @@ export default function GameModal({ game, onClose, api, token, onPatchGame, onSo
               appUsers={appUsers}
             />
           </div>
+
+          {/* ── Panneau Succès ── */}
+          <>
+            {achievements && achievements.total > 0 && (
+              <div style={{ padding: '10px 16px', flexShrink: 0, display: 'flex', gap: 6 }}>
+                {[['all', t('game.filter_all'), achievements.total], ['unlocked', t('game.filter_unlocked'), achievements.unlocked], ['locked', t('game.filter_locked'), achievements.total - achievements.unlocked]].map(([id, label, count]) => (
+                  <button key={id} onClick={() => setFilter(id)} style={{
+                    background: filter === id ? 'var(--accent)' : 'var(--surface2)',
+                    border: '2px solid var(--border)', borderRadius: 6, padding: '4px 10px',
+                    color: filter === id ? '#000' : 'var(--text-muted)',
+                    fontSize: 12, fontWeight: filter === id ? 600 : 400, cursor: 'pointer',
+                  }}>{label} {count}</button>
+                ))}
+              </div>
+            )}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px 16px' }}>
+              {loading && <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 32 }}>{t('game.loading_ach')}</div>}
+              {!loading && steamBlocked && (!achievements || achievements?.total === 0) && <SteamAccessNotice />}
+              {!loading && !steamBlocked && !achievements && <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 32 }}>{t('game.no_ach')}</div>}
+              {!loading && !steamBlocked && achievements?.total === 0 && <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 32 }}>{t('game.no_ach_game')}</div>}
+              {!loading && filteredAchievements.map((a, i) => (
+                <div key={a.apiname || i} style={{
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '8px 0', borderBottom: '1px solid var(--border)',
+                  opacity: a.unlocked ? 1 : 0.5,
+                }}>
+                  {a.icon ? (
+                    <img src={a.icon} alt="" style={{ width: 40, height: 40, borderRadius: 6, flexShrink: 0 }} onError={e => { e.target.style.display = 'none'; }} />
+                  ) : (
+                    <div style={{ width: 40, height: 40, background: 'var(--border)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>{a.unlocked ? '✅' : '🔒'}</div>
+                  )}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, fontSize: 12, marginBottom: 2 }}>{a.name}</div>
+                    {a.description && <div style={{ color: 'var(--text-muted)', fontSize: 11, lineHeight: 1.4 }}>{a.description}</div>}
+                  </div>
+                  {a.unlocked && <div style={{ color: 'var(--accent)', fontSize: 11, flexShrink: 0 }}>✓</div>}
+                </div>
+              ))}
+            </div>
+          </>
 
         </SwipeTabs>
       </div>
