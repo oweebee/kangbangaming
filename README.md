@@ -13,7 +13,7 @@ Organise ta backlog, suis tes heures de jeu, partage tes boards avec ta communau
 - **Clé API Steam personnelle** — alternative au profil public : chaque membre peut renseigner sa propre clé API Steam dans son profil pour débloquer bibliothèque, succès, wishlist et news même avec un profil privé (voir [Confidentialité du profil Steam](#confidentialité-du-profil-steam))
 - **Bannière "En jeu"** — affiche les membres de ta communauté actuellement en train de jouer
 - **Panneau infos jeu** — glisse depuis la sidebar, verrouillable, déplaçable gauche/droite
-- **Boards publics collaboratifs** — partage un lien sans compte ; tout utilisateur connecté peut ajouter colonnes et cartes (pas seulement le propriétaire)
+- **Boards publics collaboratifs** — partage un lien sans compte ; tout utilisateur connecté peut ajouter colonnes et cartes (pas seulement le propriétaire). Le créateur peut activer un [contrôle d'accès](#gestion-des-accès-boards-publics) pour restreindre la visibilité/modification à une liste blanche d'utilisateurs (désactivé par défaut)
 - **Tâches personnalisées** — cartes non-Steam avec types, assignation, échéances, progression (%) avec passage automatique en "Terminé" à 100%
 - **Notes sur les cartes** — disponibles sur toutes les cartes (Steam et tâches), avec aperçu automatique des liens collés (style Discord)
 - **Recherche globale** — icône toujours visible dans la barre de navigation, cherche parmi tous les jeux et toutes les cartes de tous tes boards
@@ -183,6 +183,23 @@ Pour les membres qui ne veulent pas rendre leur profil public, l'app permet de r
 - La clé est stockée par utilisateur (`steamApiKey` dans `users.json`), jamais renvoyée en clair par l'API (seul un indicateur `hasSteamApiKey` est exposé au frontend) et testée auprès de Steam avant d'être sauvegardée (rejetée si invalide).
 - Modifier ou retirer la clé invalide automatiquement les caches Steam (bibliothèque, wishlist, news, échéances) de ce compte pour refléter immédiatement la nouvelle source de données.
 
+### Gestion des accès (boards publics)
+
+Par défaut, un board public reste **collaboratif et ouvert** : n'importe quel utilisateur connecté peut le consulter et y ajouter colonnes/cartes (voir [Boards publics collaboratifs](#fonctionnalités)).
+
+Le **créateur** d'un board public peut activer un contrôle d'accès plus fin via le bouton **🔐 Gestion des accès** dans l'en-tête du board — ce bouton remplace alors le bouton "Quitter" et n'est visible que par lui ; les autres utilisateurs ne voient aucun bouton à cet endroit.
+
+Une fois le contrôle d'accès **activé** :
+
+- Seuls les utilisateurs explicitement **autorisés** (liste blanche) peuvent voir et ouvrir le board ; les autres reçoivent un accès refusé (403).
+- Pour chaque utilisateur autorisé, le créateur peut basculer individuellement entre **Modification** et **Lecture seule**.
+- Dans la modale de gestion, les utilisateurs autorisés remontent automatiquement en haut de la liste.
+- Si l'accès d'un utilisateur est révoqué pendant qu'il a le board ouvert, il en est notifié et renvoyé à l'accueil.
+
+Le contrôle d'accès est **désactivé par défaut** sur tous les boards publics — aucune migration ni action requise, le comportement actuel (accès complet pour tous) est préservé tant que le créateur ne l'active pas explicitement.
+
+Endpoints concernés : `GET/PATCH /api/public/boards/:boardId/access`, `PATCH /api/public/boards/:boardId/access/users/:userId`, `GET /api/public/boards/:boardId/permissions`.
+
 ---
 
 ## Configuration Discord
@@ -269,6 +286,7 @@ Quand tu partages l'URL sur Discord, Twitter/X, iMessage, etc., une image de pre
 │   │       ├── SwipeTabs.jsx          # Onglets swipables (modal)
 │   │       ├── KanbanBoard.jsx
 │   │       ├── DeadlinePanel.jsx
+│   │       ├── BoardAccessModal.jsx   # Gestion des accès (boards publics)
 │   │       ├── AdminPanel.jsx
 │   │       └── ...
 │   ├── public/

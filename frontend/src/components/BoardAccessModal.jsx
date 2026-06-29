@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import ModalBackdrop from './ModalBackdrop.jsx';
 import ModalCard from './ModalCard.jsx';
 import { useLang } from '../i18n.js';
@@ -80,6 +80,12 @@ export default function BoardAccessModal({ token, boardId, boardName, onClose })
   const toggleAllowed = (u) => patchUser(u.id, { allowed: !u.allowed });
   const toggleCanEdit = (u) => patchUser(u.id, { canEdit: !u.canEdit });
 
+  // Utilisateurs autorisés en premier (ordre stable au sein de chaque groupe)
+  const sortedUsers = useMemo(
+    () => [...users].sort((a, b) => (a.allowed === b.allowed ? 0 : a.allowed ? -1 : 1)),
+    [users]
+  );
+
   return (
     <ModalBackdrop onClose={onClose} zIndex={1000}>
       <ModalCard style={{ width: '100%', maxWidth: 560, height: '72vh', minHeight: 420, maxHeight: 760, display: 'flex', flexDirection: 'column' }}>
@@ -130,7 +136,7 @@ export default function BoardAccessModal({ token, boardId, boardName, onClose })
               ) : users.length === 0 ? (
                 <p style={{ color: 'var(--text-muted)', fontSize: 12, textAlign: 'center', marginTop: 24 }}>{t('access.no_users')}</p>
               ) : (
-                users.map(u => (
+                sortedUsers.map(u => (
                   <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px', marginBottom: 8, opacity: savingUserId === u.id ? 0.6 : 1 }}>
                     {u.steamAvatar
                       ? <img src={u.steamAvatar} alt="" style={{ width: 28, height: 28, borderRadius: 6, border: '1.5px solid var(--border)', flexShrink: 0 }} />
