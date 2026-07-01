@@ -1016,12 +1016,12 @@ export default function App() {
       const res = await fetch(`${API}/boards/${boardId}`, { method: 'DELETE', headers: authHeaders(token) });
       if (!res.ok) {
         console.error('[deleteBoard] HTTP', res.status);
-        alert(`Erreur lors de la suppression du board (${res.status}). Le board n'a pas été supprimé, rechargez la page.`);
+        alert(t('err.board_delete', { code: res.status }));
         return;
       }
     } catch (e) {
       console.error('[deleteBoard] network error', e);
-      alert(`Erreur réseau lors de la suppression du board. Le board n'a pas été supprimé.`);
+      alert(t('err.board_delete_network'));
       return;
     }
     // Suppression confirmée côté serveur (board passé en corbeille) → on peut retirer de l'UI.
@@ -1092,12 +1092,12 @@ export default function App() {
       });
       if (!res.ok) {
         console.error('[addGame] HTTP', res.status);
-        alert(`Erreur lors de l'ajout de la carte (${res.status}).`);
+        alert(t('err.card_add', { code: res.status }));
         return;
       }
     } catch (e) {
       console.error('[addGame] network error', e);
-      alert(`Erreur réseau lors de l'ajout de la carte.`);
+      alert(t('err.card_add_network'));
       return;
     }
     resyncGames();
@@ -1121,12 +1121,12 @@ export default function App() {
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         console.error('[removeGame] HTTP', res.status, err);
-        alert(`Erreur lors de la suppression (${res.status}). La carte n'a pas été supprimée, rechargez la page.`);
+        alert(t('err.card_delete', { code: res.status }));
         return;
       }
     } catch (e) {
       console.error('[removeGame] network error', e);
-      alert(`Erreur réseau lors de la suppression. La carte n'a pas été supprimée.`);
+      alert(t('err.card_delete_network'));
       return;
     }
     // Suppression confirmée côté serveur (carte passée en corbeille) → on peut retirer de l'UI.
@@ -1145,12 +1145,12 @@ export default function App() {
       const res = await fetch(`${boardApi}/games/${appid}`, { method: 'PATCH', headers: authHeaders(token), body: JSON.stringify({ archived: true }) });
       if (!res.ok) {
         console.error('[archiveGame] HTTP', res.status);
-        alert(`Erreur lors de l'archivage (${res.status}). La page va se resynchroniser.`);
+        alert(t('err.archive', { code: res.status }));
         resyncGames();
       }
     } catch (e) {
       console.error('[archiveGame] network error', e);
-      alert(`Erreur réseau lors de l'archivage. La page va se resynchroniser.`);
+      alert(t('err.archive_network'));
       resyncGames();
     }
   };
@@ -1163,12 +1163,12 @@ export default function App() {
       const res = await fetch(`${boardApi}/games/${appid}`, { method: 'PATCH', headers: authHeaders(token), body: JSON.stringify({ archived: false }) });
       if (!res.ok) {
         console.error('[unarchiveGame] HTTP', res.status);
-        alert(`Erreur lors de la restauration (${res.status}). La page va se resynchroniser.`);
+        alert(t('err.restore', { code: res.status }));
         resyncGames();
       }
     } catch (e) {
       console.error('[unarchiveGame] network error', e);
-      alert(`Erreur réseau lors de la restauration. La page va se resynchroniser.`);
+      alert(t('err.restore_network'));
       resyncGames();
     }
   };
@@ -1215,14 +1215,14 @@ export default function App() {
         const err = await res.json().catch(() => ({}));
         console.error('[patchGame] HTTP', res.status, err);
         if (fields.notes !== undefined) {
-          alert(`Erreur lors de la sauvegarde des notes (${res.status}). Rechargez la page.`);
+          alert(t('err.notes_save', { code: res.status }));
           return;
         }
       }
     } catch (e) {
       console.error('[patchGame] network error', e);
       if (fields.notes !== undefined) {
-        alert(`Erreur réseau lors de la sauvegarde des notes. Vérifiez votre connexion.`);
+        alert(t('err.notes_save_network'));
         return;
       }
       return;

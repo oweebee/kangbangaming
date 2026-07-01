@@ -8,7 +8,6 @@ import jwt from 'jsonwebtoken';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
-app.use(cors());
 app.use(express.json());
 
 const PORT = process.env.PORT || 3001;
@@ -158,6 +157,27 @@ function requireAdmin(req, res, next) {
 const FRONTEND_URL = process.env.FRONTEND_URL || process.env.SERVICE_URL_FRONTEND || 'http://localhost:5173';
 const BACKEND_URL  = process.env.BACKEND_URL  || process.env.SERVICE_URL_FRONTEND || `http://localhost:${process.env.PORT || 3001}`;
 
+// ── CORS ──────────────────────────────────────────────────────────────────────
+// En prod (Coolify/docker-compose), le frontend appelle l'API en même origine via
+// le proxy Nginx (/api/ → backend, voir frontend/nginx.conf) : CORS n'entre alors
+// jamais en jeu pour ces appels. Cette whitelist ne sert donc qu'à couvrir :
+// - le dev local (Vite sur :5173 qui appelle le backend sur :3001 directement) ;
+// - un déploiement custom où FRONTEND_URL pointe vers un autre domaine.
+// Auth par JWT Bearer (pas de cookies) → pas de risque CSRF lié à `credentials`.
+const CORS_ALLOWED_ORIGINS = new Set([
+  FRONTEND_URL,
+  'http://localhost:5173', 'http://127.0.0.1:5173',   // Vite dev
+  'http://localhost:8080', 'http://127.0.0.1:8080',   // docker-compose local (voir README)
+].filter(Boolean));
+
+app.use(cors({
+  origin(origin, callback) {
+    // Pas d'en-tête Origin (curl, Postman, appel serveur-à-serveur) → autorisé.
+    if (!origin || CORS_ALLOWED_ORIGINS.has(origin)) return callback(null, true);
+    callback(new Error('CORS: origine non autorisée'));
+  },
+}));
+
 // 1. Redirige vers Steam pour authentification
 app.get('/api/auth/steam', (req, res) => {
   const params = new URLSearchParams({
@@ -250,18 +270,48 @@ app.get('/api/auth/steam/callback', async (req, res) => {
 
 // ── Auth routes ───────────────────────────────────────────────────────────────
 
+// ── Anti-bruteforce login ─────────────────────────────────────────────────────
+// Limiteur en mémoire, clé = username (pas l'IP : derrière le proxy Nginx, req.ip
+// ne distingue pas les visiteurs — voir nginx.conf, pas de X-Forwarded-For.
+// Bloquer par username protège quand même chaque compte contre le bruteforce,
+// peu importe la ou les IP utilisées par l'attaquant).
+const LOGIN_ATTEMPTS = new Map(); // username -> { count, firstAttempt }
+const LOGIN_MAX_ATTEMPTS = 8;
+const LOGIN_WINDOW_MS = 15 * 60 * 1000; // 15 min
+
+function checkLoginRateLimit(username) {
+  const entry = LOGIN_ATTEMPTS.get(username);
+  if (!entry) return { blocked: false };
+  if (Date.now() - entry.firstAttempt > LOGIN_WINDOW_MS) { LOGIN_ATTEMPTS.delete(username); return { blocked: false }; }
+  if (entry.count < LOGIN_MAX_ATTEMPTS) return { blocked: false };
+  return { blocked: true, retryAfterSec: Math.ceil((LOGIN_WINDOW_MS - (Date.now() - entry.firstAttempt)) / 1000) };
+}
+function registerLoginFailure(username) {
+  const entry = LOGIN_ATTEMPTS.get(username);
+  if (!entry || Date.now() - entry.firstAttempt > LOGIN_WINDOW_MS) LOGIN_ATTEMPTS.set(username, { count: 1, firstAttempt: Date.now() });
+  else entry.count++;
+}
+
 app.post('/api/auth/login', async (req, res) => {
-  const { username, password } = req.body;
-  if (!username || !password) return res.status(400).json({ error: 'Missing fields' });
-  const users = readUsers();
-  const user = users.find(u => u.username === username);
-  if (!user) return res.status(401).json({ error: 'Invalid credentials' });
-  if (!user.passwordHash) return res.status(401).json({ error: 'steam_only', message: 'Ce compte utilise la connexion Steam. Utilise le bouton "Se connecter avec Steam".' });
-  if (!await bcrypt.compare(password, user.passwordHash)) return res.status(401).json({ error: 'Invalid credentials' });
-  if ((user.status || 'active') === 'pending') return res.status(403).json({ error: 'pending', message: 'Ton compte est en attente de validation par un admin.' });
-  if ((user.status || 'active') === 'suspended') return res.status(403).json({ error: 'suspended', message: 'Ton compte a été suspendu.' });
-  const token = jwt.sign({ id: user.id, username: user.username, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
-  res.json({ token, user: { id: user.id, username: user.username, role: user.role, steamAvatar: user.steamAvatar || null, steamPersonaName: user.steamPersonaName || null } });
+  try {
+    const { username, password } = req.body;
+    if (!username || !password) return res.status(400).json({ error: 'Missing fields' });
+    const rl = checkLoginRateLimit(username);
+    if (rl.blocked) return res.status(429).json({ error: 'too_many_attempts', message: `Trop de tentatives. Réessaie dans ${rl.retryAfterSec}s.`, retryAfterSec: rl.retryAfterSec });
+    const users = readUsers();
+    const user = users.find(u => u.username === username);
+    if (!user) { registerLoginFailure(username); return res.status(401).json({ error: 'Invalid credentials' }); }
+    if (!user.passwordHash) return res.status(401).json({ error: 'steam_only', message: 'Ce compte utilise la connexion Steam. Utilise le bouton "Se connecter avec Steam".' });
+    if (!await bcrypt.compare(password, user.passwordHash)) { registerLoginFailure(username); return res.status(401).json({ error: 'Invalid credentials' }); }
+    if ((user.status || 'active') === 'pending') return res.status(403).json({ error: 'pending', message: 'Ton compte est en attente de validation par un admin.' });
+    if ((user.status || 'active') === 'suspended') return res.status(403).json({ error: 'suspended', message: 'Ton compte a été suspendu.' });
+    LOGIN_ATTEMPTS.delete(username);
+    const token = jwt.sign({ id: user.id, username: user.username, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
+    res.json({ token, user: { id: user.id, username: user.username, role: user.role, steamAvatar: user.steamAvatar || null, steamPersonaName: user.steamPersonaName || null } });
+  } catch (e) {
+    console.error('[POST /api/auth/login]', e);
+    res.status(500).json({ error: 'Erreur serveur, réessaie.' });
+  }
 });
 
 // Registration is admin-only: requires a valid admin JWT
@@ -593,18 +643,23 @@ app.patch('/api/user/settings', requireAuth, async (req, res) => {
 
 
 app.patch('/api/user/password', requireAuth, async (req, res) => {
-  const { currentPassword, newPassword } = req.body;
-  if (!currentPassword || !newPassword) return res.status(400).json({ error: 'Champs manquants' });
-  if (newPassword.length < 6) return res.status(400).json({ error: 'Nouveau mot de passe trop court (min. 6 caract.)' });
-  const users = readUsers();
-  const idx = users.findIndex(u => u.id === req.user.id);
-  if (idx === -1) return res.status(404).json({ error: 'User not found' });
-  if (!users[idx].passwordHash) return res.status(400).json({ error: 'Compte Steam-only — pas de mot de passe à changer.' });
-  const ok = await bcrypt.compare(currentPassword, users[idx].passwordHash);
-  if (!ok) return res.status(403).json({ error: 'Mot de passe actuel incorrect' });
-  users[idx].passwordHash = await bcrypt.hash(newPassword, 10);
-  writeUsers(users);
-  res.json({ ok: true });
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) return res.status(400).json({ error: 'Champs manquants' });
+    if (newPassword.length < 6) return res.status(400).json({ error: 'Nouveau mot de passe trop court (min. 6 caract.)' });
+    const users = readUsers();
+    const idx = users.findIndex(u => u.id === req.user.id);
+    if (idx === -1) return res.status(404).json({ error: 'User not found' });
+    if (!users[idx].passwordHash) return res.status(400).json({ error: 'Compte Steam-only — pas de mot de passe à changer.' });
+    const ok = await bcrypt.compare(currentPassword, users[idx].passwordHash);
+    if (!ok) return res.status(403).json({ error: 'Mot de passe actuel incorrect' });
+    users[idx].passwordHash = await bcrypt.hash(newPassword, 10);
+    writeUsers(users);
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('[PATCH /api/user/password]', e);
+    res.status(500).json({ error: 'Erreur serveur, réessaie.' });
+  }
 });
 
 // ── Admin routes ──────────────────────────────────────────────────────────────
@@ -614,21 +669,26 @@ app.get('/api/admin/users', requireAdmin, (req, res) => {
 });
 
 app.patch('/api/admin/users/:id', requireAdmin, async (req, res) => {
-  const users = readUsers();
-  const idx = users.findIndex(u => u.id === req.params.id);
-  if (idx === -1) return res.status(404).json({ error: 'User not found' });
-  if (req.params.id === 'admin' && req.body.role) return res.status(400).json({ error: 'Cannot change admin role' });
-  if (req.body.role) users[idx].role = req.body.role;
-  if (req.body.status) {
-    if (req.params.id === 'admin') return res.status(400).json({ error: 'Cannot change admin status' });
-    users[idx].status = req.body.status;
+  try {
+    const users = readUsers();
+    const idx = users.findIndex(u => u.id === req.params.id);
+    if (idx === -1) return res.status(404).json({ error: 'User not found' });
+    if (req.params.id === 'admin' && req.body.role) return res.status(400).json({ error: 'Cannot change admin role' });
+    if (req.body.role) users[idx].role = req.body.role;
+    if (req.body.status) {
+      if (req.params.id === 'admin') return res.status(400).json({ error: 'Cannot change admin status' });
+      users[idx].status = req.body.status;
+    }
+    if (req.body.password) {
+      if (req.body.password.length < 6) return res.status(400).json({ error: 'Password too short' });
+      users[idx].passwordHash = await bcrypt.hash(req.body.password, 10);
+    }
+    writeUsers(users);
+    res.json(userPublicInfo(users[idx]));
+  } catch (e) {
+    console.error('[PATCH /api/admin/users/:id]', e);
+    res.status(500).json({ error: 'Erreur serveur, réessaie.' });
   }
-  if (req.body.password) {
-    if (req.body.password.length < 6) return res.status(400).json({ error: 'Password too short' });
-    users[idx].passwordHash = await bcrypt.hash(req.body.password, 10);
-  }
-  writeUsers(users);
-  res.json(userPublicInfo(users[idx]));
 });
 
 app.delete('/api/admin/users/:id', requireAdmin, (req, res) => {
@@ -721,6 +781,38 @@ function scanUserTrash(userId, userBoards, saveIfChanged = true) {
   if (changed && saveIfChanged) setUserBoards(userId, userBoards);
   return trash.sort((a, b) => new Date(b.deletedAt) - new Date(a.deletedAt));
 }
+
+// Purge programmée globale (tous les users) : la logique ci-dessus (scanUserTrash,
+// + le nettoyage des boards dans GET /api/trash/boards) ne purge que quand
+// l'utilisateur concerné ouvre son onglet Corbeille. Sans ce cron, les éléments
+// expirés (>30j) restent indéfiniment dans boards.json si personne ne l'ouvre.
+// Tourne toutes les 6h + une fois au démarrage ; n'écrit sur disque que si
+// quelque chose a réellement été purgé.
+function purgeAllExpiredTrash() {
+  const all = readBoards();
+  const now = Date.now();
+  let changed = false;
+  for (const userBoards of Object.values(all)) {
+    for (const [boardId, board] of Object.entries(userBoards)) {
+      if (board.deletedAt && now - new Date(board.deletedAt).getTime() > TRASH_TTL_MS) {
+        delete userBoards[boardId];
+        changed = true;
+        continue;
+      }
+      for (const [gameId, game] of Object.entries(board.games || {})) {
+        if (game.deletedAt) {
+          if (now - new Date(game.deletedAt).getTime() > TRASH_TTL_MS) { delete board.games[gameId]; changed = true; }
+          continue; // carte supprimée → ses notes partent avec elle
+        }
+        if (!game.notes) continue;
+        const kept = game.notes.filter(n => !n.deletedAt || now - new Date(n.deletedAt).getTime() <= TRASH_TTL_MS);
+        if (kept.length !== game.notes.length) { game.notes = kept; changed = true; }
+      }
+    }
+  }
+  if (changed) { writeBoards(all); console.log('[trash] Purge programmée : éléments expirés supprimés.'); }
+}
+const TRASH_PURGE_INTERVAL_MS = 6 * 60 * 60 * 1000; // 6h
 
 // POST /api/boards/:boardId/games/:appid/notes/:noteId/trash — soft-delete atomique d'une note
 app.post('/api/boards/:boardId/games/:appid/notes/:noteId/trash', requireAuth, (req, res) => {
@@ -1225,8 +1317,13 @@ async function getWishlistItemsRaw(userId) {
 }
 
 app.get('/api/steam/wishlist/deadline', requireAuth, async (req, res) => {
-  const items = await getWishlistItemsRaw(req.user.id);
-  res.json(items.filter(i => i.release_date !== null));
+  try {
+    const items = await getWishlistItemsRaw(req.user.id);
+    res.json(items.filter(i => i.release_date !== null));
+  } catch (e) {
+    console.error('[GET /api/steam/wishlist/deadline]', e);
+    res.status(500).json({ error: 'Erreur serveur, réessaie.' });
+  }
 });
 
 // Liste complète de la wishlist (tous les jeux, avec ou sans date de sortie
@@ -1234,8 +1331,13 @@ app.get('/api/steam/wishlist/deadline', requireAuth, async (req, res) => {
 // /deadline ci-dessus, rien n'est filtré ici : n'afficher que les jeux déjà
 // sortis est le rôle du panneau Échéances ("Attention") de l'accueil.
 app.get('/api/steam/wishlist/full', requireAuth, async (req, res) => {
-  const items = await getWishlistItemsRaw(req.user.id);
-  res.json(items);
+  try {
+    const items = await getWishlistItemsRaw(req.user.id);
+    res.json(items);
+  } catch (e) {
+    console.error('[GET /api/steam/wishlist/full]', e);
+    res.status(500).json({ error: 'Erreur serveur, réessaie.' });
+  }
 });
 
 // ── Steam featured (homepage populaires/recommandés) ─────────────────────────
@@ -2127,13 +2229,18 @@ app.delete('/api/public/boards/:boardId/columns/:colId', requireAuth, (req, res)
 });
 
 app.get('/api/public/boards/:boardId/games', requireAuth, async (req, res) => {
-  const f = loadPublicBoardOrRespond(req, res);
-  if (!f) return;
-  // Temps de jeu basé sur le compte Steam du visiteur courant (même logique que
-  // les succès, déjà toujours calculés "pour moi" indépendamment du propriétaire
-  // du board public).
-  const visible = Object.values(f.board.games || {}).filter(g => !g.deletedAt);
-  res.json(await enrichPlaytime(visible, req.user.id));
+  try {
+    const f = loadPublicBoardOrRespond(req, res);
+    if (!f) return;
+    // Temps de jeu basé sur le compte Steam du visiteur courant (même logique que
+    // les succès, déjà toujours calculés "pour moi" indépendamment du propriétaire
+    // du board public).
+    const visible = Object.values(f.board.games || {}).filter(g => !g.deletedAt);
+    res.json(await enrichPlaytime(visible, req.user.id));
+  } catch (e) {
+    console.error('[GET /api/public/boards/:boardId/games]', e);
+    if (!res.headersSent) res.status(500).json({ error: 'Erreur serveur, réessaie.' });
+  }
 });
 
 app.post('/api/public/boards/:boardId/games', requireAuth, (req, res) => {
@@ -2504,11 +2611,16 @@ app.delete('/api/boards/:boardId/columns/:colId', requireAuth, (req, res) => {
 // ── Game routes ───────────────────────────────────────────────────────────────
 
 app.get('/api/boards/:boardId/games', requireAuth, async (req, res) => {
-  const board = getUserBoards(req.user.id)[req.params.boardId];
-  if (!board) return res.status(404).json({ error: 'Board not found' });
-  // Exclure les cartes soft-deletées (dans la corbeille)
-  const visible = Object.values(board.games || {}).filter(g => !g.deletedAt);
-  res.json(await enrichPlaytime(visible, req.user.id));
+  try {
+    const board = getUserBoards(req.user.id)[req.params.boardId];
+    if (!board) return res.status(404).json({ error: 'Board not found' });
+    // Exclure les cartes soft-deletées (dans la corbeille)
+    const visible = Object.values(board.games || {}).filter(g => !g.deletedAt);
+    res.json(await enrichPlaytime(visible, req.user.id));
+  } catch (e) {
+    console.error('[GET /api/boards/:boardId/games]', e);
+    if (!res.headersSent) res.status(500).json({ error: 'Erreur serveur, réessaie.' });
+  }
 });
 
 app.post('/api/boards/:boardId/games', requireAuth, (req, res) => {
@@ -2694,10 +2806,34 @@ app.get('/api/steam/ingame/:appid', requireAuth, async (req, res) => {
   }
 });
 
+// ── Garde-fou global erreurs ──────────────────────────────────────────────────
+// Filet de sécurité : si une route async lève une erreur non catchée (try/catch
+// manquant, bug futur, etc.), Node 20 termine tout le process par défaut sur un
+// unhandledRejection non géré → plus personne ne peut utiliser l'app tant qu'un
+// admin ne relance pas le conteneur. On log l'erreur au lieu de crasher.
+// Les routes elles-mêmes restent la première ligne de défense (try/catch) ;
+// ceci n'est qu'un filet, pas une excuse pour ne pas gérer les erreurs localement.
+process.on('unhandledRejection', (reason) => {
+  console.error('[server] Unhandled Rejection (non catchée) :', reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('[server] Uncaught Exception (non catchée) :', err);
+});
+
+// Middleware d'erreur Express (4 arguments) — attrape ce qui remonte via next(err)
+// depuis un middleware synchrone. Doit rester après toutes les routes/app.use.
+app.use((err, req, res, next) => {
+  console.error('[server] Express error handler:', err);
+  if (res.headersSent) return next(err);
+  res.status(500).json({ error: 'Erreur serveur interne.' });
+});
+
 // ── Start ─────────────────────────────────────────────────────────────────────
 
 ensureAdmin().then(() => {
   app.listen(PORT, () => console.log(`[server] Backend running on port ${PORT}`));
+  purgeAllExpiredTrash();
+  setInterval(purgeAllExpiredTrash, TRASH_PURGE_INTERVAL_MS);
 }).catch(err => {
   console.error('[server] Startup error:', err);
   process.exit(1);
