@@ -2061,15 +2061,15 @@ export default function App() {
             }}
           >
             {b.gameIcon ? (
-              <div style={{ width: 38, height: 38, borderRadius: '50%', background: `linear-gradient(90deg, #f5c518 50%, ${getBoardTypeColor(b)} 50%)`, padding: 2, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <img src={b.gameIcon} alt="" style={{ width: 34, height: 34, objectFit: 'cover', borderRadius: '50%', display: 'block' }} />
+              <div style={{ width: 38, height: 38, borderRadius: 10, background: `linear-gradient(90deg, #f5c518 50%, ${getBoardTypeColor(b)} 50%)`, padding: 2, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <img src={b.gameIcon} alt="" style={{ width: 34, height: 34, objectFit: 'cover', borderRadius: 8, display: 'block' }} />
               </div>
             ) : (
               <div style={{ position: 'relative' }}>
-                <div style={{ width: 38, height: 38, borderRadius: '50%', background: `linear-gradient(90deg, #f5c518 50%, ${getBoardTypeColor(b)} 50%)`, padding: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: 38, height: 38, borderRadius: 10, background: `linear-gradient(90deg, #f5c518 50%, ${getBoardTypeColor(b)} 50%)`, padding: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <button
                     onClick={e => { e.stopPropagation(); if (emojiPickerFor === b.id) { setEmojiPickerFor(null); setEmojiPickerAnchor(null); } else { setEmojiPickerFor(b.id); setEmojiPickerAnchor(e.currentTarget); } }}
-                    style={{ background: '#000', border: 'none', borderRadius: '50%', width: 34, height: 34, fontSize: b.emoji ? 18 : 11, cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    style={{ background: '#000', border: 'none', borderRadius: 8, width: 34, height: 34, fontSize: b.emoji ? 18 : 11, cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                   >{b.emoji || '+'}</button>
                 </div>
                 {emojiPickerFor === b.id && (
@@ -2138,15 +2138,15 @@ export default function App() {
             }}
           >
             {b.gameIcon ? (
-              <div style={{ width: 38, height: 38, borderRadius: '50%', background: getBoardTypeColor(b), padding: 2, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <img src={b.gameIcon} alt="" style={{ width: 34, height: 34, objectFit: 'cover', borderRadius: '50%', display: 'block' }} />
+              <div style={{ width: 38, height: 38, borderRadius: 10, background: getBoardTypeColor(b), padding: 2, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <img src={b.gameIcon} alt="" style={{ width: 34, height: 34, objectFit: 'cover', borderRadius: 8, display: 'block' }} />
               </div>
             ) : (
               <div style={{ position: 'relative' }}>
-                <div style={{ width: 38, height: 38, borderRadius: '50%', background: getBoardTypeColor(b), padding: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: 38, height: 38, borderRadius: 10, background: getBoardTypeColor(b), padding: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <button
                     onClick={e => { e.stopPropagation(); if (emojiPickerFor === b.id) { setEmojiPickerFor(null); setEmojiPickerAnchor(null); } else { setEmojiPickerFor(b.id); setEmojiPickerAnchor(e.currentTarget); } }}
-                    style={{ background: '#000', border: 'none', borderRadius: '50%', width: 34, height: 34, fontSize: b.emoji ? 18 : 11, cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    style={{ background: '#000', border: 'none', borderRadius: 8, width: 34, height: 34, fontSize: b.emoji ? 18 : 11, cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                   >{b.emoji || '+'}</button>
                 </div>
                 {emojiPickerFor === b.id && (
@@ -2227,12 +2227,12 @@ export default function App() {
               onMouseLeave={e => { if (favDragOverId !== b.id) e.currentTarget.style.background = 'transparent'; }}
             >
               {b.gameIcon ? (
-                <div style={{ width: 38, height: 38, borderRadius: '50%', background: `linear-gradient(90deg, #3db86a 50%, ${getBoardTypeColor(b)} 50%)`, padding: 2, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <img src={b.gameIcon} alt="" style={{ width: 34, height: 34, objectFit: 'cover', borderRadius: '50%', display: 'block' }} />
+                <div style={{ width: 38, height: 38, borderRadius: 10, background: `linear-gradient(90deg, #3db86a 50%, ${getBoardTypeColor(b)} 50%)`, padding: 2, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <img src={b.gameIcon} alt="" style={{ width: 34, height: 34, objectFit: 'cover', borderRadius: 8, display: 'block' }} />
                 </div>
               ) : (
-                <div style={{ width: 38, height: 38, borderRadius: '50%', background: `linear-gradient(90deg, #3db86a 50%, ${getBoardTypeColor(b)} 50%)`, padding: 2, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>{b.emoji || '🎮'}</div>
+                <div style={{ width: 38, height: 38, borderRadius: 10, background: `linear-gradient(90deg, #3db86a 50%, ${getBoardTypeColor(b)} 50%)`, padding: 2, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ width: 34, height: 34, borderRadius: 8, background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>{b.emoji || '🎮'}</div>
                 </div>
               )}
               <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 14, fontWeight: 700, opacity: hiddenBoardIds.has(b.id) ? 0.45 : 1 }}>{b.name}</span>
@@ -2258,7 +2258,7 @@ export default function App() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {selectedBoardGame && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--surface2)', borderRadius: 6, padding: '5px 8px' }}>
-                <img src={selectedBoardGame.icon_img || selectedBoardGame.header_img} alt="" style={{ width: 22, height: 22, objectFit: 'cover', borderRadius: '50%', flexShrink: 0, border: '1px solid var(--border)' }} />
+                <img src={selectedBoardGame.icon_img || selectedBoardGame.header_img} alt="" style={{ width: 22, height: 22, objectFit: 'cover', borderRadius: 5, flexShrink: 0, border: '1px solid var(--border)' }} />
                 <span style={{ flex: 1, fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text)' }}>{selectedBoardGame.name}</span>
                 <button onClick={clearBoardGame} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>✕</button>
               </div>
