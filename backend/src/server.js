@@ -1247,12 +1247,25 @@ async function getWishlistItemsRaw(userId) {
       const data = await resp.json().catch(() => null);
       if (data && typeof data === 'object' && Object.keys(data).length > 0) {
         console.log(`[wishlist] wishlistdata OK – ${Object.keys(data).length} jeux pour user ${userId}`);
-        items = Object.entries(data).map(([appid, info]) => ({
-          appid:        Number(appid),
-          name:         info.name || `App ${appid}`,
-          header_img:   `https://cdn.akamai.steamstatic.com/steam/apps/${appid}/header.jpg`,
-          release_date: parseSteamDate(info.release_date, info.release_string),
-        }));
+        items = Object.entries(data).map(([appid, info]) => {
+          const id = Number(appid);
+          const parsed = parseSteamDate(info.release_date, info.release_string);
+          // Steam vide release_date/release_string une fois le jeu sorti (le
+          // storefront n'affiche plus de compte à rebours) → sans ce filet,
+          // un jeu qui venait d'apparaître dans "Aujourd'hui" disparaissait
+          // purement et simplement des Échéances le lendemain de sa sortie,
+          // au lieu de basculer dans "Attention !" comme il le devrait.
+          // On garde donc en mémoire la dernière date connue par appid et on
+          // ne la remplace JAMAIS par null — seulement par une date plus à jour.
+          const releaseDate = parsed || appReleaseDateCache.get(id)?.date || null;
+          if (parsed) appReleaseDateCache.set(id, { date: parsed, name: info.name || null, header_img: null, fetchedAt: now });
+          return {
+            appid:        id,
+            name:         info.name || `App ${appid}`,
+            header_img:   `https://cdn.akamai.steamstatic.com/steam/apps/${appid}/header.jpg`,
+            release_date: releaseDate,
+          };
+        });
       } else {
         console.log(`[wishlist] wishlistdata vide/privé pour user ${userId} – fallback API officielle`);
       }
@@ -1285,10 +1298,13 @@ async function getWishlistItemsRaw(userId) {
             const batch = uncached.slice(i, i + 3);
             await Promise.all(batch.map(async appid => {
               const info = await fetchOneAppDate(appid);
+              const prev = appReleaseDateCache.get(appid);
+              // Sticky : ne jamais écraser une date déjà connue par null (même
+              // raison que Stratégie 1 — voir commentaire plus haut).
               appReleaseDateCache.set(appid, {
-                date:       info?.date || null,
-                name:       info?.name || null,
-                header_img: info?.header_img || null,
+                date:       info?.date || prev?.date || null,
+                name:       info?.name || prev?.name || null,
+                header_img: info?.header_img || prev?.header_img || null,
                 fetchedAt:  now,
               });
             }));
