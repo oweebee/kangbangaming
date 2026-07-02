@@ -2069,7 +2069,7 @@ export default function App() {
                 <div style={{ width: 38, height: 38, borderRadius: 10, background: `linear-gradient(90deg, #f5c518 50%, ${getBoardTypeColor(b)} 50%)`, padding: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <button
                     onClick={e => { e.stopPropagation(); if (emojiPickerFor === b.id) { setEmojiPickerFor(null); setEmojiPickerAnchor(null); } else { setEmojiPickerFor(b.id); setEmojiPickerAnchor(e.currentTarget); } }}
-                    style={{ background: '#000', border: 'none', borderRadius: 8, width: 34, height: 34, fontSize: b.emoji ? 18 : 11, cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    style={{ background: 'var(--bg)', border: 'none', borderRadius: 8, width: 34, height: 34, fontSize: b.emoji ? 18 : 11, cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                   >{b.emoji || '+'}</button>
                 </div>
                 {emojiPickerFor === b.id && (
@@ -2146,7 +2146,7 @@ export default function App() {
                 <div style={{ width: 38, height: 38, borderRadius: 10, background: getBoardTypeColor(b), padding: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <button
                     onClick={e => { e.stopPropagation(); if (emojiPickerFor === b.id) { setEmojiPickerFor(null); setEmojiPickerAnchor(null); } else { setEmojiPickerFor(b.id); setEmojiPickerAnchor(e.currentTarget); } }}
-                    style={{ background: '#000', border: 'none', borderRadius: 8, width: 34, height: 34, fontSize: b.emoji ? 18 : 11, cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    style={{ background: 'var(--bg)', border: 'none', borderRadius: 8, width: 34, height: 34, fontSize: b.emoji ? 18 : 11, cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                   >{b.emoji || '+'}</button>
                 </div>
                 {emojiPickerFor === b.id && (
