@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import LinkPreview from './LinkPreview.jsx';
 import { useLang } from '../i18n.js';
 
@@ -75,6 +75,42 @@ export default function NotesSection({ notes: externalNotesRaw = [], onSave, onS
   const [editText, setEditText]   = useState('');
   const [editDraftRestored, setEditDraftRestored] = useState(false);
 
+  const editTextareaRef = useRef(null);
+
+  const [newNoteImages, setNewNoteImages] = useState([]);
+  const [editImages,    setEditImages]    = useState([]);
+  const [lightboxUrl,   setLightboxUrl]   = useState(null);
+
+  // Lit les images du presse-papiers et les ajoute à l'état cible
+  const handleImagePaste = (e, setImages) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (!file) continue;
+        const reader = new FileReader();
+        reader.onload = ev => setImages(prev => [
+          ...prev,
+          { id: `img_${Date.now()}_${Math.random().toString(36).slice(2,6)}`, dataUrl: ev.target.result }
+        ]);
+        reader.readAsDataURL(file);
+        break;
+      }
+    }
+  };
+
+
+  // Auto-resize le textarea d'édition pour qu'il épouse la hauteur du texte
+  useEffect(() => {
+    const el = editTextareaRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = el.scrollHeight + 'px';
+  }, [editText, editingId]);
+
+
   const isAdmin = currentUser?.role === 'admin';
   // Peut modifier/supprimer : admin OU auteur de la note
   // Notes sans authorId (legacy) : admin seulement
@@ -97,14 +133,16 @@ export default function NotesSection({ notes: externalNotesRaw = [], onSave, onS
 
   const addNote = () => {
     const text = newNote.trim();
-    if (!text) return;
+    if (!text && newNoteImages.length === 0) return;
     push([...notes, {
       id: `note_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
       text, createdAt: new Date().toISOString(), editedAt: null,
       authorId: currentUser?.id ?? null,
+      attachments: newNoteImages.length > 0 ? newNoteImages : undefined,
     }]);
     setNewNoteWithDraft('');
     setNewDraftRestored(false);
+    setNewNoteImages([]);
   };
 
   // Soft-delete : appelle l'endpoint dédié si disponible, sinon fallback via push
@@ -131,6 +169,7 @@ export default function NotesSection({ notes: externalNotesRaw = [], onSave, onS
     const restored = !!draft && draft !== note.text;
     setEditingId(note.id);
     setEditText(restored ? draft : note.text);
+    setEditImages(note.attachments || []);
     setEditDraftRestored(restored);
   };
 
@@ -142,15 +181,19 @@ export default function NotesSection({ notes: externalNotesRaw = [], onSave, onS
   const cancelEdit = () => {
     writeDraft(editDraftStorageKey(draftKey, editingId, currentUser?.id), '');
     setEditingId(null);
+    setEditImages([]);
     setEditDraftRestored(false);
   };
 
   const saveEdit = () => {
     const text = editText.trim();
     writeDraft(editDraftStorageKey(draftKey, editingId, currentUser?.id), '');
-    if (!text) { setEditingId(null); setEditDraftRestored(false); return; }
-    push(notes.map(n => n.id === editingId ? { ...n, text, editedAt: new Date().toISOString() } : n));
+    if (!text && editImages.length === 0) { setEditingId(null); setEditImages([]); setEditDraftRestored(false); return; }
+    push(notes.map(n => n.id === editingId
+      ? { ...n, text, editedAt: new Date().toISOString(), attachments: editImages.length > 0 ? editImages : undefined }
+      : n));
     setEditingId(null);
+    setEditImages([]);
     setEditDraftRestored(false);
   };
 
@@ -183,9 +226,23 @@ export default function NotesSection({ notes: externalNotesRaw = [], onSave, onS
         value={newNote}
         onChange={e => setNewNoteWithDraft(e.target.value)}
         onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) addNote(); }}
+        onPaste={e => handleImagePaste(e, setNewNoteImages)}
         placeholder={notes.length === 0 ? t('notes.ph_first') : t('notes.ph_more')}
         style={inputStyle}
       />
+      {/* Aperçu images collées — nouvelle note */}
+      {newNoteImages.length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
+          {newNoteImages.map(img => (
+            <div key={img.id} style={{ position: 'relative', display: 'inline-block' }}>
+              <img src={img.dataUrl} alt="" onClick={() => setLightboxUrl(img.dataUrl)}
+                style={{ maxWidth: '100%', maxHeight: 140, borderRadius: 5, border: '1px solid var(--border)', cursor: 'zoom-in', display: 'block' }} />
+              <button onClick={() => setNewNoteImages(prev => prev.filter(i => i.id !== img.id))}
+                style={{ position: 'absolute', top: 3, right: 3, background: 'rgba(0,0,0,0.65)', border: 'none', color: '#fff', borderRadius: '50%', width: 18, height: 18, cursor: 'pointer', fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1, padding: 0 }}>✕</button>
+            </div>
+          ))}
+        </div>
+      )}
       {newDraftRestored && newNote.trim() && (
         <div style={{ fontSize: 11, color: 'var(--accent)', fontStyle: 'italic', marginTop: 4 }}>
           {t('notes.draft_restored')}
@@ -193,17 +250,17 @@ export default function NotesSection({ notes: externalNotesRaw = [], onSave, onS
       )}
       <button
         onClick={addNote}
-        disabled={!newNote.trim()}
+        disabled={!newNote.trim() && newNoteImages.length === 0}
         style={{
           marginTop: 6, marginBottom: notes.length > 0 ? 10 : 0,
           width: '100%',
-          background: newNote.trim() ? 'rgba(192,87,10,0.12)' : 'var(--surface2)',
-          border: newNote.trim() ? '1px solid var(--accent)' : '1px solid var(--border)',
+          background: (newNote.trim() || newNoteImages.length > 0) ? 'rgba(192,87,10,0.12)' : 'var(--surface2)',
+          border: (newNote.trim() || newNoteImages.length > 0) ? '1px solid var(--accent)' : '1px solid var(--border)',
           borderRadius: 7, padding: compact ? '8px' : '6px',
-          color: newNote.trim() ? 'var(--accent)' : 'var(--text-muted)',
+          color: (newNote.trim() || newNoteImages.length > 0) ? 'var(--accent)' : 'var(--text-muted)',
           fontSize: compact ? 13 : 12, fontWeight: 600,
-          cursor: newNote.trim() ? 'pointer' : 'not-allowed',
-          opacity: newNote.trim() ? 1 : 0.5,
+          cursor: (newNote.trim() || newNoteImages.length > 0) ? 'pointer' : 'not-allowed',
+          opacity: (newNote.trim() || newNoteImages.length > 0) ? 1 : 0.5,
           transition: 'all .15s',
         }}
       >{t('notes.add_btn')}</button>
@@ -230,11 +287,25 @@ export default function NotesSection({ notes: externalNotesRaw = [], onSave, onS
             }}>
               {editingId === note.id ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <textarea autoFocus value={editText}
+                  <textarea ref={editTextareaRef} autoFocus value={editText}
                     onChange={e => setEditTextWithDraft(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) saveEdit(); if (e.key === 'Escape') cancelEdit(); }}
-                    style={{ ...inputStyle, minHeight: 52 }}
+                    onPaste={e => handleImagePaste(e, setEditImages)}
+                    style={{ ...inputStyle, minHeight: 0, resize: 'none', overflow: 'hidden' }}
                   />
+                  {/* Aperçu images collées — édition */}
+                  {editImages.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {editImages.map(img => (
+                        <div key={img.id} style={{ position: 'relative', display: 'inline-block' }}>
+                          <img src={img.dataUrl} alt="" onClick={() => setLightboxUrl(img.dataUrl)}
+                            style={{ maxWidth: '100%', maxHeight: 140, borderRadius: 5, border: '1px solid var(--border)', cursor: 'zoom-in', display: 'block' }} />
+                          <button onClick={() => setEditImages(prev => prev.filter(i => i.id !== img.id))}
+                            style={{ position: 'absolute', top: 3, right: 3, background: 'rgba(0,0,0,0.65)', border: 'none', color: '#fff', borderRadius: '50%', width: 18, height: 18, cursor: 'pointer', fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1, padding: 0 }}>✕</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   {editDraftRestored && (
                     <div style={{ fontSize: 11, color: 'var(--accent)', fontStyle: 'italic' }}>
                       {t('notes.draft_restored')}
@@ -292,13 +363,43 @@ export default function NotesSection({ notes: externalNotesRaw = [], onSave, onS
                     </>)}
                   </div>
                   <div style={{ fontSize: compact ? 13 : 12, color: 'var(--text)' }}>
-                    <NoteText text={note.text} token={token} />
+                    {note.text && <NoteText text={note.text} token={token} />}
                   </div>
+                  {/* Images attachées */}
+                  {(note.attachments || []).length > 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: note.text ? 8 : 0 }}>
+                      {note.attachments.map(att => (
+                        <img key={att.id} src={att.dataUrl} alt=""
+                          onClick={() => setLightboxUrl(att.dataUrl)}
+                          style={{ maxWidth: '100%', borderRadius: 5, border: '1px solid var(--border)', cursor: 'zoom-in', display: 'block' }} />
+                      ))}
+                    </div>
+                  )}
                 </>
               )}
             </div>
             );
           })}
+        </div>
+      )}
+      {/* ── Lightbox image ── */}
+      {lightboxUrl && (
+        <div
+          onClick={() => setLightboxUrl(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 99999, cursor: 'zoom-out' }}
+        >
+          <button
+            onClick={e => { e.stopPropagation(); setLightboxUrl(null); }}
+            style={{ position: 'absolute', top: 16, right: 16,
+              background: 'rgba(255,255,255,0.15)', border: 'none', color: '#fff',
+              borderRadius: '50%', width: 34, height: 34, cursor: 'pointer',
+              fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >✕</button>
+          <img src={lightboxUrl} alt=""
+            onClick={e => e.stopPropagation()}
+            style={{ maxWidth: '90vw', maxHeight: '90vh', borderRadius: 8, objectFit: 'contain' }} />
         </div>
       )}
     </div>

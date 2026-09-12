@@ -7,7 +7,7 @@ import SwipeTabs from './SwipeTabs.jsx';
 import { useLang } from '../i18n.js';
 import { isSteamAccessBlocked, SteamAccessNotice } from './SteamUI.jsx';
 
-export default function GameModal({ game, onClose, api, token, onPatchGame, onSoftDeleteNote, defaultTab = 'info', currentUser, appUsers = [] }) {
+export default function GameModal({ game, onClose, api, token, onPatchGame, onSoftDeleteNote, defaultTab = 'notes', currentUser, appUsers = [] }) {
   const { t } = useLang();
   const steamBlocked = isSteamAccessBlocked(currentUser);
   const [achievements, setAchievements] = useState(null);

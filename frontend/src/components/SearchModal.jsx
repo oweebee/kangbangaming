@@ -30,7 +30,7 @@ function LibraryBadge() {
 //   initialGame  — when set, opens in edit mode (pre-fills fields)
 //   onSave       — called with updated game object in edit mode
 
-export default function SearchModal({ api, token, boardGames, onAdd, onRemove, onClose, customOnly, initialGame, onSave, isTaskBoard, appUsers = [], currentUser }) {
+export default function SearchModal({ api, token, boardGames, onAdd, onRemove, onClose, customOnly, initialGame, onSave, isTaskBoard, appUsers = [], currentUser, defaultEmoji, defaultColor }) {
   const { t } = useLang();
   const isEditMode = !!initialGame;
 
@@ -47,8 +47,8 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
 
   // Custom card fields — pre-fill from initialGame in edit mode
   const [customName,     setCustomName]     = useState(initialGame?.name      || '');
-  const [customEmoji,    setCustomEmoji]    = useState(initialGame?.emoji     || '🎮');
-  const [customColor,    setCustomColor]    = useState(initialGame?.color     || '#66c0f4');
+  const [customEmoji,    setCustomEmoji]    = useState(initialGame?.emoji     || defaultEmoji || '🎮');
+  const [customColor,    setCustomColor]    = useState(initialGame?.color     || defaultColor || '#66c0f4');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [customTaskType, setCustomTaskType] = useState(initialGame?.taskType  || null);
 
@@ -150,7 +150,7 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
   // modifs en cours. En mode création (pas encore de carte existante) ou onglet
   // Steam (rien à "enregistrer" par ce biais), on ferme simplement comme avant.
   const handleClose = () => {
-    if (isEditMode && tab === 'custom' && customName.trim()) {
+    if (tab === 'custom' && customName.trim()) {
       handleSubmitCustom();
     } else {
       onClose();
