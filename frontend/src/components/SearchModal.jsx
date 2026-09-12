@@ -35,7 +35,7 @@ export default function SearchModal({ api, token, boardGames, onAdd, onRemove, o
   const isEditMode = !!initialGame;
 
   const [tab, setTab] = useState(customOnly || isEditMode ? 'custom' : 'steam');
-  const [customSubTab, setCustomSubTab] = useState('fiche'); // 'fiche' | 'notes'
+  const [customSubTab, setCustomSubTab] = useState('notes'); // 'fiche' | 'notes'
 
   // Steam search
   const [query, setQuery] = useState('');
