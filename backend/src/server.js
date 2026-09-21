@@ -1352,6 +1352,26 @@ async function getWishlistItemsRaw(userId) {
             onSale,
           };
         });
+        // Post-traitement : certains jeux (sortis, ou profil privé) ont
+        // info.name vide dans wishlistdata — Steam vide aussi release_date
+        // pour les jeux déjà sortis. On résout via appdetails en batch de 3.
+        const _toResolve = items.filter(i => i.name.startsWith('App ')).map(i => i.appid);
+        if (_toResolve.length > 0) {
+          console.log(`[wishlist] ${_toResolve.length} items sans nom – fetch appdetails`);
+          for (let _bi = 0; _bi < _toResolve.length; _bi += 3) {
+            await Promise.all(_toResolve.slice(_bi, _bi + 3).map(async _appid => {
+              const _det = await fetchOneAppDate(_appid);
+              if (!_det) return;
+              const _idx = items.findIndex(it => it.appid === _appid);
+              if (_idx < 0) return;
+              if (_det.name)       items[_idx].name       = _det.name;
+              if (_det.header_img) items[_idx].header_img = _det.header_img;
+              if (!items[_idx].release_date && _det.date) items[_idx].release_date = _det.date;
+              items[_idx].onSale = _det.onSale;
+            }));
+            if (_bi + 3 < _toResolve.length) await new Promise(r => setTimeout(r, 300));
+          }
+        }
       } else {
         console.log(`[wishlist] wishlistdata vide/privé pour user ${userId} – fallback API officielle`);
       }
