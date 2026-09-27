@@ -26,6 +26,7 @@ import UpcomingPanel from './components/UpcomingPanel.jsx';
 import LibraryNewsPanel from './components/LibraryNewsPanel.jsx';
 import MobileHomeSlider from './components/MobileHomeSlider.jsx';
 import ShareBoardButton from './components/ShareBoardButton.jsx';
+import BugReportModal from './components/BugReportModal.jsx';
 
 const DISCORD_FALLBACK_ICON = 'https://cdn.discordapp.com/icons/983316258302877747/ebcf20448ef8818f93e8f31afad9f8d9.webp?size=64';
 const DISCORD_FALLBACK_URL  = 'https://discord.gg/9mXpM9wv';
@@ -311,6 +312,7 @@ export default function App() {
   const [showAdmin, setShowAdmin] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showAppInfo, setShowAppInfo] = useState(false);
+  const [showBugReport, setShowBugReport] = useState(false);
 
   // Favorites (public boards pinned to sidebar)
   const [favBoards, setFavBoards] = useState([]);
@@ -801,6 +803,7 @@ export default function App() {
       if (showAccessModal) { setShowAccessModal(false); return; }
       if (showProfile)     { setShowProfile(false);    return; }
       if (showAppInfo)     { setShowAppInfo(false);    return; }
+      if (showBugReport) { setShowBugReport(false); return; }
       if (selectedGame)    { setSelectedGame(null); setSelectedGameDefaultTab('notes'); return; }
       if (gameInfo)        { setGameInfo(null);        return; }
       if (publicBoardMode) { setPublicBoardMode(null); setShowHome(true); setColumns([]); setGames([]); return; }
@@ -2629,6 +2632,18 @@ export default function App() {
             )}
           </div>
         )}
+        {/* Bug Report Button mobile */}
+        <button
+          onClick={() => setShowBugReport(true)}
+          style={{
+            position: 'fixed', top: 10, right: 10, zIndex: 9999,
+            background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+            color: '#fff', border: 'none', borderRadius: 16,
+            padding: '5px 10px', cursor: 'pointer', fontWeight: 700, fontSize: 11,
+            display: 'flex', alignItems: 'center', gap: 4,
+            boxShadow: '0 0 0 2px #7f1d1d, 0 4px 12px rgba(239,68,68,.5)',
+          }}
+        >🐛 Bug</button>
         <footer style={{ position: 'fixed', bottom: 0, right: 0, padding: '4px 10px', display: 'flex', alignItems: 'center', gap: 8, fontSize: 9, color: 'var(--text-muted)' }}><span>by Oweebee</span><a href={discordConfig.discordUrl || DISCORD_FALLBACK_URL} target="_blank" rel="noreferrer" style={{ color: '#7289da', textDecoration: 'none', fontSize: 9 }}>Discord</a><a href="https://github.com/oweebee/kangbangaming" target="_blank" rel="noreferrer" style={{ color: 'var(--text-muted)', textDecoration: 'none', fontSize: 9 }}>GitHub</a></footer>
         {showSearch && <SearchModal api={API} token={token} boardGames={games} onAdd={g => addGame(g, searchTargetCol)} onRemove={removeGame} onClose={() => { setShowSearch(false); setSearchTargetCol(null); }} customOnly={isTaskBoard} isTaskBoard={isTaskBoard} appUsers={appUsers} currentUser={currentUser} defaultEmoji={columns.find(c => c.id === searchTargetCol)?.emoji || undefined} defaultColor={columns.find(c => c.id === searchTargetCol)?.color || undefined} />}
         {editingGame && <SearchModal api={API} token={token} boardGames={games} onAdd={addGame} onRemove={removeGame} onClose={() => setEditingGame(null)} customOnly={isTaskBoard} isTaskBoard={isTaskBoard} appUsers={appUsers} currentUser={currentUser} initialGame={editingGame} onSave={async g => { await updateGame(g); setEditingGame(null); }} />}
@@ -2641,6 +2656,7 @@ export default function App() {
 
 
         {showAppInfo && <AppInfoModal onClose={() => setShowAppInfo(false)} />}
+        {showBugReport && <BugReportModal token={token} userRole={currentUser?.role} onClose={() => setShowBugReport(false)} />}
         {showProfile && <ProfilePage token={token} currentUser={currentUser} onClose={() => setShowProfile(false)} onSaveSteam={handleSteamSave} />}
         {(publicBoardMode?.gameIcon || activeBoard?.gameIcon) && <NowPlayingBanner gameIconUrl={publicBoardMode?.gameIcon || activeBoard?.gameIcon} token={token} />}
       </div>
@@ -2829,6 +2845,25 @@ export default function App() {
         )}
         </div>
       </div>
+      {/* ── Bug Report Button ─────────────────────────────────────────────── */}
+      <button
+        onClick={() => setShowBugReport(true)}
+        title="Signaler un bug"
+        style={{
+          position: 'fixed', top: 12, right: 12, zIndex: 9999,
+          background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+          color: '#fff', border: 'none', borderRadius: 20,
+          padding: '7px 14px', cursor: 'pointer', fontWeight: 700, fontSize: 12,
+          display: 'flex', alignItems: 'center', gap: 6,
+          boxShadow: '0 0 0 2px #7f1d1d, 0 4px 16px rgba(239,68,68,.5)',
+          transition: 'transform .15s, box-shadow .15s',
+          letterSpacing: '.3px',
+        }}
+        onMouseEnter={e => { e.currentTarget.style.transform='scale(1.05)'; e.currentTarget.style.boxShadow='0 0 0 2px #7f1d1d, 0 6px 20px rgba(239,68,68,.7)'; }}
+        onMouseLeave={e => { e.currentTarget.style.transform='scale(1)'; e.currentTarget.style.boxShadow='0 0 0 2px #7f1d1d, 0 4px 16px rgba(239,68,68,.5)'; }}
+      >
+        🐛 Signaler un bug
+      </button>
       <footer style={{ position: 'fixed', bottom: 0, right: 0, padding: '5px 12px', display: 'flex', alignItems: 'center', gap: 8, fontSize: 10, color: 'var(--text-muted)' }}>
         <span>by Oweebee</span>
         <a href={discordConfig.discordUrl || DISCORD_FALLBACK_URL} target="_blank" rel="noreferrer" style={{ color: '#7289da', textDecoration: 'none' }}>Discord</a>
@@ -2843,6 +2878,7 @@ export default function App() {
       {showAdmin && <AdminPanel token={token} currentUser={currentUser} onClose={() => setShowAdmin(false)} />}
       {showAccessModal && isOwnPublicBoard && publicBoardMode && <BoardAccessModal token={token} boardId={publicBoardMode.id} boardName={publicBoardMode.name} onClose={() => setShowAccessModal(false)} />}
       {showAppInfo && <AppInfoModal onClose={() => setShowAppInfo(false)} />}
+        {showBugReport && <BugReportModal token={token} userRole={currentUser?.role} onClose={() => setShowBugReport(false)} />}
       {showProfile && <ProfilePage token={token} currentUser={currentUser} onClose={() => setShowProfile(false)} onSaveSteam={handleSteamSave} />}
       {activeBoard?.gameIcon && !showHome && <NowPlayingBanner gameIconUrl={activeBoard.gameIcon} token={token} />}
       {/* Game stats widget — shown only when viewing a Steam-based board */}

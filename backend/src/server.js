@@ -22,6 +22,7 @@ const USERS_FILE    = path.join(DATA_DIR, 'users.json');
 const BOARDS_FILE   = path.join(DATA_DIR, 'boards.json');
 const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
 const UPCOMING_CACHE_FILE = path.join(DATA_DIR, 'upcoming_cache.json');
+const BUGS_FILE = path.join(DATA_DIR, 'bugs.json');
 
 // ── Data helpers ─────────────────────────────────────────────────────────────
 
@@ -163,6 +164,22 @@ function requireAdmin(req, res, next) {
     if (req.user.role !== 'admin') return res.status(403).json({ error: 'Forbidden' });
     next();
   });
+}
+
+
+// ── Bug reports helpers ───────────────────────────────────────────────────────
+let _bugsCache = null;
+function readBugs() {
+  ensureDataDir();
+  if (_bugsCache !== null) return _bugsCache;
+  if (!fs.existsSync(BUGS_FILE)) { fs.writeFileSync(BUGS_FILE, '[]'); _bugsCache = []; return _bugsCache; }
+  try { _bugsCache = JSON.parse(fs.readFileSync(BUGS_FILE, 'utf8')); } catch { _bugsCache = []; }
+  return _bugsCache;
+}
+function writeBugs(bugs) {
+  ensureDataDir();
+  _bugsCache = bugs;
+  fs.writeFileSync(BUGS_FILE, JSON.stringify(bugs, null, 2));
 }
 
 // ── Steam OpenID login ────────────────────────────────────────────────────────
@@ -3159,6 +3176,127 @@ process.on('unhandledRejection', (reason) => {
 });
 process.on('uncaughtException', (err) => {
   console.error('[server] Uncaught Exception (non catchée) :', err);
+});
+
+
+// ── Bug reports ───────────────────────────────────────────────────────────────
+
+// Soumettre un bug (authentifié)
+app.post('/api/bugs', requireAuth, (req, res) => {
+  const { title, description, category } = req.body;
+  if (!title || !description) return res.status(400).json({ error: 'title + description requis' });
+  const bugs = readBugs();
+  const bug = {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    title: String(title).slice(0, 200),
+    description: String(description).slice(0, 2000),
+    category: String(category || 'bug').slice(0, 50),
+    status: 'open',
+    authorId: req.user.id,
+    authorUsername: req.user.username,
+    createdAt: new Date().toISOString(),
+    replies: [],
+  };
+  bugs.unshift(bug);
+  writeBugs(bugs);
+  res.status(201).json(bug);
+});
+
+// Lister les bugs (user voit les siens + admin voit tout)
+app.get('/api/bugs', requireAuth, (req, res) => {
+  const bugs = readBugs();
+  if (req.user.role === 'admin') return res.json(bugs);
+  res.json(bugs.filter(b => b.authorId === req.user.id));
+});
+
+// Répondre à un bug (admin seulement)
+app.post('/api/bugs/:id/reply', requireAdmin, (req, res) => {
+  const { message, status } = req.body;
+  if (!message) return res.status(400).json({ error: 'message requis' });
+  const bugs = readBugs();
+  const bug = bugs.find(b => b.id === req.params.id);
+  if (!bug) return res.status(404).json({ error: 'Bug non trouvé' });
+  const reply = {
+    id: Date.now().toString(36),
+    message: String(message).slice(0, 2000),
+    authorId: req.user.id,
+    authorUsername: req.user.username,
+    isAdmin: true,
+    createdAt: new Date().toISOString(),
+  };
+  bug.replies = bug.replies || [];
+  bug.replies.push(reply);
+  if (status) bug.status = status;
+  writeBugs(bugs);
+  res.json(bug);
+});
+
+// Changer le statut (admin)
+app.patch('/api/bugs/:id/status', requireAdmin, (req, res) => {
+  const { status } = req.body;
+  const allowed = ['open', 'in_progress', 'resolved', 'wont_fix'];
+  if (!allowed.includes(status)) return res.status(400).json({ error: 'statut invalide' });
+  const bugs = readBugs();
+  const bug = bugs.find(b => b.id === req.params.id);
+  if (!bug) return res.status(404).json({ error: 'Bug non trouvé' });
+  bug.status = status;
+  writeBugs(bugs);
+  res.json(bug);
+});
+
+// ── MCP Web API (accès IA) ────────────────────────────────────────────────────
+// Protégé par X-MCP-Token (env MCP_TOKEN). Un agent IA peut lire et répondre.
+
+function requireMcpToken(req, res, next) {
+  const mcpToken = process.env.MCP_TOKEN;
+  if (!mcpToken) return res.status(503).json({ error: 'MCP_TOKEN non configuré' });
+  const provided = req.headers['x-mcp-token'];
+  if (!provided || provided !== mcpToken) return res.status(401).json({ error: 'Token MCP invalide' });
+  next();
+}
+
+app.get('/mcp/bugs', requireMcpToken, (req, res) => {
+  const bugs = readBugs();
+  const { status, limit = 50 } = req.query;
+  const filtered = status ? bugs.filter(b => b.status === status) : bugs;
+  res.json({
+    total: filtered.length,
+    bugs: filtered.slice(0, Number(limit)),
+    _doc: 'GET /mcp/bugs?status=open|in_progress|resolved|wont_fix&limit=N | POST /mcp/bugs/:id/reply {message,status?} | PATCH /mcp/bugs/:id/status {status}'
+  });
+});
+
+app.post('/mcp/bugs/:id/reply', requireMcpToken, (req, res) => {
+  const { message, status, agentName } = req.body;
+  if (!message) return res.status(400).json({ error: 'message requis' });
+  const bugs = readBugs();
+  const bug = bugs.find(b => b.id === req.params.id);
+  if (!bug) return res.status(404).json({ error: 'Bug non trouvé' });
+  const reply = {
+    id: Date.now().toString(36),
+    message: String(message).slice(0, 2000),
+    authorUsername: agentName || 'Admin',
+    isAdmin: true,
+    isAI: true,
+    createdAt: new Date().toISOString(),
+  };
+  bug.replies = bug.replies || [];
+  bug.replies.push(reply);
+  if (status) bug.status = status;
+  writeBugs(bugs);
+  res.json(bug);
+});
+
+app.patch('/mcp/bugs/:id/status', requireMcpToken, (req, res) => {
+  const { status } = req.body;
+  const allowed = ['open', 'in_progress', 'resolved', 'wont_fix'];
+  if (!allowed.includes(status)) return res.status(400).json({ error: 'statut invalide' });
+  const bugs = readBugs();
+  const bug = bugs.find(b => b.id === req.params.id);
+  if (!bug) return res.status(404).json({ error: 'Bug non trouvé' });
+  bug.status = status;
+  writeBugs(bugs);
+  res.json(bug);
 });
 
 // Middleware d'erreur Express (4 arguments) — attrape ce qui remonte via next(err)
